@@ -1,0 +1,138 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  --ink: #174b48;
+  --teal: #087f78;
+  --sidebar: #0b5751;
+  --line: #e0ece9;
+  --muted: #718986;
+}
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f8f7;
+}
+
+.sidebar {
+  width: 205px;
+  flex: 0 0 205px;
+  padding: 25px 12px 16px;
+  color: #d7f0ed;
+  background: var(--sidebar);
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 31px;
+  color: white;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+
+  &-mark {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+    background: #20aa9e;
+    color: white;
+    font-weight: 800;
+  }
+}
+
+.nav-label {
+  margin: 0 8px 11px;
+  font-size: 8px;
+  color: #7ed2c8;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.nav-item {
+  width: 100%;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #e1f5f2;
+  text-align: left;
+  font-size: 11px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  span {
+    width: 15px;
+    text-align: center;
+    opacity: 0.8;
+  }
+
+  &.active {
+    background: #187d74;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 10px;
+  border-radius: 6px;
+  background: #12665f;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  strong {
+    font-size: 10px;
+    color: #fff;
+  }
+
+  small {
+    font-size: 9px;
+    color: #a9dbd5;
+  }
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 800px) {
+  .sidebar {
+    width: 68px;
+    flex-basis: 68px;
+    padding: 20px 8px;
+  }
+
+  .brand {
+    padding: 0 10px 28px;
+
+    span:last-child {
+      font-size: 0;
+      display: none;
+    }
+  }
+
+  .nav-item:not(.active) {
+    font-size: 0;
+  }
+
+  .nav-label,
+  .sidebar-footer {
+    display: none;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: 11px 5px;
+  }
+
+}
