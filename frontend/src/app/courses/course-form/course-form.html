@@ -1,0 +1,54 @@
+<div class="modal-backdrop" (click)="cancel.emit()">
+  <section class="modal" (click)="$event.stopPropagation()">
+    <button class="close" (click)="cancel.emit()">×</button>
+    <h2>{{ mode === 'create' ? 'Registrar curso' : 'Actualizar curso' }}</h2>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="course-form">
+      <label>
+        <span>Código</span>
+        <input formControlName="code" placeholder="CUR-001">
+      </label>
+
+      <label>
+        <span>Nombre *</span>
+        <input formControlName="name" placeholder="Nombre del curso">
+        @if (fieldError('name')) { <small>El nombre es obligatorio.</small> }
+      </label>
+
+      <label>
+        <span>Contenido *</span>
+        <textarea formControlName="content" rows="3" placeholder="Contenido del curso"></textarea>
+        @if (fieldError('content')) { <small>El contenido es obligatorio.</small> }
+      </label>
+
+      <label>
+        <span>Horas *</span>
+        <input type="number" min="1" formControlName="durationHours">
+        @if (fieldError('durationHours')) { <small>Debe ser mayor a 0.</small> }
+      </label>
+
+      <label>
+        <span>Horario *</span>
+        <input formControlName="schedule" placeholder="Lun y Mie 18:00-20:00">
+        @if (fieldError('schedule')) { <small>El horario es obligatorio.</small> }
+      </label>
+
+      <label>
+        <span>Instructor *</span>
+        <input formControlName="instructor" placeholder="Nombre del instructor">
+        @if (fieldError('instructor')) { <small>El instructor es obligatorio.</small> }
+      </label>
+
+      <label>
+        <span>Criterios de aprobación *</span>
+        <input formControlName="approvalCriteria" placeholder="Proyecto final">
+        @if (fieldError('approvalCriteria')) { <small>Los criterios son obligatorios.</small> }
+      </label>
+
+      <div class="form-actions">
+        <button type="button" (click)="cancel.emit()">Cancelar</button>
+        <button type="submit" class="primary-btn" [disabled]="saving">{{ saving ? 'Guardando...' : (mode === 'create' ? 'Registrar curso' : 'Guardar cambios') }}</button>
+      </div>
+    </form>
+  </section>
+</div>
