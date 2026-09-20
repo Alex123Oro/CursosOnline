@@ -1,0 +1,54 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">ADMINISTRACIÓN / CURSOS</p>
+    <h1>Cursos y lanzamientos</h1>
+    <p class="subtitle">Registra y administra los cursos de formación continua.</p>
+  </div>
+  <button class="primary-btn" (click)="openCreateForm()">+ Nuevo curso</button>
+</section>
+
+@if (feedback()) {
+  <p class="app-feedback">{{ feedback() }}</p>
+}
+
+<section class="metrics">
+  <article class="metric">
+    <span class="dot teal"></span>
+    <small>Cursos activos</small>
+    <strong>{{ courses().length }}</strong>
+  </article>
+  <article class="metric muted">
+    <span class="dot mint"></span>
+    <small>Matrícula abierta</small>
+    <strong>—</strong>
+  </article>
+  <article class="metric muted">
+    <span class="dot orange"></span>
+    <small>Periodo</small>
+    <strong>—</strong>
+  </article>
+  <article class="metric muted">
+    <span class="dot red"></span>
+    <small>Borradores</small>
+    <strong>{{ courses().length }}</strong>
+  </article>
+</section>
+
+<section class="table-card">
+  <app-course-list
+    [courses]="courses()"
+    [loading]="isLoading()"
+    (editCourse)="openEditForm($event)">
+  </app-course-list>
+  <!-- TODO HU-02: "Matrícula abierta" y "Periodo" se activan cuando se implemente la publicación de cursos. -->
+</section>
+
+@if (isFormOpen()) {
+  <app-course-form
+    [mode]="formMode()"
+    [course]="editingCourse()"
+    [saving]="isSaving()"
+    (save)="handleSave($event)"
+    (cancel)="closeForm()">
+  </app-course-form>
+}

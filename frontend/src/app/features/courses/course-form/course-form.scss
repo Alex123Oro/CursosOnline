@@ -1,0 +1,131 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(9, 43, 40, 0.38);
+  z-index: 10;
+}
+
+.modal {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 30px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #087f78;
+  font-weight: 800;
+}
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 15px;
+  border: 0;
+  background: none;
+  color: #7e9692;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.modal h2 {
+  margin: 5px 0 12px;
+  color: #174b48;
+  font: 800 23px 'Manrope', sans-serif;
+}
+
+.form-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+
+.course-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px 14px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #55736f;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dbe9e6;
+    border-radius: 6px;
+    padding: 9px 10px;
+    color: #174b48;
+    background: #fff;
+    font: 500 11px/1.4 Arial, sans-serif;
+    outline: 0;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  input:focus,
+  textarea:focus {
+    border-color: #0a8e84;
+    box-shadow: 0 0 0 3px rgba(10, 142, 132, 0.1);
+  }
+
+  small {
+    color: #cf5148;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .full {
+    grid-column: 1 / -1;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.primary-btn {
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 17px;
+  color: #fff;
+  background: #0a8e84;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+}
+
+.secondary-btn {
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 17px;
+  color: #17645e;
+  background: #dcefeb;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}

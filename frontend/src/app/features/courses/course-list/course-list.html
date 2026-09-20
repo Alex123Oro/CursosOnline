@@ -1,0 +1,36 @@
+<div class="toolbar">
+  <label class="search"><span>⌕</span><input placeholder="Buscar por nombre o código" [value]="query()" (input)="onSearch($any($event.target).value)"></label>
+  <span class="results">{{ filteredCourses().length }} resultados</span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>CURSO</th><th>HORAS</th><th>HORARIO</th><th>INSTRUCTOR</th><th>ESTADO</th><th>ACCIÓN</th></tr>
+    </thead>
+    <tbody>
+      @if (loading) {
+        <tr><td colspan="6">Cargando cursos...</td></tr>
+      } @else {
+        @for (course of filteredCourses(); track course.id) {
+          <tr>
+            <td>
+              <button class="course-name" (click)="editCourse.emit(course)">{{ course.name }}</button>
+              <small>{{ course.code }}</small>
+            </td>
+            <td>{{ course.durationHours }}</td>
+            <td>{{ course.schedule }}</td>
+            <td>{{ course.instructor }}</td>
+            <td><span class="badge draft">Borrador</span></td>
+            <td class="actions">
+              <button class="more" (click)="editCourse.emit(course)">Editar</button>
+              <button class="more publish" disabled title="Disponible cuando se implemente HU-02">Publicar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6">No hay cursos para mostrar.</td></tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
