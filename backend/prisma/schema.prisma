@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Course {
+  id               Int      @id @default(autoincrement())
+  code             String?  @unique @map("codigo")
+  name             String   @map("nombre")
+  content          String?  @map("contenido")
+  durationHours    Int?     @map("duracion_horas")
+  instructor       String?  @map("instructor")
+  schedule         String?  @map("horario")
+  approvalCriteria String?  @map("criterios_aprobacion")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("cursos")
+}

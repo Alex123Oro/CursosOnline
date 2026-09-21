@@ -1,0 +1,14 @@
+ALTER TABLE cursos
+  ADD COLUMN IF NOT EXISTS codigo TEXT,
+  ADD COLUMN IF NOT EXISTS contenido TEXT,
+  ADD COLUMN IF NOT EXISTS duracion_horas INTEGER,
+  ADD COLUMN IF NOT EXISTS instructor TEXT,
+  ADD COLUMN IF NOT EXISTS horario TEXT,
+  ADD COLUMN IF NOT EXISTS criterios_aprobacion TEXT;
+
+ALTER TABLE cursos
+  ALTER COLUMN instructor_id DROP NOT NULL,
+  ALTER COLUMN fecha_inicio DROP NOT NULL,
+  ALTER COLUMN fecha_fin DROP NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS cursos_codigo_key ON cursos(codigo);
