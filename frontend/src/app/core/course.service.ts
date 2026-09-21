@@ -27,7 +27,7 @@ export interface CoursePayload {
 
 @Injectable({ providedIn: 'root' })
 export class CourseService {
-  private readonly apiUrl = 'http://localhost:3000/api/courses';
+  private readonly apiUrl = 'http://localhost:3333/api/courses';
 
   constructor(private readonly http: HttpClient) {}
 
