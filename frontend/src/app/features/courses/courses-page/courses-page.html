@@ -15,7 +15,7 @@
   <article class="metric">
     <span class="dot teal"></span>
     <small>Cursos activos</small>
-    <strong>{{ courses().length }}</strong>
+    <strong>{{ courses().filter(course => course.status === 'PUBLISHED').length }}</strong>
   </article>
   <article class="metric muted">
     <span class="dot mint"></span>
@@ -30,7 +30,7 @@
   <article class="metric muted">
     <span class="dot red"></span>
     <small>Borradores</small>
-    <strong>{{ courses().length }}</strong>
+    <strong>{{ courses().filter(course => course.status !== 'PUBLISHED').length }}</strong>
   </article>
 </section>
 
@@ -38,9 +38,9 @@
   <app-course-list
     [courses]="courses()"
     [loading]="isLoading()"
-    (editCourse)="openEditForm($event)">
+    (editCourse)="openEditForm($event)"
+    (publishCourse)="publishCourse($event)">
   </app-course-list>
-  <!-- TODO HU-02: "Matrícula abierta" y "Periodo" se activan cuando se implemente la publicación de cursos. -->
 </section>
 
 @if (isFormOpen()) {

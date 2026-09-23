@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../shared/http-error.js';
-import type { CourseInput } from './course.rules.js';
+import { canPublishCourse, type CourseInput } from './course.rules.js';
 
 const courseSelect = {
   id: true,
@@ -12,6 +12,9 @@ const courseSelect = {
   instructor: true,
   schedule: true,
   approvalCriteria: true,
+  status: true,
+  startDate: true,
+  endDate: true,
   createdAt: true,
   updatedAt: true
 } satisfies Prisma.CourseSelect;
@@ -27,13 +30,19 @@ const toCourseResponse = (course: CourseRecord) => ({
   instructor: course.instructor ?? '',
   schedule: course.schedule ?? '',
   approvalCriteria: course.approvalCriteria ?? '',
+  status: course.status ?? 'DRAFT',
+  startDate: course.startDate ? course.startDate.toISOString().slice(0, 10) : null,
+  endDate: course.endDate ? course.endDate.toISOString().slice(0, 10) : null,
   createdAt: course.createdAt.toISOString(),
   updatedAt: course.updatedAt.toISOString()
 });
 
 const toCourseData = (input: CourseInput) => ({
   ...input,
-  code: input.code ?? null
+  code: input.code ?? null,
+  status: input.status ?? 'DRAFT',
+  startDate: input.startDate ? new Date(input.startDate) : null,
+  endDate: input.endDate ? new Date(input.endDate) : null
 });
 
 const handlePrismaError = (error: unknown): never => {
@@ -47,6 +56,9 @@ const handlePrismaError = (error: unknown): never => {
 };
 
 export const courseService = {
+  /**
+   * Lista todos los cursos para el panel administrativo.
+   */
   async list() {
     const courses = await prisma.course.findMany({
       select: courseSelect,
@@ -56,6 +68,22 @@ export const courseService = {
     return courses.map(toCourseResponse);
   },
 
+  /**
+   * Devuelve solo los cursos publicados para el catálogo público.
+   */
+  async catalog() {
+    const courses = await prisma.course.findMany({
+      where: { status: 'PUBLISHED' },
+      select: courseSelect,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return courses.map(toCourseResponse);
+  },
+
+  /**
+   * Crea un curso nuevo en estado borrador.
+   */
   async create(input: CourseInput) {
     try {
       const course = await prisma.course.create({
@@ -69,6 +97,9 @@ export const courseService = {
     }
   },
 
+  /**
+   * Actualiza la información del curso.
+   */
   async update(id: number, input: CourseInput) {
     try {
       const course = await prisma.course.update({
@@ -84,6 +115,43 @@ export const courseService = {
       }
 
       handlePrismaError(error);
+    }
+  },
+
+  /**
+   * Publica un curso solo si cumple con la información mínima requerida.
+   */
+  async publish(id: number) {
+    const existing = await prisma.course.findUnique({
+      where: { id },
+      select: courseSelect
+    });
+
+    if (!existing) {
+      throw new HttpError(404, 'Curso no encontrado.');
+    }
+
+    canPublishCourse({
+      instructor: existing.instructor,
+      schedule: existing.schedule,
+      startDate: existing.startDate ? existing.startDate.toISOString().slice(0, 10) : null,
+      endDate: existing.endDate ? existing.endDate.toISOString().slice(0, 10) : null
+    });
+
+    try {
+      const course = await prisma.course.update({
+        where: { id },
+        data: { status: 'PUBLISHED' },
+        select: courseSelect
+      });
+
+      return toCourseResponse(course);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new HttpError(404, 'Curso no encontrado.');
+      }
+
+      throw error;
     }
   }
 };

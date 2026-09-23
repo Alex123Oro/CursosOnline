@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { courseInputSchema } from '../src/modules/courses/course.rules.js';
+import { canPublishCourse, courseInputSchema } from '../src/modules/courses/course.rules.js';
 
 describe('course rules (HU-01)', () => {
   it('acepta un curso valido y rechaza duracion invalida', () => {
@@ -27,5 +27,25 @@ describe('course rules (HU-01)', () => {
       name: 'Curso incompleto',
       durationHours: 10
     })).toThrow();
+  });
+});
+
+describe('course rules (HU-02)', () => {
+  it('permite publicar cuando el curso tiene instructor, horario y fechas completas', () => {
+    expect(() => canPublishCourse({
+      instructor: 'Ana Lopez',
+      schedule: 'Martes y jueves 18:00-20:00',
+      startDate: '2026-10-01',
+      endDate: '2026-11-15'
+    })).not.toThrow();
+  });
+
+  it('impide publicar cuando faltan instructor, horario o fechas', () => {
+    expect(() => canPublishCourse({
+      instructor: '',
+      schedule: '',
+      startDate: null,
+      endDate: null
+    })).toThrow('No se puede publicar un curso sin instructor, horario o fechas definidas.');
   });
 });

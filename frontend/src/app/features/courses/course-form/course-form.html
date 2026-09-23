@@ -41,6 +41,16 @@
       </label>
 
       <label>
+        <span>Fecha de inicio *</span>
+        <input type="date" formControlName="startDate">
+      </label>
+
+      <label>
+        <span>Fecha de fin *</span>
+        <input type="date" formControlName="endDate">
+      </label>
+
+      <label class="full">
         <span>Criterios de aprobación *</span>
         <input formControlName="approvalCriteria" placeholder="Proyecto final">
         @if (fieldError('approvalCriteria')) { <small>Los criterios son obligatorios.</small> }

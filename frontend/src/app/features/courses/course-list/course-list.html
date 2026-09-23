@@ -21,10 +21,16 @@
             <td>{{ course.durationHours }}</td>
             <td>{{ course.schedule }}</td>
             <td>{{ course.instructor }}</td>
-            <td><span class="badge draft">Borrador</span></td>
+            <td>
+              <span class="badge" [class.draft]="course.status !== 'PUBLISHED'" [class.published]="course.status === 'PUBLISHED'">
+                {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Borrador' }}
+              </span>
+            </td>
             <td class="actions">
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
-              <button class="more publish" disabled title="Disponible cuando se implemente HU-02">Publicar</button>
+              <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">
+                {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Publicar' }}
+              </button>
             </td>
           </tr>
         } @empty {

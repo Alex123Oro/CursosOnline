@@ -65,6 +65,19 @@ export class CoursesPage {
     });
   }
 
+  publishCourse(course: Course) {
+    this.isSaving.set(true);
+    this.courseService.publish(course.id)
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.feedback.set('Curso publicado correctamente.');
+          this.loadCourses();
+        },
+        error: error => this.feedback.set(this.errorMessage(error))
+      });
+  }
+
   private loadCourses() {
     this.isLoading.set(true);
     this.courseService.list()

@@ -26,7 +26,9 @@ export class CourseForm implements OnChanges {
     durationHours: [1, [Validators.required, Validators.min(1)]],
     instructor: ['', [Validators.required, Validators.minLength(2)]],
     schedule: ['', [Validators.required, Validators.minLength(3)]],
-    approvalCriteria: ['', [Validators.required, Validators.minLength(3)]]
+    approvalCriteria: ['', [Validators.required, Validators.minLength(3)]],
+    startDate: [''],
+    endDate: ['']
   });
 
   ngOnChanges(changes: SimpleChanges) {
@@ -39,7 +41,9 @@ export class CourseForm implements OnChanges {
         durationHours: course?.durationHours ?? 1,
         instructor: course?.instructor ?? '',
         schedule: course?.schedule ?? '',
-        approvalCriteria: course?.approvalCriteria ?? ''
+        approvalCriteria: course?.approvalCriteria ?? '',
+        startDate: course?.startDate ?? '',
+        endDate: course?.endDate ?? ''
       });
     }
   }
@@ -61,7 +65,9 @@ export class CourseForm implements OnChanges {
       durationHours: Number(value.durationHours),
       instructor: value.instructor.trim(),
       schedule: value.schedule.trim(),
-      approvalCriteria: value.approvalCriteria.trim()
+      approvalCriteria: value.approvalCriteria.trim(),
+      startDate: value.startDate || null,
+      endDate: value.endDate || null
     });
   }
 }

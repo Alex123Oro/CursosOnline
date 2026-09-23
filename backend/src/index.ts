@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { supabase } from './config/supabase.js';
+import { prisma } from './config/prisma.js';
 import { courseRoutes } from './modules/courses/course.routes.js';
 import { errorMiddleware } from './shared/error.middleware.js';
 
@@ -17,14 +18,20 @@ app.get('/api/health', (_request, response) => {
 app.use('/api/courses', courseRoutes);
 
 app.get('/api/supabase/health', async (_request, response) => {
-	const { error } = await supabase.auth.getSession();
+	const { error: authError } = await supabase.auth.getSession();
 
-	if (error) {
-		response.status(503).json({ ok: false, servicio: 'supabase', error: error.message });
+	if (authError) {
+		response.status(503).json({ ok: false, servicio: 'supabase-auth', error: authError.message });
 		return;
 	}
 
-	response.json({ ok: true, servicio: 'supabase' });
+	try {
+		await prisma.$queryRaw`SELECT 1`;
+		response.json({ ok: true, servicio: 'supabase', auth: true, database: true });
+	} catch (databaseError) {
+		const message = databaseError instanceof Error ? databaseError.message : 'No se pudo conectar con PostgreSQL.';
+		response.status(503).json({ ok: false, servicio: 'supabase-database', auth: true, database: false, error: message });
+	}
 });
 
 app.use(errorMiddleware);

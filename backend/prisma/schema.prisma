@@ -8,16 +8,19 @@ datasource db {
 }
 
 model Course {
-  id               Int      @id @default(autoincrement())
-  code             String?  @unique @map("codigo")
-  name             String   @map("nombre")
-  content          String?  @map("contenido")
-  durationHours    Int?     @map("duracion_horas")
-  instructor       String?  @map("instructor")
-  schedule         String?  @map("horario")
-  approvalCriteria String?  @map("criterios_aprobacion")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id               Int       @id @default(autoincrement())
+  code             String?   @unique @map("codigo")
+  name             String    @map("nombre")
+  content          String?   @map("contenido")
+  durationHours    Int?      @map("duracion_horas")
+  instructor       String?   @map("instructor")
+  schedule         String?   @map("horario")
+  approvalCriteria String?   @map("criterios_aprobacion")
+  status           String    @default("DRAFT") @map("estado")
+  startDate        DateTime? @map("fecha_inicio")
+  endDate          DateTime? @map("fecha_fin")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   @@map("cursos")
 }

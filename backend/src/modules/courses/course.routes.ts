@@ -5,5 +5,7 @@ import { courseController } from './course.controller.js';
 export const courseRoutes = Router();
 
 courseRoutes.get('/', asyncHandler(courseController.list));
+courseRoutes.get('/catalog', asyncHandler(courseController.catalog));
 courseRoutes.post('/', asyncHandler(courseController.create));
 courseRoutes.put('/:id', asyncHandler(courseController.update));
+courseRoutes.patch('/:id/publish', asyncHandler(courseController.publish));

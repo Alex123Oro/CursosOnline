@@ -13,6 +13,7 @@ export class CourseList {
   @Input() courses: Course[] = [];
   @Input() loading = false;
   @Output() editCourse = new EventEmitter<Course>();
+  @Output() publishCourse = new EventEmitter<Course>();
 
   readonly query = signal('');
 
