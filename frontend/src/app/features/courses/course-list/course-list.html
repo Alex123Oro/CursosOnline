@@ -9,7 +9,7 @@
       <tr><th>CURSO</th><th>HORAS</th><th>HORARIO</th><th>INSTRUCTOR</th><th>ESTADO</th><th>ACCIÓN</th></tr>
     </thead>
     <tbody>
-      @if (loading) {
+      @if (loading()) {
         <tr><td colspan="6">Cargando cursos...</td></tr>
       } @else {
         @for (course of filteredCourses(); track course.id) {

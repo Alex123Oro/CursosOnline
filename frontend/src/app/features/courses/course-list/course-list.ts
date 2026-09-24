@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { Component, EventEmitter, Output, computed, input, signal } from '@angular/core';
 import { Course } from '../../../core/course.service';
 
 @Component({
@@ -10,15 +10,15 @@ import { Course } from '../../../core/course.service';
   styleUrl: './course-list.scss'
 })
 export class CourseList {
-  @Input() courses: Course[] = [];
-  @Input() loading = false;
+  readonly courses = input<Course[]>([]);
+  readonly loading = input(false);
   @Output() editCourse = new EventEmitter<Course>();
   @Output() publishCourse = new EventEmitter<Course>();
 
   readonly query = signal('');
 
   readonly filteredCourses = computed(() =>
-    this.courses.filter(course =>
+    this.courses().filter(course =>
       `${course.name} ${course.code}`.toLowerCase().includes(this.query().toLowerCase())
     )
   );
