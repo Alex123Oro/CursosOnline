@@ -1,0 +1,39 @@
+<a class="skip-link" href="#catalog-content">Saltar al contenido</a>
+<header class="catalog-header">
+  <a class="catalog-brand" routerLink="/catalogo" aria-label="EVA, cursos disponibles"><span class="brand-mark" aria-hidden="true">E</span><span>EVA</span></a>
+  <span class="catalog-header-label">Formación continua</span>
+</header>
+
+<section id="catalog-content" class="participant-catalog" tabindex="-1">
+  <section class="catalog-hero" aria-labelledby="catalog-title">
+    <p class="eyebrow">CURSOS DISPONIBLES</p>
+    <h1 id="catalog-title">Encuentra tu próximo curso</h1>
+    <p>Explora oportunidades de aprendizaje creadas para acompañar tu desarrollo profesional.</p>
+  </section>
+
+  <section class="catalog-controls" aria-label="Buscar y filtrar cursos">
+    <label class="search-field" for="course-search"><span>Buscar cursos</span><input #search id="course-search" class="search-input" type="search" placeholder="Nombre, código o instructor" [value]="query()" (input)="onSearch(search.value)"></label>
+  </section>
+
+  <section class="catalog-results" aria-labelledby="results-title">
+    <div class="results-heading"><div><p class="eyebrow">OFERTA FORMATIVA</p><h2 id="results-title">Cursos para ti</h2></div><p class="result-count" role="status" aria-live="polite" aria-atomic="true">{{ filteredCourses().length }} {{ filteredCourses().length === 1 ? 'curso disponible' : 'cursos disponibles' }}</p></div>
+    @if (loading()) {
+      <div class="empty-state" role="status" aria-live="polite"><p class="eyebrow">CARGANDO</p><h3>Estamos cargando los cursos disponibles</h3></div>
+    } @else if (loadFailed()) {
+      <div class="empty-state catalog-error" role="alert"><p class="eyebrow">NO DISPONIBLE</p><h3>No pudimos cargar los cursos</h3><p>Verifica que el backend esté en ejecución e inténtalo nuevamente.</p></div>
+    } @else if (filteredCourses().length) {
+      <div class="catalog-grid">
+        @for (course of filteredCourses(); track course.id) {
+          <article class="course-card">
+            <div class="card-topline"><span class="course-code">{{ course.code }}</span></div>
+            <h3>{{ course.name }}</h3><p class="course-summary">{{ course.content }}</p>
+            <dl class="course-meta"><div><dt>Duración</dt><dd>{{ course.durationHours }} horas</dd></div><div><dt>Instructor</dt><dd>{{ course.instructor }}</dd></div><div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div></dl>
+            <button class="course-action" type="button" disabled aria-disabled="true">Detalles próximamente</button>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="empty-state"><p class="eyebrow">SIN RESULTADOS</p><h3>No encontramos cursos con esos filtros</h3><p>Prueba otra búsqueda o vuelve a ver todas las áreas disponibles.</p><button class="clear-filters" type="button" (click)="clearFilters()">Limpiar filtros</button></div>
+    }
+  </section>
+</section>

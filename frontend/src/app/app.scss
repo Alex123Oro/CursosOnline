@@ -105,6 +105,15 @@
   min-width: 0;
 }
 
+.public-shell {
+  display: block;
+  background: #f3f8f7;
+}
+
+.public-content {
+  min-width: 0;
+}
+
 @media (max-width: 800px) {
   .sidebar {
     width: 68px;

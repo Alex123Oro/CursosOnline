@@ -1,12 +1,14 @@
-<div class="shell">
+<div class="shell" [class.public-shell]="isPublicRoute()">
+  @if (!isPublicRoute()) {
   <aside class="sidebar">
     <div class="brand"><span class="brand-mark">E</span><span>EVA ADMIN</span></div>
     <p class="nav-label">OPERACIÓN</p>
     <button class="nav-item active"><span>▦</span> Cursos</button>
     <div class="sidebar-footer"><strong>Administración</strong><small>Formación continua</small></div>
   </aside>
+  }
 
-  <main class="main-content">
+  <main id="app-content" class="main-content" [class.public-content]="isPublicRoute()">
     <router-outlet></router-outlet>
   </main>
 </div>

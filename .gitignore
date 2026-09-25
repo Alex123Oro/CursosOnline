@@ -9,3 +9,4 @@ frontend/dist/
 .angular/
 .vscode/
 *.log
+docs/
