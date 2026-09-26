@@ -47,6 +47,10 @@ export class CourseService {
     return this.http.get<Course[]>(`${this.apiUrl}/catalog`);
   }
 
+  catalogById(id: string): Observable<Course> {
+    return this.http.get<Course>(`${this.apiUrl}/catalog/${id}`);
+  }
+
   create(payload: CoursePayload): Observable<Course> {
     return this.http.post<Course>(this.apiUrl, payload);
   }

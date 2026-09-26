@@ -21,6 +21,26 @@ export const courseController = {
   },
 
   /**
+   * Retorna un curso publicado para el detalle público.
+   */
+  async catalogDetail(request: Request, response: Response) {
+    const rawId = request.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+    const courseId = Number(id);
+
+    if (!id || !Number.isInteger(courseId) || courseId <= 0) {
+      throw new HttpError(400, 'El identificador del curso no es valido.');
+    }
+
+    const course = await courseService.catalogById(courseId);
+    if (!course) {
+      throw new HttpError(404, 'El curso no esta disponible.');
+    }
+
+    response.json(course);
+  },
+
+  /**
    * Crea un curso nuevo.
    */
   async create(request: Request, response: Response) {

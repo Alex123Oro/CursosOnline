@@ -48,6 +48,8 @@ describe('ParticipantCatalogPage', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Programación con JavaScript');
     expect(fixture.nativeElement.querySelectorAll('.course-card')).toHaveLength(1);
+    const action = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.course-action');
+    expect(action?.getAttribute('href')).toBe('/catalogo/42');
   });
 
   it('filters courses from the API by a case-insensitive query across name, code and instructor', async () => {

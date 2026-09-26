@@ -82,6 +82,18 @@ export const courseService = {
   },
 
   /**
+   * Devuelve un curso publicado para el detalle público.
+   */
+  async catalogById(id: number) {
+    const course = await prisma.course.findFirst({
+      where: { id, status: 'PUBLISHED' },
+      select: courseSelect
+    });
+
+    return course ? toCourseResponse(course) : null;
+  },
+
+  /**
    * Crea un curso nuevo en estado borrador.
    */
   async create(input: CourseInput) {

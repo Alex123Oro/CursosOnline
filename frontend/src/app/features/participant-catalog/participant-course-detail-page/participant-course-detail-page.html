@@ -1,0 +1,42 @@
+<a class="skip-link" href="#course-detail-content">Saltar al contenido</a>
+<header class="catalog-header">
+  <a class="catalog-brand" routerLink="/catalogo" aria-label="EVA, cursos disponibles"><span class="brand-mark" aria-hidden="true">E</span><span>EVA</span></a>
+  <span class="catalog-header-label">Formación continua</span>
+</header>
+
+<section id="course-detail-content" class="course-detail" tabindex="-1">
+  <a class="back-link" routerLink="/catalogo">Volver a cursos</a>
+
+  @if (loading()) {
+    <div class="course-feedback" role="status" aria-live="polite"><p class="eyebrow">CARGANDO</p><h1>Estamos cargando el curso</h1></div>
+  } @else if (loadFailed()) {
+    <div class="course-feedback course-detail-error" role="alert"><p class="eyebrow">NO DISPONIBLE</p><h1>Este curso no está disponible</h1><p>Es posible que haya sido retirado o que el enlace ya no sea válido.</p><a class="return-link" routerLink="/catalogo">Volver al catálogo</a></div>
+  } @else if (course(); as course) {
+    <section class="course-hero" aria-labelledby="course-title">
+      <p class="eyebrow">{{ course.code }}</p>
+      <h1 id="course-title">{{ course.name }}</h1>
+      <p>{{ course.content }}</p>
+    </section>
+
+    <div class="course-detail-layout">
+      <section class="detail-card" aria-labelledby="course-information-title">
+        <h2 class="eyebrow">INFORMACIÓN DEL CURSO</h2>
+<!--         <h2 id="course-information-title">Todo lo que necesitas saber</h2> -->
+        <dl class="course-information">
+          <div><dt>Duración</dt><dd>{{ course.durationHours }} horas</dd></div>
+          <div><dt>Instructor</dt><dd>{{ course.instructor }}</dd></div>
+          <div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div>
+          <div><dt>Inicio</dt><dd>{{ formatDate(course.startDate) }}</dd></div>
+          <div><dt>Finalización</dt><dd>{{ formatDate(course.endDate) }}</dd></div>
+        </dl>
+      </section>
+
+      <aside class="criteria-card" aria-labelledby="criteria-title">
+        <p class="eyebrow">EVALUACIÓN</p>
+        <h2 id="criteria-title">Criterios de aprobación</h2>
+        <p>{{ course.approvalCriteria }}</p>
+        <p class="enrolment-note">La información de inscripciones estará disponible próximamente.</p>
+      </aside>
+    </div>
+  }
+</section>

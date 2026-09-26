@@ -26,11 +26,12 @@
 .course-code { color: var(--catalog-muted); letter-spacing: .05em; }
 .course-summary { margin: 0; color: var(--catalog-muted); font-size: 16px; line-height: 1.5; }
 .course-meta { display: grid; gap: 10px; margin: 24px 0; div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; } dt, dd { margin: 0; font-size: 14px; line-height: 1.35; } dt { color: #66807b; } dd { color: var(--catalog-ink); font-weight: 700; overflow-wrap: anywhere; } }
-.course-action { width: 100%; margin-top: auto; border: 0; color: #66807b; background: #edf3f2; cursor: not-allowed; }
+.course-action { display: flex; width: 100%; box-sizing: border-box; align-items: center; justify-content: center; margin-top: auto; color: #fff; background: var(--catalog-teal); text-decoration: none; transition: background 160ms ease; }
 .empty-state { max-width: 560px; padding: 40px; border: 1px dashed #aacbc4; border-radius: 14px; background: var(--catalog-surface); text-align: center; h3 { margin: 0; color: var(--catalog-ink); font: 800 22px/1.25 'Manrope', sans-serif; } > p:last-of-type { margin: 12px auto 24px; color: var(--catalog-muted); font-size: 16px; line-height: 1.5; } }
 .clear-filters { padding: 0 18px; border: 0; color: #fff; background: var(--catalog-teal); cursor: pointer; }
 .filter-button:hover:not(.active), .filter-button:focus-visible { border-color: var(--catalog-teal); background: #edf8f6; }
-.search-input:focus-visible, .filter-button:focus-visible, .clear-filters:focus-visible, .catalog-brand:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }
+.search-input:focus-visible, .filter-button:focus-visible, .clear-filters:focus-visible, .course-action:focus-visible, .catalog-brand:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }
+.course-action:hover { background: var(--catalog-teal-dark); }
 @media (max-width: 900px) { .catalog-controls { grid-template-columns: 1fr; } .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) { .catalog-header { min-height: 64px; padding: 0 20px; } .catalog-header-label { font-size: 13px; } .participant-catalog { min-height: calc(100vh - 64px); padding: 40px 20px; } .catalog-hero { margin-bottom: 32px; > p:last-child { font-size: 16px; } } .catalog-controls, .course-card, .empty-state { padding: 20px; } .results-heading { align-items: start; flex-direction: column; } .catalog-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }

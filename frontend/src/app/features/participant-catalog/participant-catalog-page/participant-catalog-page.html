@@ -28,7 +28,7 @@
             <div class="card-topline"><span class="course-code">{{ course.code }}</span></div>
             <h3>{{ course.name }}</h3><p class="course-summary">{{ course.content }}</p>
             <dl class="course-meta"><div><dt>Duración</dt><dd>{{ course.durationHours }} horas</dd></div><div><dt>Instructor</dt><dd>{{ course.instructor }}</dd></div><div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div></dl>
-            <button class="course-action" type="button" disabled aria-disabled="true">Detalles próximamente</button>
+            <a class="course-action" [routerLink]="['/catalogo', course.id]">Ver detalles</a>
           </article>
         }
       </div>
