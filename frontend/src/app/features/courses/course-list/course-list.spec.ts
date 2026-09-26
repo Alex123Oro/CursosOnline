@@ -36,4 +36,14 @@ describe('CourseList', () => {
 
     expect(component.filteredCourses()).toEqual([course]);
   });
+
+  it('muestra el botón Publicar activo para cursos en borrador', () => {
+    fixture.componentRef.setInput('courses', [course]);
+    fixture.detectChanges();
+
+    const publishButton = fixture.nativeElement.querySelector('button.publish') as HTMLButtonElement | null;
+
+    expect(publishButton?.disabled).toBe(false);
+    expect(getComputedStyle(publishButton!).cursor).toBe('pointer');
+  });
 });
