@@ -1,11 +1,7 @@
 :host { display: block; }
 
-.catalog-header, .participant-catalog { --catalog-ink: #174b48; --catalog-teal: #087f78; --catalog-teal-dark: #066a64; --catalog-surface: #fff; --catalog-background: #f3f8f7; --catalog-border: #d8e8e4; --catalog-muted: #5e7773; }
+.participant-catalog { --catalog-ink: #174b48; --catalog-teal: #087f78; --catalog-teal-dark: #066a64; --catalog-surface: #fff; --catalog-background: #f3f8f7; --catalog-border: #d8e8e4; --catalog-muted: #5e7773; }
 .skip-link { position: fixed; z-index: 2; top: 12px; left: 12px; padding: 10px 14px; border-radius: 6px; color: #fff; background: var(--catalog-teal, #087f78); transform: translateY(-160%); &:focus { transform: translateY(0); } }
-.catalog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 48px; border-bottom: 1px solid var(--catalog-border); background: var(--catalog-surface); }
-.catalog-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--catalog-ink); font: 800 18px/1 'Manrope', sans-serif; letter-spacing: .04em; text-decoration: none; }
-.brand-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; color: #fff; background: var(--catalog-teal); font-size: 16px; }
-.catalog-header-label { color: var(--catalog-muted); font-size: 14px; }
 .participant-catalog { min-height: calc(100vh - 72px); padding: 64px max(24px, calc((100vw - 1180px) / 2)); background: var(--catalog-background); }
 .catalog-hero { max-width: 720px; margin-bottom: 40px; h1, p { margin: 0; } h1 { max-width: 560px; color: var(--catalog-ink); font: 800 clamp(32px, 4vw, 48px)/1.1 'Manrope', sans-serif; letter-spacing: -.045em; } > p:last-child { max-width: 640px; margin-top: 16px; color: var(--catalog-muted); font-size: 17px; line-height: 1.55; } }
 .eyebrow { margin: 0 0 8px; color: var(--catalog-teal); font-size: 12px; font-weight: 800; letter-spacing: .08em; }
@@ -30,8 +26,8 @@
 .empty-state { max-width: 560px; padding: 40px; border: 1px dashed #aacbc4; border-radius: 14px; background: var(--catalog-surface); text-align: center; h3 { margin: 0; color: var(--catalog-ink); font: 800 22px/1.25 'Manrope', sans-serif; } > p:last-of-type { margin: 12px auto 24px; color: var(--catalog-muted); font-size: 16px; line-height: 1.5; } }
 .clear-filters { padding: 0 18px; border: 0; color: #fff; background: var(--catalog-teal); cursor: pointer; }
 .filter-button:hover:not(.active), .filter-button:focus-visible { border-color: var(--catalog-teal); background: #edf8f6; }
-.search-input:focus-visible, .filter-button:focus-visible, .clear-filters:focus-visible, .course-action:focus-visible, .catalog-brand:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }
+.search-input:focus-visible, .filter-button:focus-visible, .clear-filters:focus-visible, .course-action:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }
 .course-action:hover { background: var(--catalog-teal-dark); }
 @media (max-width: 900px) { .catalog-controls { grid-template-columns: 1fr; } .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .catalog-header { min-height: 64px; padding: 0 20px; } .catalog-header-label { font-size: 13px; } .participant-catalog { min-height: calc(100vh - 64px); padding: 40px 20px; } .catalog-hero { margin-bottom: 32px; > p:last-child { font-size: 16px; } } .catalog-controls, .course-card, .empty-state { padding: 20px; } .results-heading { align-items: start; flex-direction: column; } .catalog-grid { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .participant-catalog { min-height: calc(100vh - 64px); padding: 40px 20px; } .catalog-hero { margin-bottom: 32px; > p:last-child { font-size: 16px; } } .catalog-controls, .course-card, .empty-state { padding: 20px; } .results-heading { align-items: start; flex-direction: column; } .catalog-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }

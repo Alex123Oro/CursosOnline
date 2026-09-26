@@ -59,6 +59,7 @@ describe('ParticipantCourseDetailPage', () => {
     expect(content).toContain('Valeria Ríos');
     expect(content).toContain('Martes y jueves');
     expect(content).toContain('Nota mínima de 70/100');
+    expect(fixture.nativeElement.querySelector('app-participant-header')).not.toBeNull();
     const backLink = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.back-link');
     expect(backLink?.getAttribute('href')).toBe('/catalogo');
   });

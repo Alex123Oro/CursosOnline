@@ -48,6 +48,7 @@ describe('ParticipantCatalogPage', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Programación con JavaScript');
     expect(fixture.nativeElement.querySelectorAll('.course-card')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('app-participant-header')).not.toBeNull();
     const action = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.course-action');
     expect(action?.getAttribute('href')).toBe('/catalogo/42');
   });

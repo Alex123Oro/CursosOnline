@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Course, CourseService } from '../../../core/course.service';
+import { ParticipantHeader } from '../shared/participant-header/participant-header';
 
 @Component({
   selector: 'app-participant-course-detail-page',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, ParticipantHeader],
   templateUrl: './participant-course-detail-page.html',
   styleUrl: './participant-course-detail-page.scss'
 })

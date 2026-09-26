@@ -1,0 +1,7 @@
+:host { display: block; --catalog-ink: #174b48; --catalog-teal: #087f78; --catalog-surface: #fff; --catalog-border: #d8e8e4; --catalog-muted: #5e7773; }
+.catalog-header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 48px; border-bottom: 1px solid var(--catalog-border); background: var(--catalog-surface); }
+.catalog-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--catalog-ink); font: 800 18px/1 'Manrope', sans-serif; letter-spacing: .04em; text-decoration: none; }
+.brand-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; color: #fff; background: var(--catalog-teal); font-size: 16px; }
+.catalog-header-label { color: var(--catalog-muted); font-size: 14px; }
+.catalog-brand:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }
+@media (max-width: 620px) { .catalog-header { min-height: 64px; padding: 0 20px; } .catalog-header-label { font-size: 13px; } }
