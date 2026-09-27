@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum CourseStatus {
+  DRAFT     @map("borrador")
+  PUBLISHED @map("publicado")
+
+  @@map("estado_curso")
+}
+
 model Course {
   id               Int       @id @default(autoincrement())
   code             String?   @unique @map("codigo")
@@ -16,7 +23,7 @@ model Course {
   instructor       String?   @map("instructor")
   schedule         String?   @map("horario")
   approvalCriteria String?   @map("criterios_aprobacion")
-  status           String    @default("DRAFT") @map("estado")
+  status           CourseStatus @default(DRAFT) @map("estado")
   startDate        DateTime? @map("fecha_inicio")
   endDate          DateTime? @map("fecha_fin")
   createdAt        DateTime  @default(now()) @map("created_at")
