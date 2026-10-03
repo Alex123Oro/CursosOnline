@@ -42,6 +42,24 @@ npm start
 
 El frontend estará disponible en `http://localhost:4200` y el backend en `http://localhost:3000`.
 
+## Ejecutar en produccion
+
+Compila el frontend y el backend, y luego inicia Express:
+
+```bash
+cd frontend
+npm run build
+cd ../backend
+npm run build
+npm start
+```
+
+Abre `http://localhost:3000` (o el puerto configurado en `PUERTO`). Express sirve
+`frontend/dist/frontend/browser` y la API desde el mismo origen, por lo que
+la URL `/api` del frontend de produccion funciona sin un proxy adicional.
+Conserva ambas carpetas al desplegar. Las rutas de Angular tambien se sirven
+desde `index.html` al recargar la pagina.
+
 ## Estructura
 
 ```text

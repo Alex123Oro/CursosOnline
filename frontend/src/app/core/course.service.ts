@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export type CourseStatus = 'DRAFT' | 'PUBLISHED';
 
@@ -28,14 +29,13 @@ export interface CoursePayload {
   instructor: string;
   schedule: string;
   approvalCriteria: string;
-  status?: CourseStatus;
   startDate?: string | null;
   endDate?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
 export class CourseService {
-  private readonly apiUrl = 'http://localhost:3000/api/courses';
+  private readonly apiUrl = `${environment.apiBaseUrl}/courses`;
 
   constructor(private readonly http: HttpClient) {}
 

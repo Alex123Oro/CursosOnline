@@ -1,14 +1,21 @@
 import express from 'express';
 import cors from 'cors';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { env } from './config/env.js';
 import { supabase } from './config/supabase.js';
 import { prisma } from './config/prisma.js';
 import { courseRoutes } from './modules/courses/course.routes.js';
 import { errorMiddleware } from './shared/error.middleware.js';
 
 const app = express();
-const port = Number(process.env.PUERTO ?? 3000);
+const allowAnyOrigin = env.corsOrigins.includes('*');
 
-app.use(cors());
+app.use(cors({
+	origin: allowAnyOrigin ? true : env.corsOrigins,
+	optionsSuccessStatus: 204
+}));
 app.use(express.json());
 
 app.get('/api/health', (_request, response) => {
@@ -18,6 +25,15 @@ app.get('/api/health', (_request, response) => {
 app.use('/api/courses', courseRoutes);
 
 app.get('/api/supabase/health', async (_request, response) => {
+	if (!supabase) {
+		response.status(503).json({
+			ok: false,
+			servicio: 'supabase-auth',
+			error: 'Supabase no esta configurado.'
+		});
+		return;
+	}
+
 	const { error: authError } = await supabase.auth.getSession();
 
 	if (authError) {
@@ -34,8 +50,18 @@ app.get('/api/supabase/health', async (_request, response) => {
 	}
 });
 
+const frontendDirectory = fileURLToPath(new URL('../../frontend/dist/frontend/browser/', import.meta.url));
+const frontendIndex = join(frontendDirectory, 'index.html');
+
+if (existsSync(frontendIndex)) {
+	app.use(express.static(frontendDirectory));
+	app.get(/^\/(?!api(?:\/|$)).*/, (_request, response) => {
+		response.sendFile(frontendIndex);
+	});
+}
+
 app.use(errorMiddleware);
 
-app.listen(port, () => {
-	console.log(`Backend escuchando en http://localhost:${port}`);
+app.listen(env.port, () => {
+	console.log(`Backend escuchando en http://localhost:${env.port}`);
 });

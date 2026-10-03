@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { BehaviorSubject } from 'rxjs';
 import { Course } from '../../../core/course.service';
 import { ParticipantCourseDetailPage } from './participant-course-detail-page';
+import { environment } from '../../../../environments/environment';
 
 describe('ParticipantCourseDetailPage', () => {
   let fixture: ComponentFixture<ParticipantCourseDetailPage>;
@@ -47,7 +48,7 @@ describe('ParticipantCourseDetailPage', () => {
   afterEach(() => httpTesting.verify());
 
   it('shows all available public course information', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog/42');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
     request.flush(course);
 
     await fixture.whenStable();
@@ -65,7 +66,7 @@ describe('ParticipantCourseDetailPage', () => {
   });
 
   it('shows a not-available message when the course cannot be loaded', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog/42');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
     request.flush({ message: 'El curso no esta disponible.' }, { status: 404, statusText: 'Not Found' });
 
     await fixture.whenStable();
@@ -74,12 +75,12 @@ describe('ParticipantCourseDetailPage', () => {
   });
 
   it('loads the next course after a not-available result on the same route', async () => {
-    const unavailableRequest = httpTesting.expectOne('http://localhost:3000/api/courses/catalog/42');
+    const unavailableRequest = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
     unavailableRequest.flush({ message: 'El curso no esta disponible.' }, { status: 404, statusText: 'Not Found' });
     await fixture.whenStable();
 
     paramMap.next(convertToParamMap({ id: '7' }));
-    const nextRequest = httpTesting.expectOne('http://localhost:3000/api/courses/catalog/7');
+    const nextRequest = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/7`);
     nextRequest.flush({ ...course, id: '7', name: 'Administración Básica de Linux' });
     await fixture.whenStable();
 

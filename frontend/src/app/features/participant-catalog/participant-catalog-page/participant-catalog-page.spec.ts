@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { Course } from '../../../core/course.service';
 import { ParticipantCatalogPage } from './participant-catalog-page';
+import { environment } from '../../../../environments/environment';
 
 describe('ParticipantCatalogPage', () => {
   let fixture: ComponentFixture<ParticipantCatalogPage>;
@@ -40,7 +41,7 @@ describe('ParticipantCatalogPage', () => {
   afterEach(() => httpTesting.verify());
 
   it('loads published courses from the catalogue API', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`);
     expect(request.request.method).toBe('GET');
     request.flush([catalogCourse]);
 
@@ -54,7 +55,7 @@ describe('ParticipantCatalogPage', () => {
   });
 
   it('filters courses from the API by a case-insensitive query across name, code and instructor', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`);
     request.flush([catalogCourse]);
     await fixture.whenStable();
 
@@ -67,7 +68,7 @@ describe('ParticipantCatalogPage', () => {
   });
 
   it('shows an actionable empty state and clears the search query', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`);
     request.flush([catalogCourse]);
     await fixture.whenStable();
 
@@ -85,7 +86,7 @@ describe('ParticipantCatalogPage', () => {
   });
 
   it('shows an error message when the catalogue API is unavailable', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`);
     request.error(new ProgressEvent('error'));
 
     await fixture.whenStable();
@@ -94,7 +95,7 @@ describe('ParticipantCatalogPage', () => {
   });
 
   it('uses a labelled content section rather than nesting a second main landmark', async () => {
-    const request = httpTesting.expectOne('http://localhost:3000/api/courses/catalog');
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`);
     request.flush([]);
     await fixture.whenStable();
 
