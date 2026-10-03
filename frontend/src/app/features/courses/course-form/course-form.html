@@ -41,13 +41,16 @@
       </label>
 
       <label>
-        <span>Fecha de inicio *</span>
+        <span>Fecha de inicio</span>
         <input type="date" formControlName="startDate">
       </label>
 
       <label>
-        <span>Fecha de fin *</span>
+        <span>Fecha de fin</span>
         <input type="date" formControlName="endDate">
+        @if (form.hasError('dateRange') && (form.touched || form.dirty)) {
+          <small>La fecha de fin no puede ser anterior a la de inicio.</small>
+        }
       </label>
 
       <label class="full">

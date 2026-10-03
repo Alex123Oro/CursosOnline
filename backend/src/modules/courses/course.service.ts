@@ -38,9 +38,13 @@ const toCourseResponse = (course: CourseRecord) => ({
 });
 
 const toCourseData = (input: CourseInput) => ({
-  ...input,
   code: input.code ?? null,
-  status: input.status ?? 'DRAFT',
+  name: input.name,
+  content: input.content,
+  durationHours: input.durationHours,
+  instructor: input.instructor,
+  schedule: input.schedule,
+  approvalCriteria: input.approvalCriteria,
   startDate: input.startDate ? new Date(input.startDate) : null,
   endDate: input.endDate ? new Date(input.endDate) : null
 });
@@ -99,7 +103,10 @@ export const courseService = {
   async create(input: CourseInput) {
     try {
       const course = await prisma.course.create({
-        data: toCourseData(input),
+        data: {
+          ...toCourseData(input),
+          status: 'DRAFT'
+        },
         select: courseSelect
       });
 
@@ -113,6 +120,24 @@ export const courseService = {
    * Actualiza la información del curso.
    */
   async update(id: number, input: CourseInput) {
+    const existing = await prisma.course.findUnique({
+      where: { id },
+      select: { status: true }
+    });
+
+    if (!existing) {
+      throw new HttpError(404, 'Curso no encontrado.');
+    }
+
+    if (existing.status === 'PUBLISHED') {
+      canPublishCourse({
+        instructor: input.instructor,
+        schedule: input.schedule,
+        startDate: input.startDate ?? null,
+        endDate: input.endDate ?? null
+      });
+    }
+
     try {
       const course = await prisma.course.update({
         where: { id },

@@ -1,7 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Course, CoursePayload } from '../../../core/course.service';
+
+const dateRangeValidator = (group: AbstractControl): ValidationErrors | null => {
+  const startDate = group.get('startDate')?.value;
+  const endDate = group.get('endDate')?.value;
+
+  if (startDate && endDate && startDate > endDate) {
+    return { dateRange: true };
+  }
+
+  return null;
+};
 
 @Component({
   selector: 'app-course-form',
@@ -29,7 +40,7 @@ export class CourseForm implements OnChanges {
     approvalCriteria: ['', [Validators.required, Validators.minLength(3)]],
     startDate: [''],
     endDate: ['']
-  });
+  }, { validators: dateRangeValidator });
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['course']) {
