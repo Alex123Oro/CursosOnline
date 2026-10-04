@@ -3,5 +3,7 @@
 .catalog-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--catalog-ink); font: 800 18px/1 'Manrope', sans-serif; letter-spacing: .04em; text-decoration: none; }
 .brand-mark { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; color: #fff; background: var(--catalog-teal); font-size: 16px; }
 .catalog-header-label { color: var(--catalog-muted); font-size: 14px; }
+.header-tools { display: flex; align-items: center; gap: 16px; }
+.session-select { display: flex; align-items: center; gap: 8px; color: var(--catalog-muted); font-size: 12px; font-weight: 700; select { border: 1px solid var(--catalog-border); border-radius: 6px; padding: 7px 8px; color: var(--catalog-ink); background: #fff; font-size: 12px; } }
 .catalog-brand:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }
 @media (max-width: 620px) { .catalog-header { min-height: 64px; padding: 0 20px; } .catalog-header-label { font-size: 13px; } }

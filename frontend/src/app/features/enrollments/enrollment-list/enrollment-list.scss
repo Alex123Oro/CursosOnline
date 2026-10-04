@@ -46,7 +46,7 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 700px;
+  min-width: 980px;
 }
 
 th {
@@ -63,26 +63,13 @@ td {
   color: #476c68;
   font-size: 10px;
   vertical-align: middle;
-
-  &:first-child {
-    width: 31%;
-  }
 }
 
-.course-name {
+.name {
   display: block;
-  border: 0;
-  padding: 0;
-  background: none;
   color: #1b5550;
   font-weight: 700;
   font-size: 10px;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    color: #087f78;
-  }
 
   & + small {
     display: block;
@@ -90,6 +77,12 @@ td {
     color: #899a97;
     font-size: 8px;
   }
+}
+
+.final {
+  color: #17605a;
+  font-weight: 800;
+  font-size: 12px;
 }
 
 .actions {
@@ -107,6 +100,7 @@ td {
   font-size: 9px;
   cursor: pointer;
 
+  &:disabled,
   &.publish:disabled {
     color: #a9bab6;
     background: #f3f6f5;

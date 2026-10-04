@@ -23,6 +23,13 @@ describe('ParticipantCatalogPage', () => {
     status: 'PUBLISHED',
     startDate: '2026-10-06',
     endDate: '2026-11-12',
+    capacity: 24,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31',
+    occupiedSlots: 0,
+    remainingSlots: 24,
+    prices: [],
+    enrollment: null,
     createdAt: '2026-09-24T00:00:00.000Z',
     updatedAt: '2026-09-24T00:00:00.000Z'
   };
@@ -38,7 +45,10 @@ describe('ParticipantCatalogPage', () => {
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpTesting.verify());
+  afterEach(() => {
+    httpTesting.match(req => req.url.includes('/session/users')).forEach(req => req.flush([]));
+    httpTesting.verify();
+  });
 
   it('loads published courses from the catalogue API', async () => {
     const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`);

@@ -10,7 +10,9 @@
 .detail-card, .criteria-card, .course-feedback { padding: 32px; border: 1px solid var(--catalog-border); border-radius: 14px; background: var(--catalog-surface); box-shadow: 0 8px 24px rgba(19, 74, 68, .05); }
 .detail-card h2, .criteria-card h2, .course-feedback h1 { margin: 0; color: var(--catalog-ink); font: 800 26px/1.2 'Manrope', sans-serif; letter-spacing: -.03em; }
 .course-information { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 32px 0 0; div { min-width: 0; padding-top: 18px; border-top: 1px solid var(--catalog-border); } dt, dd { margin: 0; } dt { margin-bottom: 7px; color: var(--catalog-muted); font-size: 14px; } dd { color: var(--catalog-ink); font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; } }
-.criteria-card { p:not(.eyebrow) { margin: 20px 0 0; color: var(--catalog-muted); font-size: 16px; line-height: 1.6; } .enrolment-note { padding-top: 20px; border-top: 1px solid var(--catalog-border); font-size: 14px; } }
+.criteria-card { p:not(.eyebrow) { margin: 20px 0 0; color: var(--catalog-muted); font-size: 16px; line-height: 1.6; } .enrolment-note { padding-top: 20px; border-top: 1px solid var(--catalog-border); font-size: 14px; } .enrolment-note.success { color: #17645e; font-weight: 700; } }
+.economic { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--catalog-border); p { margin: 0 0 8px !important; font-size: 14px; } strong { display: block; color: var(--catalog-ink); font: 800 26px/1.2 'Manrope', sans-serif; } }
+.enrol-btn { width: 100%; margin-top: 20px; border: 0; cursor: pointer; &:disabled { opacity: .62; cursor: not-allowed; } }
 .course-feedback { max-width: 620px; margin-top: 40px; text-align: center; > p:last-of-type { margin: 14px auto 24px; color: var(--catalog-muted); line-height: 1.55; } }
 .return-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0 18px; border-radius: 8px; color: #fff; background: var(--catalog-teal); font: 700 14px/1 'Manrope', sans-serif; text-decoration: none; }
 .back-link:focus-visible, .return-link:focus-visible { outline: 3px solid #cf7b23; outline-offset: 3px; }

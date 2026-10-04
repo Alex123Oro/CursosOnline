@@ -1,4 +1,14 @@
 <header class="catalog-header">
   <a class="catalog-brand" routerLink="/catalogo" aria-label="EVA, cursos disponibles"><span class="brand-mark" aria-hidden="true">E</span><span>EVA</span></a>
-  <span class="catalog-header-label">{{ label() }}</span>
+  <div class="header-tools">
+    <span class="catalog-header-label">{{ label() }}</span>
+    <label class="session-select">
+      <span>Sesión</span>
+      <select [value]="session.userId()" (change)="onSessionChange($any($event.target).value)">
+        @for (user of session.users(); track user.id) {
+          <option [value]="user.id">{{ user.name }}</option>
+        }
+      </select>
+    </label>
+  </div>
 </header>

@@ -1,0 +1,61 @@
+<div class="toolbar">
+  <label class="search"><span>⌕</span><input placeholder="Buscar por participante, curso o tipo" [value]="query()" (input)="onSearch($any($event.target).value)"></label>
+  <span class="results">{{ filteredEnrollments().length }} resultados</span>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>PARTICIPANTE</th>
+        <th>CURSO</th>
+        <th>TIPO</th>
+        <th>ESTADO</th>
+        <th>PRECIO</th>
+        <th>BECA</th>
+        <th>MONTO FINAL</th>
+        <th>PAGO</th>
+        <th>ACCIÓN</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        <tr><td colspan="9">Cargando inscripciones...</td></tr>
+      } @else {
+        @for (enrollment of filteredEnrollments(); track enrollment.id) {
+          <tr>
+            <td>
+              <strong class="name">{{ enrollment.participantName }}</strong>
+              <small>{{ enrollment.participantEmail }}</small>
+            </td>
+            <td>
+              <strong class="name">{{ enrollment.courseName }}</strong>
+              <small>{{ enrollment.courseCode }}</small>
+            </td>
+            <td>{{ enrollment.participantTypeName }}</td>
+            <td>
+              <span class="badge" [class.draft]="enrollment.status !== 'INSCRITO'" [class.published]="enrollment.status === 'INSCRITO'">
+                {{ enrollment.status === 'INSCRITO' ? 'Inscrito' : 'Preinscrito' }}
+              </span>
+            </td>
+            <td>{{ enrollment.basePrice }} Bs</td>
+            <td>{{ enrollment.scholarshipPercent }} %</td>
+            <td class="final">{{ enrollment.finalAmount }} Bs</td>
+            <td>
+              <span class="badge" [class.published]="enrollment.paymentRegistered || enrollment.finalAmount === 0" [class.draft]="!enrollment.paymentRegistered && enrollment.finalAmount > 0">
+                {{ enrollment.finalAmount === 0 ? 'No requiere' : (enrollment.paymentRegistered ? 'Registrado' : 'Pendiente') }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="more" (click)="assignScholarship.emit(enrollment)">Asignar beca</button>
+              <button class="more" [disabled]="enrollment.finalAmount === 0" (click)="registerPayment.emit(enrollment)">Registrar pago</button>
+              <button class="more publish" [disabled]="enrollment.status !== 'PREINSCRITO'" (click)="confirmEnrollment.emit(enrollment)">Confirmar inscripción</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="9">No hay preinscripciones para mostrar.</td></tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

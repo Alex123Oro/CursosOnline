@@ -24,6 +24,13 @@ describe('ParticipantCourseDetailPage', () => {
     status: 'PUBLISHED',
     startDate: '2026-10-06',
     endDate: '2026-11-12',
+    capacity: 24,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31',
+    occupiedSlots: 0,
+    remainingSlots: 24,
+    prices: [{ participantTypeId: '1', participantTypeName: 'Estudiante', basePrice: 400 }],
+    enrollment: null,
     createdAt: '2026-09-24T00:00:00.000Z',
     updatedAt: '2026-09-24T00:00:00.000Z'
   };
@@ -45,7 +52,10 @@ describe('ParticipantCourseDetailPage', () => {
     httpTesting = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpTesting.verify());
+  afterEach(() => {
+    httpTesting.match(req => req.url.includes('/session/users')).forEach(req => req.flush([]));
+    httpTesting.verify();
+  });
 
   it('shows all available public course information', async () => {
     const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
@@ -63,6 +73,7 @@ describe('ParticipantCourseDetailPage', () => {
     expect(fixture.nativeElement.querySelector('app-participant-header')).not.toBeNull();
     const backLink = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.back-link');
     expect(backLink?.getAttribute('href')).toBe('/catalogo');
+    expect(content).toContain('Preinscribirme');
   });
 
   it('shows a not-available message when the course cannot be loaded', async () => {

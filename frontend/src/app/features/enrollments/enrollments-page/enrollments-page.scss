@@ -1,3 +1,48 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 43px 42px 24px;
+  max-width: 1240px;
+  margin: auto;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--teal, #087f78);
+  font-weight: 800;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #174b48;
+  font: 800 25px/1.2 'Manrope', sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: #77908c;
+  font-size: 11px;
+}
+
+.app-feedback {
+  max-width: 1240px;
+  margin: 0 auto 12px;
+  padding: 0 42px;
+  color: #17645e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.table-card {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 42px 32px;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -10,19 +55,11 @@
 
 .modal {
   position: relative;
-  width: min(460px, 100%);
+  width: min(560px, 100%);
   padding: 30px;
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  color: #087f78;
-  font-weight: 800;
 }
 
 .close {
@@ -43,15 +80,13 @@
 }
 
 .form-modal {
-  width: min(560px, 100%);
   max-height: calc(100vh - 40px);
   overflow: auto;
 }
 
 .course-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 13px 14px;
+  gap: 13px;
 
   label {
     display: flex;
@@ -62,8 +97,7 @@
     font-weight: 700;
   }
 
-  input,
-  textarea {
+  input {
     width: 100%;
     box-sizing: border-box;
     border: 1px solid #dbe9e6;
@@ -75,12 +109,7 @@
     outline: 0;
   }
 
-  textarea {
-    resize: vertical;
-  }
-
-  input:focus,
-  textarea:focus {
+  input:focus {
     border-color: #0a8e84;
     box-shadow: 0 0 0 3px rgba(10, 142, 132, 0.1);
   }
@@ -90,25 +119,22 @@
     font-size: 9px;
     font-weight: 700;
   }
+}
 
-  .full {
-    grid-column: 1 / -1;
+.economic {
+  padding: 12px 0;
+  color: #55736f;
+  font-size: 11px;
+
+  p {
+    margin: 0 0 6px;
   }
-}
 
-.prices-block .eyebrow {
-  margin-bottom: 10px;
-}
-
-.prices-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 13px 14px;
-}
-
-@media (max-width: 620px) {
-  .prices-grid {
-    grid-template-columns: 1fr;
+  strong {
+    display: block;
+    margin-top: 8px;
+    color: #17605a;
+    font: 800 20px 'Manrope', sans-serif;
   }
 }
 
@@ -144,4 +170,16 @@
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .page-header {
+    padding: 30px 20px 20px;
+  }
+
+  .table-card,
+  .app-feedback {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }

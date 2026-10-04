@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { finalize } from 'rxjs';
-import { Course, CoursePayload, CourseService } from '../../../core/course.service';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { switchMap } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { Course, CoursePayload, CoursePricesPayload, CourseService, ParticipantType } from '../../../core/course.service';
 import { CourseForm } from '../course-form/course-form';
 import { CourseList } from '../course-list/course-list';
+import { SessionService } from '../../../core/session.service';
 
 type FormMode = 'create' | 'edit';
 
@@ -17,17 +19,36 @@ type FormMode = 'create' | 'edit';
 })
 export class CoursesPage {
   private readonly courseService = inject(CourseService);
+  private readonly session = inject(SessionService);
 
   readonly courses = signal<Course[]>([]);
+  readonly participantTypes = signal<ParticipantType[]>([]);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
   readonly isFormOpen = signal(false);
   readonly formMode = signal<FormMode>('create');
   readonly editingCourse = signal<Course | null>(null);
   readonly feedback = signal('');
+  readonly publishedCount = computed(() => this.courses().filter(course => course.status === 'PUBLISHED').length);
+  readonly openEnrollmentCount = computed(() => this.courses().filter(course =>
+    course.status === 'PUBLISHED' && (course.remainingSlots === null || course.remainingSlots > 0)
+  ).length);
+  readonly periodCount = computed(() => this.courses().filter(course => course.preinscriptionStart && course.preinscriptionEnd).length);
 
   constructor() {
-    this.loadCourses();
+    effect(onCleanup => {
+      const user = this.session.currentUser();
+      this.courses.set([]);
+      this.feedback.set('');
+      this.isLoading.set(false);
+      this.closeForm();
+      if (!user) return;
+      const subscription = untracked(() => this.loadCourses());
+      onCleanup(() => subscription.unsubscribe());
+    });
+    this.courseService.participantTypes().subscribe({
+      next: types => this.participantTypes.set(types)
+    });
   }
 
   openCreateForm() {
@@ -48,14 +69,17 @@ export class CoursesPage {
     this.isFormOpen.set(false);
   }
 
-  handleSave(payload: CoursePayload) {
+  handleSave(payload: { course: CoursePayload; prices: CoursePricesPayload }) {
     const editing = this.editingCourse();
     const request = editing
-      ? this.courseService.update(editing.id, payload)
-      : this.courseService.create(payload);
+      ? this.courseService.update(editing.id, payload.course)
+      : this.courseService.create(payload.course);
 
     this.isSaving.set(true);
-    request.pipe(finalize(() => this.isSaving.set(false))).subscribe({
+    request.pipe(
+      switchMap(course => this.courseService.replacePrices(course.id, payload.prices)),
+      finalize(() => this.isSaving.set(false))
+    ).subscribe({
       next: () => {
         this.feedback.set(editing ? 'Curso actualizado correctamente.' : 'Curso registrado correctamente.');
         this.closeForm();
@@ -80,7 +104,7 @@ export class CoursesPage {
 
   private loadCourses() {
     this.isLoading.set(true);
-    this.courseService.list()
+    return this.courseService.list()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: courses => this.courses.set(courses),
