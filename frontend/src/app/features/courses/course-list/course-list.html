@@ -16,7 +16,7 @@
           <tr>
             <td>
               <button class="course-name" (click)="editCourse.emit(course)">{{ course.name }}</button>
-              <small>{{ course.code }}</small>
+              <small>{{ course.code }}@if (course.capacity) { · {{ course.occupiedSlots }}/{{ course.capacity }} cupos }</small>
             </td>
             <td>{{ course.durationHours }}</td>
             <td>{{ course.schedule }}</td>
@@ -28,6 +28,7 @@
             </td>
             <td class="actions">
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
+              <button class="more" (click)="editCourse.emit(course)">Precios</button>
               <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">
                 {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Publicar' }}
               </button>

@@ -96,6 +96,22 @@
   }
 }
 
+.prices-block .eyebrow {
+  margin-bottom: 10px;
+}
+
+.prices-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px 14px;
+}
+
+@media (max-width: 620px) {
+  .prices-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

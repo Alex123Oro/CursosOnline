@@ -1,0 +1,99 @@
+<section class="page-header">
+  <div>
+    <p class="eyebrow">ADMINISTRACIÓN / INSCRIPCIONES</p>
+    <h1>Preinscritos e inscripciones</h1>
+    <p class="subtitle">Consulta participantes, asigna becas, verifica pagos y confirma la inscripción.</p>
+  </div>
+</section>
+
+@if (feedback()) {
+  <p class="app-feedback">{{ feedback() }}</p>
+}
+
+<section class="table-card">
+  <app-enrollment-list
+    [enrollments]="enrollments()"
+    [loading]="isLoading()"
+    (assignScholarship)="openScholarship($event)"
+    (registerPayment)="openPayment($event)"
+    (confirmEnrollment)="openConfirm($event)">
+  </app-enrollment-list>
+</section>
+
+@if (modal() === 'scholarship' && selected(); as enrollment) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <section class="modal form-modal" (click)="$event.stopPropagation()">
+      <button class="close" (click)="closeModal()">×</button>
+      <p class="eyebrow">ASIGNAR BECA</p>
+      <h2>{{ enrollment.participantName }}</h2>
+      <form [formGroup]="scholarshipForm" (ngSubmit)="saveScholarship()" class="course-form">
+        <label class="full">
+          <span>Porcentaje de beca *</span>
+          <input type="number" min="0" max="100" formControlName="scholarshipPercent">
+          @if (scholarshipForm.controls.scholarshipPercent.invalid && scholarshipForm.controls.scholarshipPercent.touched) {
+            <small>El porcentaje de beca debe estar entre 0 % y 100 %.</small>
+          }
+        </label>
+        @if (previewAmounts(); as amounts) {
+          <div class="economic full">
+            <p>Precio base: {{ enrollment.basePrice }} Bs</p>
+            <p>Beneficio aplicado: {{ scholarshipForm.controls.scholarshipPercent.value }} % (-{{ amounts.benefitAmount }} Bs)</p>
+            <strong>Monto final: {{ amounts.finalAmount }} Bs</strong>
+          </div>
+        }
+        <div class="form-actions full">
+          <button type="button" class="secondary-btn" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="primary-btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando...' : 'Guardar beca' }}</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (modal() === 'payment' && selected(); as enrollment) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <section class="modal form-modal" (click)="$event.stopPropagation()">
+      <button class="close" (click)="closeModal()">×</button>
+      <p class="eyebrow">REGISTRAR PAGO</p>
+      <h2>{{ enrollment.participantName }}</h2>
+      <form [formGroup]="paymentForm" (ngSubmit)="savePayment()" class="course-form">
+        <div class="economic full">
+          <p>Precio base: {{ enrollment.basePrice }} Bs</p>
+          <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
+          <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
+        </div>
+        <label class="full">
+          <span>Monto (Bs) *</span>
+          <input type="number" min="0" step="0.01" formControlName="amount">
+          @if (paymentForm.controls.amount.invalid && paymentForm.controls.amount.touched) {
+            <small>El monto no puede ser negativo.</small>
+          }
+        </label>
+        <div class="form-actions full">
+          <button type="button" class="secondary-btn" (click)="closeModal()">Cancelar</button>
+          <button type="submit" class="primary-btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando...' : 'Registrar pago' }}</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}
+
+@if (modal() === 'confirm' && selected(); as enrollment) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <section class="modal form-modal" (click)="$event.stopPropagation()">
+      <button class="close" (click)="closeModal()">×</button>
+      <p class="eyebrow">CONFIRMAR INSCRIPCIÓN</p>
+      <h2>¿Confirmar la inscripción de este participante?</h2>
+      <div class="economic">
+        <p>{{ enrollment.participantName }} · {{ enrollment.courseName }}</p>
+        <p>Precio base: {{ enrollment.basePrice }} Bs</p>
+        <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
+        <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="secondary-btn" (click)="closeModal()">Cancelar</button>
+        <button type="button" class="primary-btn" [disabled]="isSaving()" (click)="confirmSelected()">{{ isSaving() ? 'Confirmando...' : 'Confirmar inscripción' }}</button>
+      </div>
+    </section>
+  </div>
+}

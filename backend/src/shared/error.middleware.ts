@@ -13,7 +13,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _request, response, 
 
   if (error instanceof ZodError) {
     response.status(400).json({
-      message: 'Datos invalidos para registrar el curso.',
+      message: 'Datos invalidos.',
       fields: error.issues.map(issue => ({
         path: issue.path.join('.'),
         message: issue.message

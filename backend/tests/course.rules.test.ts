@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { HttpError } from '../src/shared/http-error.js';
-import { canPublishCourse, courseInputSchema } from '../src/modules/courses/course.rules.js';
+import { canPublishCourse, courseInputSchema, coursePricesSchema, scholarshipSchema } from '../src/modules/courses/course.rules.js';
 
 describe('course rules (HU-01)', () => {
   it('acepta un curso valido y rechaza duracion invalida', () => {
@@ -9,8 +9,7 @@ describe('course rules (HU-01)', () => {
       content: 'Contenido de seguridad para personal administrativo',
       durationHours: 12,
       instructor: 'Ana Lopez',
-      schedule: 'Martes y jueves 18:00-20:00',
-      approvalCriteria: 'Proyecto final'
+      schedule: 'Martes y jueves 18:00-20:00'
     })).not.toThrow();
 
     expect(() => courseInputSchema.parse({
@@ -37,7 +36,10 @@ describe('course rules (HU-02)', () => {
       instructor: 'Ana Lopez',
       schedule: 'Martes y jueves 18:00-20:00',
       startDate: '2026-10-01',
-      endDate: '2026-11-15'
+      endDate: '2026-11-15',
+      capacity: 20,
+      preinscriptionStart: '2026-09-01',
+      preinscriptionEnd: '2026-09-30'
     })).not.toThrow();
   });
 
@@ -66,7 +68,10 @@ describe('course rules (HU-02)', () => {
       instructor: 'Ana Lopez',
       schedule: 'Martes y jueves 18:00-20:00',
       startDate: '2026-11-15',
-      endDate: '2026-10-01'
+      endDate: '2026-10-01',
+      capacity: 20,
+      preinscriptionStart: '2026-09-01',
+      preinscriptionEnd: '2026-09-30'
     })).toThrow(HttpError);
   });
 });
@@ -100,5 +105,32 @@ describe('course input dates and status', () => {
     });
 
     expect(result).not.toHaveProperty('status');
+  });
+});
+
+describe('precios y becas', () => {
+  it('acepta un precio valido', () => {
+    expect(coursePricesSchema.parse({
+      items: [{ participantTypeId: 1, basePrice: 500 }]
+    }).items[0]?.basePrice).toBe(500);
+  });
+
+  it('rechaza un precio negativo', () => {
+    const result = coursePricesSchema.safeParse({
+      items: [{ participantTypeId: 1, basePrice: -1 }]
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('acepta becas de 0, parcial y 100', () => {
+    expect(scholarshipSchema.parse({ scholarshipPercent: 0 }).scholarshipPercent).toBe(0);
+    expect(scholarshipSchema.parse({ scholarshipPercent: 30 }).scholarshipPercent).toBe(30);
+    expect(scholarshipSchema.parse({ scholarshipPercent: 100 }).scholarshipPercent).toBe(100);
+  });
+
+  it('rechaza becas de -1 y 101', () => {
+    expect(scholarshipSchema.safeParse({ scholarshipPercent: -1 }).success).toBe(false);
+    expect(scholarshipSchema.safeParse({ scholarshipPercent: 101 }).success).toBe(false);
   });
 });

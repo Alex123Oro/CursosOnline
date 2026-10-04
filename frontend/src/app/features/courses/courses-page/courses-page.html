@@ -15,17 +15,17 @@
   <article class="metric">
     <span class="dot teal"></span>
     <small>Cursos activos</small>
-    <strong>{{ courses().filter(course => course.status === 'PUBLISHED').length }}</strong>
+    <strong>{{ publishedCount() }}</strong>
   </article>
-  <article class="metric muted">
+  <article class="metric">
     <span class="dot mint"></span>
     <small>Matrícula abierta</small>
-    <strong>—</strong>
+    <strong>{{ openEnrollmentCount() }}</strong>
   </article>
-  <article class="metric muted">
+  <article class="metric">
     <span class="dot orange"></span>
-    <small>Periodo</small>
-    <strong>—</strong>
+    <small>Con periodo</small>
+    <strong>{{ periodCount() }}</strong>
   </article>
   <article class="metric muted">
     <span class="dot red"></span>
@@ -47,6 +47,7 @@
   <app-course-form
     [mode]="formMode()"
     [course]="editingCourse()"
+    [participantTypes]="participantTypes()"
     [saving]="isSaving()"
     (save)="handleSave($event)"
     (cancel)="closeForm()">

@@ -18,6 +18,13 @@ describe('CourseList', () => {
     status: 'DRAFT',
     startDate: '2026-10-01',
     endDate: '2026-10-10',
+    capacity: 10,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-09-30',
+    occupiedSlots: 0,
+    remainingSlots: 10,
+    prices: [],
+    enrollment: null,
     createdAt: '2026-09-23T00:00:00.000Z',
     updatedAt: '2026-09-23T00:00:00.000Z'
   };

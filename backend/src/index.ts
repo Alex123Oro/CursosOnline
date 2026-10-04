@@ -7,6 +7,9 @@ import { env } from './config/env.js';
 import { supabase } from './config/supabase.js';
 import { prisma } from './config/prisma.js';
 import { courseRoutes } from './modules/courses/course.routes.js';
+import { enrollmentRoutes } from './modules/enrollments/enrollment.routes.js';
+import { participantTypeRoutes } from './modules/participant-types/participant-type.routes.js';
+import { sessionRoutes } from './modules/session/session.routes.js';
 import { errorMiddleware } from './shared/error.middleware.js';
 
 const app = express();
@@ -23,6 +26,9 @@ app.get('/api/health', (_request, response) => {
 });
 
 app.use('/api/courses', courseRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/participant-types', participantTypeRoutes);
+app.use('/api/session', sessionRoutes);
 
 app.get('/api/supabase/health', async (_request, response) => {
 	if (!supabase) {

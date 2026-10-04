@@ -24,14 +24,41 @@
           <div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div>
           <div><dt>Inicio</dt><dd>{{ formatDate(course.startDate) }}</dd></div>
           <div><dt>Finalización</dt><dd>{{ formatDate(course.endDate) }}</dd></div>
+          <div><dt>Preinscripción</dt><dd>{{ formatDate(course.preinscriptionStart) }} — {{ formatDate(course.preinscriptionEnd) }}</dd></div>
+          <div><dt>Cupos</dt><dd>{{ course.remainingSlots === null ? 'Por confirmar' : course.remainingSlots + ' disponibles' }}</dd></div>
         </dl>
       </section>
 
-      <aside class="criteria-card" aria-labelledby="criteria-title">
-        <p class="eyebrow">EVALUACIÓN</p>
-        <h2 id="criteria-title">Criterios de aprobación</h2>
-        <p>{{ course.approvalCriteria }}</p>
-        <p class="enrolment-note">La información de inscripciones estará disponible próximamente.</p>
+      <aside class="criteria-card" aria-labelledby="enrollment-title">
+        <h2 id="enrollment-title">Preinscripción</h2>
+
+        @if (applicablePrice(); as price) {
+          <div class="economic">
+            <p>Precio base: {{ price.basePrice }} Bs</p>
+            @if (course.enrollment; as enrollment) {
+              <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
+              <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
+            } @else {
+              <strong>Monto final: {{ price.basePrice }} Bs</strong>
+            }
+          </div>
+        }
+
+        @if (feedback()) {
+          <p class="enrolment-note success">{{ feedback() }}</p>
+        }
+
+        @if (course.enrollment) {
+          <p class="enrolment-note">Ya estás {{ course.enrollment.status === 'INSCRITO' ? 'inscrito' : 'preinscrito' }} en este curso.</p>
+        } @else if (noSlots(course)) {
+          <p class="enrolment-note">No existen cupos disponibles para este curso.</p>
+        } @else if (periodClosed(course)) {
+          <p class="enrolment-note">El periodo de preinscripción ha finalizado.</p>
+        } @else {
+          <button class="return-link enrol-btn" type="button" [disabled]="saving()" (click)="preenroll()">
+            {{ saving() ? 'Guardando...' : 'Preinscribirme' }}
+          </button>
+        }
       </aside>
     </div>
   }
