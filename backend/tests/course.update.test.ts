@@ -38,11 +38,16 @@ describe('course updates', () => {
     findUnique.mockResolvedValue({ status });
     const edited = status === 'DRAFT'
       ? input
-      : { ...input, startDate: '2026-10-01', endDate: '2026-11-01' };
+      : { ...input, startDate: '2026-10-01', endDate: '2026-11-01', capacity: 20, preinscriptionStart: '2026-09-01', preinscriptionEnd: '2026-09-30' };
     update.mockResolvedValue({
       ...edited, id: 7, code: null, status,
       startDate: edited.startDate ? new Date(edited.startDate) : null,
       endDate: edited.endDate ? new Date(edited.endDate) : null,
+      capacity: edited.capacity ?? null,
+      preinscriptionStart: edited.preinscriptionStart ? new Date(edited.preinscriptionStart) : null,
+      preinscriptionEnd: edited.preinscriptionEnd ? new Date(edited.preinscriptionEnd) : null,
+      prices: [],
+      _count: { enrollments: 0 },
       createdAt: new Date(), updatedAt: new Date()
     });
 

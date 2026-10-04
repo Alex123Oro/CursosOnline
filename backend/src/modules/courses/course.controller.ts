@@ -1,38 +1,22 @@
 import type { Request, Response } from 'express';
+import { currentUser } from '../../shared/auth.js';
 import { HttpError } from '../../shared/http-error.js';
-import { courseInputSchema } from './course.rules.js';
+import { courseInputSchema, coursePricesSchema, parsePositiveInt } from './course.rules.js';
 import { courseService } from './course.service.js';
+import { enrollmentService } from '../enrollments/enrollment.service.js';
 
 export const courseController = {
-  /**
-   * Retorna todos los cursos para la administración.
-   */
   async list(_request: Request, response: Response) {
-    const courses = await courseService.list();
-    response.json(courses);
+    response.json(await courseService.list());
   },
 
-  /**
-   * Retorna solo los cursos publicados para el catálogo público.
-   */
   async catalog(_request: Request, response: Response) {
-    const courses = await courseService.catalog();
-    response.json(courses);
+    response.json(await courseService.catalog());
   },
 
-  /**
-   * Retorna un curso publicado para el detalle público.
-   */
   async catalogDetail(request: Request, response: Response) {
-    const rawId = request.params.id;
-    const id = Array.isArray(rawId) ? rawId[0] : rawId;
-    const courseId = Number(id);
-
-    if (!id || !Number.isInteger(courseId) || courseId <= 0) {
-      throw new HttpError(400, 'El identificador del curso no es valido.');
-    }
-
-    const course = await courseService.catalogById(courseId);
+    const courseId = parsePositiveInt(request.params.id, 'El identificador del curso no es valido.');
+    const course = await courseService.catalogById(courseId, currentUserSafe(request));
     if (!course) {
       throw new HttpError(404, 'El curso no esta disponible.');
     }
@@ -40,51 +24,40 @@ export const courseController = {
     response.json(course);
   },
 
-  /**
-   * Crea un curso nuevo.
-   */
   async create(request: Request, response: Response) {
     const input = courseInputSchema.parse(request.body);
     const course = await courseService.create(input);
     response.status(201).json(course);
   },
 
-  /**
-   * Actualiza la información del curso.
-   */
   async update(request: Request, response: Response) {
-    const rawId = request.params.id;
-    const id = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!id) {
-      throw new HttpError(400, 'El identificador del curso es obligatorio.');
-    }
-
-    const courseId = Number(id);
-    if (!Number.isInteger(courseId) || courseId <= 0) {
-      throw new HttpError(400, 'El identificador del curso no es valido.');
-    }
-
+    const courseId = parsePositiveInt(request.params.id, 'El identificador del curso no es valido.');
     const input = courseInputSchema.parse(request.body);
-    const course = await courseService.update(courseId, input);
-    response.json(course);
+    response.json(await courseService.update(courseId, input));
   },
 
-  /**
-   * Publica un curso cuando cumple con los requisitos mínimos.
-   */
   async publish(request: Request, response: Response) {
-    const rawId = request.params.id;
-    const id = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!id) {
-      throw new HttpError(400, 'El identificador del curso es obligatorio.');
-    }
+    const courseId = parsePositiveInt(request.params.id, 'El identificador del curso no es valido.');
+    response.json(await courseService.publish(courseId));
+  },
 
-    const courseId = Number(id);
-    if (!Number.isInteger(courseId) || courseId <= 0) {
-      throw new HttpError(400, 'El identificador del curso no es valido.');
-    }
+  async replacePrices(request: Request, response: Response) {
+    const courseId = parsePositiveInt(request.params.id, 'El identificador del curso no es valido.');
+    const input = coursePricesSchema.parse(request.body);
+    response.json(await courseService.replacePrices(courseId, input));
+  },
 
-    const course = await courseService.publish(courseId);
-    response.json(course);
+  async preenroll(request: Request, response: Response) {
+    const courseId = parsePositiveInt(request.params.id, 'El identificador del curso no es valido.');
+    const enrollment = await enrollmentService.preenroll(courseId, currentUser(request));
+    response.status(201).json(enrollment);
+  }
+};
+
+const currentUserSafe = (request: Request) => {
+  try {
+    return currentUser(request);
+  } catch {
+    return null;
   }
 };

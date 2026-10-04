@@ -14,20 +14,105 @@ enum CourseStatus {
   @@map("estado_curso")
 }
 
+enum UserRole {
+  ADMIN       @map("administrador")
+  PARTICIPANT @map("participante")
+
+  @@map("rol_usuario")
+}
+
+enum EnrollmentStatus {
+  PREINSCRITO @map("preinscrito")
+  INSCRITO    @map("inscrito")
+
+  @@map("estado_inscripcion")
+}
+
+model ParticipantType {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique @map("nombre")
+  users        User[]
+  prices       CoursePrice[]
+  enrollments  Enrollment[]
+
+  @@map("tipos_participante")
+}
+
+model User {
+  id                Int              @id @default(autoincrement())
+  authId            String           @unique @map("auth_id") @db.Uuid
+  name              String           @map("nombre_completo")
+  email             String           @unique @map("correo")
+  role              UserRole         @map("rol")
+  participantTypeId Int?             @map("tipo_participante_id")
+  participantType   ParticipantType? @relation(fields: [participantTypeId], references: [id])
+  enrollments       Enrollment[]
+
+  @@map("usuarios")
+}
+
 model Course {
-  id               Int       @id @default(autoincrement())
-  code             String?   @unique @map("codigo")
-  name             String    @map("nombre")
-  content          String?   @map("contenido")
-  durationHours    Int?      @map("duracion_horas")
-  instructor       String?   @map("instructor")
-  schedule         String?   @map("horario")
-  approvalCriteria String?   @map("criterios_aprobacion")
-  status           CourseStatus @default(DRAFT) @map("estado")
-  startDate        DateTime? @map("fecha_inicio")
-  endDate          DateTime? @map("fecha_fin")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                   Int            @id @default(autoincrement())
+  code                 String?        @unique @map("codigo")
+  name                 String         @map("nombre")
+  content              String?        @map("contenido")
+  durationHours        Int?           @map("duracion_horas")
+  instructor           String?        @map("instructor")
+  schedule             String?        @map("horario")
+  approvalCriteria     String?        @map("criterios_aprobacion")
+  status               CourseStatus   @default(DRAFT) @map("estado")
+  startDate            DateTime?      @map("fecha_inicio")
+  endDate              DateTime?      @map("fecha_fin")
+  capacity             Int?           @map("capacidad")
+  preinscriptionStart  DateTime?      @map("fecha_inicio_preinscripcion")
+  preinscriptionEnd    DateTime?      @map("fecha_fin_preinscripcion")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  prices               CoursePrice[]
+  enrollments          Enrollment[]
 
   @@map("cursos")
+}
+
+model CoursePrice {
+  id                Int             @id @default(autoincrement())
+  courseId          Int             @map("curso_id")
+  participantTypeId Int             @map("tipo_participante_id")
+  basePrice         Decimal         @map("precio_base") @db.Decimal(10, 2)
+  course            Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  participantType   ParticipantType @relation(fields: [participantTypeId], references: [id])
+
+  @@unique([courseId, participantTypeId])
+  @@map("precios_curso")
+}
+
+model Enrollment {
+  id                 Int              @id @default(autoincrement())
+  courseId           Int              @map("curso_id")
+  participantId      Int              @map("participante_id")
+  participantTypeId  Int              @map("tipo_participante_id")
+  status             EnrollmentStatus @default(PREINSCRITO) @map("estado")
+  basePrice          Decimal          @map("precio_base") @db.Decimal(10, 2)
+  scholarshipPercent Decimal          @default(0) @map("porcentaje_beca") @db.Decimal(5, 2)
+  benefitAmount      Decimal          @default(0) @map("beneficio") @db.Decimal(10, 2)
+  finalAmount        Decimal          @map("monto_final") @db.Decimal(10, 2)
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  course             Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  participant        User             @relation(fields: [participantId], references: [id])
+  participantType    ParticipantType  @relation(fields: [participantTypeId], references: [id])
+  payment            Payment?
+
+  @@unique([courseId, participantId])
+  @@map("inscripciones")
+}
+
+model Payment {
+  id           Int        @id @default(autoincrement())
+  enrollmentId Int        @unique @map("inscripcion_id")
+  amount       Decimal    @map("monto") @db.Decimal(10, 2)
+  registeredAt DateTime   @default(now()) @map("registrado_en")
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@map("pagos")
 }

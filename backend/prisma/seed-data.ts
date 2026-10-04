@@ -9,7 +9,26 @@ export type SeedCourse = {
   status: 'PUBLISHED';
   startDate: string;
   endDate: string;
+  capacity: number;
+  preinscriptionStart: string;
+  preinscriptionEnd: string;
 };
+
+export const SEED_PARTICIPANT_TYPES = ['Estudiante', 'Docente', 'Administrativo', 'Externo'] as const;
+
+export const SEED_PRICES: Record<(typeof SEED_PARTICIPANT_TYPES)[number], number> = {
+  Estudiante: 400,
+  Docente: 500,
+  Administrativo: 450,
+  Externo: 700
+};
+
+export const SEED_USERS = [
+  { name: 'Ana Admin', email: 'admin@eva.local', role: 'ADMIN' as const, participantTypeName: null },
+  { name: 'Luis Estudiante', email: 'luis@eva.local', role: 'PARTICIPANT' as const, participantTypeName: 'Estudiante' },
+  { name: 'Marta Docente', email: 'marta@eva.local', role: 'PARTICIPANT' as const, participantTypeName: 'Docente' },
+  { name: 'Pedro Externo', email: 'pedro@eva.local', role: 'PARTICIPANT' as const, participantTypeName: 'Externo' }
+];
 
 export const SEED_COURSES: SeedCourse[] = [
   {
@@ -22,7 +41,10 @@ export const SEED_COURSES: SeedCourse[] = [
     approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
     status: 'PUBLISHED',
     startDate: '2026-10-05',
-    endDate: '2026-11-11'
+    endDate: '2026-11-11',
+    capacity: 20,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31'
   },
   {
     code: 'INF-HW-110',
@@ -34,7 +56,10 @@ export const SEED_COURSES: SeedCourse[] = [
     approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
     status: 'PUBLISHED',
     startDate: '2026-10-06',
-    endDate: '2026-11-05'
+    endDate: '2026-11-05',
+    capacity: 16,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31'
   },
   {
     code: 'INF-JS-101',
@@ -46,7 +71,10 @@ export const SEED_COURSES: SeedCourse[] = [
     approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
     status: 'PUBLISHED',
     startDate: '2026-10-12',
-    endDate: '2026-11-18'
+    endDate: '2026-11-18',
+    capacity: 24,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31'
   },
   {
     code: 'INF-LNX-120',
@@ -58,7 +86,10 @@ export const SEED_COURSES: SeedCourse[] = [
     approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
     status: 'PUBLISHED',
     startDate: '2026-10-13',
-    endDate: '2026-11-17'
+    endDate: '2026-11-17',
+    capacity: 18,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31'
   },
   {
     code: 'INF-NET-130',
@@ -70,7 +101,10 @@ export const SEED_COURSES: SeedCourse[] = [
     approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
     status: 'PUBLISHED',
     startDate: '2026-10-10',
-    endDate: '2026-11-14'
+    endDate: '2026-11-14',
+    capacity: 20,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31'
   },
   {
     code: 'INF-GIT-140',
@@ -82,6 +116,9 @@ export const SEED_COURSES: SeedCourse[] = [
     approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
     status: 'PUBLISHED',
     startDate: '2026-10-09',
-    endDate: '2026-11-06'
+    endDate: '2026-11-06',
+    capacity: 22,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31'
   }
 ];

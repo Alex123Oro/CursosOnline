@@ -29,6 +29,11 @@ describe('course catalogue (HU-03)', () => {
       status: 'PUBLISHED',
       startDate: new Date('2026-10-06'),
       endDate: new Date('2026-11-12'),
+      capacity: 24,
+      preinscriptionStart: new Date('2026-09-01'),
+      preinscriptionEnd: new Date('2026-12-31'),
+      prices: [],
+      _count: { enrollments: 0 },
       createdAt: new Date('2026-09-20T12:00:00.000Z'),
       updatedAt: new Date('2026-09-20T12:00:00.000Z')
     });
