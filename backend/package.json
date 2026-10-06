@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
-    "prisma:seed:instructors": "tsx prisma/seed-instructors.ts"
+    "prisma:seed:instructors": "tsx prisma/seed-instructors.ts",
+    "prisma:seed:attendance-demo": "tsx prisma/seed-attendance-demo.ts"
   },
   "keywords": [],
   "author": "",
