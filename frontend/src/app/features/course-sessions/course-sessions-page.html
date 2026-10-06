@@ -2,7 +2,7 @@
   <a class="back-link" [routerLink]="identity.currentUser()?.role === 'INSTRUCTOR' ? '/mis-cursos' : '/cursos'">← Volver a cursos</a>
   <header class="page-header">
     <div><p class="eyebrow">ORGANIZACIÓN DEL CURSO</p><h1>Sesiones del curso</h1><p class="subtitle">Planifica tus clases y organiza el calendario en un solo lugar.</p></div>
-    @if (course()) { <button class="primary-btn add-session" (click)="openSchedule()" [disabled]="saving()">+ Programar sesiones</button> }
+    @if (course()) { <div class="header-actions"><a class="secondary-btn attendance-link" [routerLink]="['/cursos', course()!.id, 'asistencia']">Asistencia</a><button class="primary-btn add-session" (click)="openSchedule()" [disabled]="saving()">+ Programar sesiones</button></div> }
   </header>
   @if (feedback() && !formOpen()) { <p class="feedback" role="status">{{ feedback() }}</p> }
   @if (loading()) { <p class="feedback" role="status">Cargando agenda…</p> }

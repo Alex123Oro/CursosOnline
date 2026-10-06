@@ -68,3 +68,33 @@ cerca de medianoche UTC; rechazar futuros, preinscritos y otro instructor.
 Guardar, corregir y recargar; verificar un solo registro. Simular error y
 reintentar sin mostrar éxito falso. Probar móvil y escritorio. Conservar cursos,
 sesiones e inscripciones existentes; usar datos locales de prueba identificados.
+
+## Resultado y prueba local
+
+Abrir `http://localhost:4200/cursos/21/asistencia` con Ing. Carla Mendoza
+o Ana Admin. También se accede desde Mis cursos → Asistencia y desde Sesiones.
+El curso EVA-HU09-DEMO tiene 9 inscritos y 1 preinscrito excluido del panel.
+Ana Álvarez muestra 75% y 2 pendientes; las marcas realizadas sobre otros
+alumnos durante la verificación permanecen y pueden corregirse.
+
+El seed de demostración se ejecuta en backend con
+`npm run prisma:seed:attendance-demo`; conserva los cursos existentes y las
+marcas ya guardadas. Las fechas demo son 1–7 de octubre de 2026.
+
+Migración aplicada de forma incremental con respaldo previo en
+`C:/Users/bruno/AppData/Local/Temp/eva-hu09-before-20261006.dump`.
+Prisma generate y comparación esquema/base completados sin diferencias.
+No repetir la ejecución SQL sobre una base que ya contiene la migración.
+
+Verificación: 121 pruebas backend aprobadas; frontend 39/40 aprobadas,
+incluidas las 10 pruebas del panel y la regresión del selector de identidad.
+El fallo restante es anterior a HU-09: el detalle público del catálogo espera
+el texto «Nota mínima de 70/100». Compilaciones backend/frontend correctas;
+persisten advertencias de presupuesto CSS en catálogo y sesiones.
+Integración real comprobó autorización, futuras, preinscritos, correcciones,
+concurrencia sin duplicados, persistencia y FKs que impiden cruzar cursos.
+Flujo en navegador probado en escritorio y móvil, con búsqueda/paginación,
+corrección y recarga. Revisión independiente sin hallazgos importantes.
+
+HU-08 ya estaba registrado en fefac6d antes de comenzar esta implementación;
+se conservó ese commit y se registró HU-09 por datos, API e interfaz.

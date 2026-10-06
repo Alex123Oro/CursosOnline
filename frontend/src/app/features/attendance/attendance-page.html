@@ -1,0 +1,28 @@
+<section class="attendance-page">
+  <a class="back-link" [routerLink]="['/cursos', courseId(), 'sesiones']">← Volver a sesiones</a>
+  <header><p class="eyebrow">CONTROL DEL CURSO</p><h1>Asistencia</h1>@if (course(); as current) { <p class="course-name">{{ current.name }}</p><p class="helper">{{ current.code }} · {{ current.instructor }} · Hora de Bolivia</p> }</header>
+  @if (error()) { <div class="notice error" role="alert">{{ error() }}<button (click)="reload()">Reintentar</button></div> }
+  @if (loading()) { <p class="notice" role="status">Cargando lista de alumnos…</p> }
+  @if (course()) {
+    @if (sessions().length) {
+      <div class="toolbar"><label>Sesión de clase<select [value]="sessionId()" (change)="selectSession($any($event.target).value)" [disabled]="loading() || anySaving()">@for (session of sessions(); track session.id) { <option [value]="session.id" [selected]="session.id === sessionId()">{{ formatDate(session.date) }} · {{ session.startTime }}–{{ session.endTime }}{{ session.editable ? '' : ' · Futura' }}</option> }</select></label><label>Buscar alumno<input type="search" placeholder="Nombre del alumno" [value]="search()" (input)="setSearch($any($event.target).value)"></label></div>
+      @if (selectedSession(); as selected) {
+        @if (!selected.editable) { <p class="notice" role="status">Esta es una sesión futura. Podrás marcar asistencia el día de la clase.</p> }
+        <div class="roster-summary"><strong>{{ students().length }} alumnos inscritos</strong><span>{{ sessionCounts().present }} presentes · {{ sessionCounts().absent }} ausentes · {{ sessionCounts().unmarked }} sin marcar</span></div>
+        <div class="roster"><div class="roster-heading" aria-hidden="true"><span>Alumno</span><span>Asistencia de esta clase</span><span>Resumen del curso</span></div><ul>
+        @for (student of visibleStudents(); track student.enrollmentId) {
+          <li class="student-row"><strong class="student-name">{{ student.name }}</strong>
+            <div class="mark-area"><div class="mark-controls" role="group" [attr.aria-label]="'Asistencia de ' + student.name"><button [class.present]="statusFor(student) === 'PRESENT'" [attr.aria-pressed]="statusFor(student) === 'PRESENT'" [disabled]="loading() || !selected.editable || rowState()[student.enrollmentId]?.phase === 'saving'" (click)="mark(student, 'PRESENT')">Presente</button><button [class.absent]="statusFor(student) === 'ABSENT'" [attr.aria-pressed]="statusFor(student) === 'ABSENT'" [disabled]="loading() || !selected.editable || rowState()[student.enrollmentId]?.phase === 'saving'" (click)="mark(student, 'ABSENT')">Ausente</button></div>
+              @if (rowState()[student.enrollmentId]; as state) { @if (state.phase !== 'error') { <small class="save-note" role="status">{{ state.phase === 'saving' ? 'Guardando…' : 'Guardado' }}</small> } } @else if (!statusFor(student)) { <small class="helper">Sin marcar</small> }
+            </div>
+            <div class="student-summary"><strong>{{ student.percentage === null ? 'Sin registros' : student.percentage + ' %' }}</strong><small>{{ student.presentCount }} presentes / {{ student.presentCount + student.absentCount }} registros</small><small>{{ student.pendingCount }} pendientes</small></div>
+            @if (rowState()[student.enrollmentId]?.phase === 'error') { <div class="row-error" role="alert">{{ student.name }}: {{ rowState()[student.enrollmentId].message }}<button (click)="retry(student)" [disabled]="loading() || !selected.editable">Reintentar</button></div> }
+          </li>
+        } @empty { <li class="empty">{{ students().length ? 'No hay alumnos que coincidan con tu búsqueda.' : 'Este curso todavía no tiene alumnos oficialmente inscritos. Los preinscritos no aparecen en esta lista.' }}</li> }
+        </ul></div>
+        @if (pageCount() > 1) { <nav class="pagination" aria-label="Páginas de alumnos"><span role="status">Página {{ currentPage() + 1 }} de {{ pageCount() }} · {{ filteredStudents().length }} alumnos</span><div><button aria-label="Página anterior" (click)="changePage(-1)" [disabled]="currentPage() === 0">←</button><button aria-label="Página siguiente" (click)="changePage(1)" [disabled]="currentPage() + 1 === pageCount()">→</button></div></nav> }
+        <p class="helper calculation-note">El porcentaje se calcula sobre las marcas guardadas. Las clases anteriores sin registrar quedan pendientes; las futuras no cuentan.</p>
+      }
+    } @else { <div class="empty notice"><h2>Primero programa las clases</h2><p>La asistencia se registra sobre una sesión existente.</p><a class="back-link" [routerLink]="['/cursos', courseId(), 'sesiones']">Ir a sesiones</a></div> }
+  }
+</section>

@@ -7,7 +7,7 @@ import { CourseSessionService, SessionCourse } from '../../core/course-session.s
   <section class="sessions-page"><header class="page-header"><div><p class="eyebrow">INSTRUCTOR</p><h1>Mis cursos</h1><p class="subtitle">Organiza las sesiones de tus cursos publicados.</p></div></header>
   @if (loading()) { <p role="status">Cargando cursos…</p> } @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
   @if (!loading() && !error()) { <div class="table-card"><table><caption>Cursos asignados</caption><thead><tr><th>Curso</th><th>Periodo</th><th>Acción</th></tr></thead><tbody>
-  @for (course of courses(); track course.id) { <tr><td>{{ course.name }}<br>{{ course.code }}</td><td>{{ course.startDate }} — {{ course.endDate }}</td><td><a class="back-link" [routerLink]="['/cursos', course.id, 'sesiones']">Sesiones</a></td></tr> }
+  @for (course of courses(); track course.id) { <tr><td>{{ course.name }}<br>{{ course.code }}</td><td>{{ course.startDate }} — {{ course.endDate }}</td><td><a class="back-link" [routerLink]="['/cursos', course.id, 'sesiones']">Sesiones</a> · <a class="back-link" [routerLink]="['/cursos', course.id, 'asistencia']">Asistencia</a></td></tr> }
   @empty { <tr><td colspan="3">No tienes cursos publicados asignados. Solicita la asignación al administrador.</td></tr> }
   </tbody></table></div> }</section>` })
 export class TeachingCoursesPage {

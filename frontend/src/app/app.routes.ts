@@ -5,11 +5,13 @@ import { ParticipantCatalogPage } from './features/participant-catalog/participa
 import { ParticipantCourseDetailPage } from './features/participant-catalog/participant-course-detail-page/participant-course-detail-page';
 import { CourseSessionsPage } from './features/course-sessions/course-sessions-page';
 import { TeachingCoursesPage } from './features/course-sessions/teaching-courses-page';
+import { AttendancePage } from './features/attendance/attendance-page';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'cursos', pathMatch: 'full' },
   { path: 'cursos', component: CoursesPage, title: 'Administración de cursos | EVA' },
   { path: 'cursos/:courseId/sesiones', component: CourseSessionsPage, title: 'Sesiones del curso | EVA' },
+  { path: 'cursos/:courseId/asistencia', component: AttendancePage, title: 'Asistencia del curso | EVA' },
   { path: 'mis-cursos', component: TeachingCoursesPage, title: 'Mis cursos | EVA' },
   { path: 'inscripciones', component: EnrollmentsPage, title: 'Inscripciones | EVA' },
   { path: 'catalogo', component: ParticipantCatalogPage, title: 'Cursos disponibles | EVA' },
