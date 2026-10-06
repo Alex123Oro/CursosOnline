@@ -38,7 +38,7 @@
         <span>Sesión</span>
         <select [value]="session.userId()" (change)="onSessionChange($any($event.target).value)">
           @for (user of session.users(); track user.id) {
-            <option [value]="user.id">{{ user.name }}</option>
+            <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option>
           }
         </select>
       </label>
