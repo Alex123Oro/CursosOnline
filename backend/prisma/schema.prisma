@@ -29,6 +29,13 @@ enum EnrollmentStatus {
   @@map("estado_inscripcion")
 }
 
+enum AttendanceStatus {
+  PRESENT @map("presente")
+  ABSENT  @map("ausente")
+
+  @@map("estado_asistencia")
+}
+
 model ParticipantType {
   id           Int           @id @default(autoincrement())
   name         String        @unique @map("nombre")
@@ -49,6 +56,7 @@ model User {
   participantType   ParticipantType? @relation(fields: [participantTypeId], references: [id])
   enrollments       Enrollment[]
   teachingCourses   Course[]         @relation("CourseInstructor")
+  recordedAttendance Attendance[]
 
   @@map("usuarios")
 }
@@ -88,7 +96,9 @@ model CourseSession {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  attendance      Attendance[]
 
+  @@unique([id, courseId])
   @@unique([courseId, date, startTime])
   @@map("sesiones_curso")
 }
@@ -121,9 +131,29 @@ model Enrollment {
   participant        User             @relation(fields: [participantId], references: [id])
   participantType    ParticipantType  @relation(fields: [participantTypeId], references: [id])
   payment            Payment?
+  attendance         Attendance[]
 
+  @@unique([id, courseId])
   @@unique([courseId, participantId])
   @@map("inscripciones")
+}
+
+model Attendance {
+  id           Int              @id @default(autoincrement())
+  courseId     Int              @map("curso_id")
+  sessionId    Int              @map("sesion_id")
+  enrollmentId Int              @map("inscripcion_id")
+  status       AttendanceStatus @map("estado")
+  recordedById Int              @map("registrado_por_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  session      CourseSession   @relation(fields: [sessionId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
+  enrollment   Enrollment      @relation(fields: [enrollmentId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
+  recordedBy   User            @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, enrollmentId])
+  @@index([enrollmentId])
+  @@map("asistencias")
 }
 
 model Payment {
