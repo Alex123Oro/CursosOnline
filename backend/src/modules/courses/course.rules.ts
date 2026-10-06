@@ -95,6 +95,7 @@ export const courseInputSchema = z
       .int('Las horas deben ser un numero entero.')
       .positive('Las horas deben ser mayores a 0.'),
     instructor: requiredText('El instructor', 2),
+    instructorId: z.preprocess(value => value === '' ? null : value, z.coerce.number().int().positive().nullable().optional()),
     schedule: requiredText('El horario', 3),
     approvalCriteria: z.string().trim().optional(),
     startDate: dateStringSchema,

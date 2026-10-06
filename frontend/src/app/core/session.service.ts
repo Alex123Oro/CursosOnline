@@ -2,7 +2,7 @@ import { HttpBackend, HttpClient } from '@angular/common/http';
 import { Injectable, computed, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
 
-export type UserRole = 'ADMIN' | 'PARTICIPANT';
+export type UserRole = 'ADMIN' | 'PARTICIPANT' | 'INSTRUCTOR';
 
 export interface SessionUser {
   id: string;

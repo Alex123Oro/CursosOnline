@@ -7,7 +7,7 @@ export type RequestUser = {
   id: number;
   name: string;
   email: string;
-  role: 'ADMIN' | 'PARTICIPANT';
+  role: 'ADMIN' | 'PARTICIPANT' | 'INSTRUCTOR';
   participantTypeId: number | null;
 };
 
@@ -17,7 +17,7 @@ const toRequestUser = (user: {
   id: number;
   name: string;
   email: string;
-  role: 'ADMIN' | 'PARTICIPANT';
+  role: 'ADMIN' | 'PARTICIPANT' | 'INSTRUCTOR';
   participantTypeId: number | null;
 }): RequestUser => user;
 

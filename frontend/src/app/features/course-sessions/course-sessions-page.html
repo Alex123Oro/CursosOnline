@@ -1,0 +1,67 @@
+<section class="sessions-page agenda-page">
+  <a class="back-link" [routerLink]="identity.currentUser()?.role === 'INSTRUCTOR' ? '/mis-cursos' : '/cursos'">← Volver a cursos</a>
+  <header class="page-header">
+    <div><p class="eyebrow">ORGANIZACIÓN DEL CURSO</p><h1>Sesiones del curso</h1><p class="subtitle">Planifica tus clases y organiza el calendario en un solo lugar.</p></div>
+    @if (course()) { <button class="primary-btn add-session" (click)="openSchedule()" [disabled]="saving()">+ Programar sesiones</button> }
+  </header>
+  @if (feedback() && !formOpen()) { <p class="feedback" role="status">{{ feedback() }}</p> }
+  @if (loading()) { <p class="feedback" role="status">Cargando agenda…</p> }
+  @if (course(); as current) {
+    <section class="course-banner" aria-label="Resumen del curso">
+      <div><span class="course-code">{{ current.code || 'CURSO' }}</span><h2>{{ current.name }}</h2><p>{{ current.instructor || 'Instructor sin asignar' }}</p></div>
+      <div class="course-period"><span>Periodo del curso</span><strong>{{ current.startDate ? formatDate(current.startDate, true) : 'Sin inicio' }} — {{ current.endDate ? formatDate(current.endDate, true) : 'Sin fin' }}</strong><small>Hora local de Bolivia · UTC−4</small></div>
+    </section>
+    <div class="stats" aria-label="Resumen de sesiones"><div><strong>{{ sessions().length }}</strong><span>Sesiones programadas</span></div><div><strong>{{ totalHours() }} <small>h</small></strong><span>Horas de clases</span></div><div><strong>{{ groups().length }}</strong><span>Días con clases</span></div></div>
+    <div class="workspace" [class.with-form]="formOpen()">
+      @if (formOpen()) {
+        <section #planner tabindex="-1" class="form-card planner" aria-labelledby="session-form-title">
+          <div class="planner-heading"><div><p class="eyebrow">{{ editingId() ? 'AJUSTAR CLASE' : 'NUEVA PROGRAMACIÓN' }}</p><h2 id="session-form-title">{{ editingId() ? 'Editar sesión' : 'Programar clases' }}</h2></div><button class="secondary-btn" (click)="closeForm()" [disabled]="saving()" aria-label="Cerrar formulario">Cerrar</button></div>
+          @if (feedback()) { <p class="validation" role="alert">{{ feedback() }}</p> }
+          @if (!editingId()) { <div class="mode-switch" aria-label="Tipo de programación"><button type="button" [class.selected]="weekly()" [attr.aria-pressed]="weekly()" (click)="!weekly() && openSchedule()" [disabled]="saving()">Repetir semanalmente</button><button type="button" [class.selected]="!weekly()" [attr.aria-pressed]="!weekly()" (click)="weekly() && openCreate()" [disabled]="saving()">Una sola clase</button></div> }
+          @if (weekly()) {
+            <form [formGroup]="scheduleForm" (ngSubmit)="submitSchedule()">
+              <fieldset [disabled]="saving()">
+                <div class="fields date-fields"><label>Desde<input type="date" formControlName="startDate">@if (scheduleForm.controls.startDate.invalid && scheduleForm.controls.startDate.touched) { <small>Ingresa una fecha válida.</small> }</label><label>Repetir hasta<input type="date" formControlName="endDate" [min]="scheduleForm.controls.startDate.value">@if (scheduleForm.controls.endDate.invalid && scheduleForm.controls.endDate.touched) { <small>Ingresa una fecha válida.</small> }</label></div>
+                <fieldset class="weekday-field"><legend>Días de la semana</legend><div class="weekdays">@for (day of weekdays; track day.value) { <label [class.checked]="scheduleForm.controls.weekdays.value.includes(day.value)"><input type="checkbox" [checked]="scheduleForm.controls.weekdays.value.includes(day.value)" (change)="toggleDay(day.value)" [attr.aria-label]="day.name"><span>{{ day.label }}</span></label> }</div></fieldset>
+                @if (scheduleForm.controls.weekdays.invalid && scheduleForm.controls.weekdays.touched) { <p class="validation">Selecciona al menos un día.</p> }
+                <div class="fields date-fields"><label>Hora de inicio<input type="time" formControlName="startTime">@if (scheduleForm.controls.startTime.invalid && scheduleForm.controls.startTime.touched) { <small>Ingresa una hora válida.</small> }</label><label>Duración en minutos<input type="number" min="1" step="1" formControlName="durationMinutes">@if (scheduleForm.controls.durationMinutes.invalid && scheduleForm.controls.durationMinutes.touched) { <small>Usa un número entero mayor a cero.</small> }</label></div>
+                <p class="helper">Se repetirá cada semana hasta la fecha indicada, inclusive. Máximo 366 días por programación.</p>
+                @if (scheduleForm.hasError('range')) { <p class="validation" role="alert">El fin debe ser igual o posterior al inicio, con un máximo de 366 días.</p> }
+                @if (scheduleForm.hasError('noDates')) { <p class="validation" role="alert">No hay fechas para los días elegidos en este periodo.</p> }
+                @if (scheduleForm.hasError('sameDay')) { <p class="validation" role="alert">La clase debe finalizar dentro del mismo día.</p> }
+                <section class="preview" aria-label="Vista previa de la programación" aria-live="polite"><div class="preview-title"><h3>Vista previa</h3><span>{{ newCount() }} nuevas</span></div>
+                  @if (preview().length) {
+                    <ul>@for (row of (showAllPreview() ? preview() : preview().slice(0, 5)); track row.date) { <li><span>{{ formatDate(row.date, true) }} · {{ scheduleForm.controls.startTime.value }}</span><small [class.outside]="row.outside">{{ row.duplicate ? 'Ya existe · se omite' : row.outside ? 'Fuera del periodo' : 'Nueva clase' }}</small></li> }</ul>
+                    @if (preview().length > 5) { <button type="button" class="preview-toggle" (click)="showAllPreview.set(!showAllPreview())">{{ showAllPreview() ? 'Ver menos' : 'Ver las ' + preview().length + ' fechas' }}</button> }
+                    @if (preview().length > newCount()) { <p class="helper">{{ preview().length - newCount() }} sesiones ya existen con esa fecha y hora. Se omitirán.</p> }
+                  } @else { <p class="helper">Elige un periodo y los días para ver las fechas de tus clases.</p> }
+                </section>
+                @if (outsideCount()) { <p class="warning-box" role="status">{{ outsideCount() }} clases nuevas quedan fuera del periodo del curso. Puedes guardarlas igualmente.</p> }
+                <div class="form-actions"><button type="button" class="secondary-btn" (click)="closeForm()">Cancelar</button><button class="primary-btn" type="submit" [disabled]="scheduleForm.invalid">{{ saving() ? 'Programando…' : 'Guardar programación' }}</button></div>
+              </fieldset>
+            </form>
+          } @else {
+            <form [formGroup]="form" (ngSubmit)="submit()"><fieldset [disabled]="saving()"><div class="fields single-fields">
+              <label>Fecha<input type="date" formControlName="date">@if (form.controls.date.invalid && form.controls.date.touched) { <small>Ingresa una fecha válida.</small> }</label>
+              <label>Hora de inicio<input type="time" formControlName="startTime">@if (form.controls.startTime.invalid && form.controls.startTime.touched) { <small>Ingresa una hora válida.</small> }</label>
+              <label>Duración en minutos<input type="number" min="1" step="1" formControlName="durationMinutes">@if (form.controls.durationMinutes.invalid && form.controls.durationMinutes.touched) { <small>Usa un número entero mayor a cero.</small> }</label>
+            </div>
+            @if (form.hasError('sameDay')) { <p class="validation" role="alert">La sesión debe finalizar dentro del mismo día.</p> }
+            @if (formWarning()) { <p class="warning-box" role="status">{{ formWarning() }}</p> }
+            <p class="helper">{{ editingId() ? 'Los cambios se aplican solamente a esta clase.' : 'Para varias clases, usa la programación semanal.' }}</p>
+            <div class="form-actions"><button type="button" class="secondary-btn" (click)="closeForm()">Cancelar</button><button class="primary-btn" type="submit">{{ saving() ? 'Guardando…' : 'Guardar sesión' }}</button></div></fieldset></form>
+          }
+        </section>
+      }
+      <section class="agenda" aria-labelledby="agenda-title"><div class="agenda-heading"><h2 id="agenda-title">Agenda de clases</h2><span>{{ sessions().length }} sesiones</span></div>
+        <ul class="agenda-list">
+        @for (session of visibleSessions(); track session.id) {
+          <li class="agenda-row"><div class="agenda-date"><time [attr.datetime]="session.date">{{ agendaDate(session.date) }}</time>@if (session.warning) { <small class="session-warning" [title]="session.warning">Fuera del periodo</small> }</div><strong class="agenda-time">{{ session.startTime }} <span>—</span> {{ session.endTime }}</strong><button class="secondary-btn" (click)="openEdit(session)" [disabled]="saving()" [attr.aria-label]="'Editar sesión del ' + session.date + ' a las ' + session.startTime">Editar</button></li>
+        }
+        </ul>
+        @if (!sessions().length) { <div class="empty-agenda"><span class="empty-icon" aria-hidden="true">▦</span><h3>Tu agenda está por comenzar</h3><p>Elige los días de la semana y programa todas las clases de tu curso de una vez.</p><button class="primary-btn" (click)="openSchedule()" [disabled]="saving()">Programar primeras clases</button></div> }
+        @if (pageCount() > 1) { <nav class="agenda-pagination" aria-label="Páginas de clases"><span role="status" aria-live="polite">{{ firstRow() }}–{{ lastRow() }} de {{ sessions().length }}</span><div><button class="secondary-btn" aria-label="Página anterior" (click)="changePage(-1)" [disabled]="currentPage() === 0 || saving()">←</button><span>{{ currentPage() + 1 }} / {{ pageCount() }}</span><button class="secondary-btn" aria-label="Página siguiente" (click)="changePage(1)" [disabled]="currentPage() + 1 === pageCount() || saving()">→</button></div></nav> }
+      </section>
+    </div>
+  }
+</section>

@@ -36,8 +36,16 @@
 
       <label>
         <span>Instructor *</span>
-        <input formControlName="instructor" placeholder="Nombre del instructor">
+        <input formControlName="instructor" placeholder="Nombre del instructor" [readOnly]="!!form.controls.instructorId.value">
         @if (fieldError('instructor')) { <small>El instructor es obligatorio.</small> }
+      </label>
+
+      <label>
+        <span>Usuario instructor asignado</span>
+        <select formControlName="instructorId" (change)="selectInstructor($any($event.target).value)">
+          <option value="">Sin usuario asignado (nombre manual)</option>
+          @for (instructor of instructors; track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }
+        </select>
       </label>
 
       <label>

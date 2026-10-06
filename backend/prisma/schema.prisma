@@ -17,6 +17,7 @@ enum CourseStatus {
 enum UserRole {
   ADMIN       @map("administrador")
   PARTICIPANT @map("participante")
+  INSTRUCTOR  @map("instructor")
 
   @@map("rol_usuario")
 }
@@ -47,6 +48,7 @@ model User {
   participantTypeId Int?             @map("tipo_participante_id")
   participantType   ParticipantType? @relation(fields: [participantTypeId], references: [id])
   enrollments       Enrollment[]
+  teachingCourses   Course[]         @relation("CourseInstructor")
 
   @@map("usuarios")
 }
@@ -58,6 +60,8 @@ model Course {
   content              String?        @map("contenido")
   durationHours        Int?           @map("duracion_horas")
   instructor           String?        @map("instructor")
+  instructorId         Int?           @map("instructor_id")
+  assignedInstructor   User?          @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
   schedule             String?        @map("horario")
   approvalCriteria     String?        @map("criterios_aprobacion")
   status               CourseStatus   @default(DRAFT) @map("estado")
@@ -70,8 +74,23 @@ model Course {
   updatedAt            DateTime       @updatedAt @map("updated_at")
   prices               CoursePrice[]
   enrollments          Enrollment[]
+  sessions             CourseSession[]
 
   @@map("cursos")
+}
+
+model CourseSession {
+  id              Int      @id @default(autoincrement())
+  courseId        Int      @map("curso_id")
+  date            DateTime @db.Date @map("fecha")
+  startTime       String   @db.VarChar(5) @map("hora_inicio")
+  durationMinutes Int      @map("duracion_minutos")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  @@unique([courseId, date, startTime])
+  @@map("sesiones_curso")
 }
 
 model CoursePrice {

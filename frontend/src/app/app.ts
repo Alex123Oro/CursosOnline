@@ -27,5 +27,7 @@ export class App {
 
   onSessionChange(id: string) {
     this.session.selectUser(id);
+    const role = this.session.currentUser()?.role;
+    void this.router.navigateByUrl(role === 'INSTRUCTOR' ? '/mis-cursos' : role === 'ADMIN' ? '/cursos' : '/catalogo');
   }
 }

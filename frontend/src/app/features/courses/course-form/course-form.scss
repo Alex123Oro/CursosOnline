@@ -63,6 +63,7 @@
   }
 
   input,
+  select,
   textarea {
     width: 100%;
     box-sizing: border-box;
@@ -80,6 +81,7 @@
   }
 
   input:focus,
+  select:focus,
   textarea:focus {
     border-color: #0a8e84;
     box-shadow: 0 0 0 3px rgba(10, 142, 132, 0.1);

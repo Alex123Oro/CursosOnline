@@ -29,6 +29,7 @@ export interface Course {
   content: string;
   durationHours: number;
   instructor: string;
+  instructorId?: string | null;
   schedule: string;
   approvalCriteria: string;
   status: CourseStatus;
@@ -51,6 +52,7 @@ export interface CoursePayload {
   content: string;
   durationHours: number;
   instructor: string;
+  instructorId?: string | null;
   schedule: string;
   startDate?: string | null;
   endDate?: string | null;

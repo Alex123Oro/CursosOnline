@@ -30,6 +30,15 @@ export const SEED_USERS = [
   { name: 'Pedro Externo', email: 'pedro@eva.local', role: 'PARTICIPANT' as const, participantTypeName: 'Externo' }
 ];
 
+export const SEED_INSTRUCTORS = [
+  { name: 'Ing. Carla Mendoza', email: 'carla.instructor@eva.local' },
+  { name: 'Téc. Diego Quispe', email: 'diego.instructor@eva.local' },
+  { name: 'Lic. Valeria Ríos', email: 'valeria.instructor@eva.local' },
+  { name: 'Ing. Mauricio Flores', email: 'mauricio.instructor@eva.local' },
+  { name: 'Ing. Andrea Salazar', email: 'andrea.instructor@eva.local' },
+  { name: 'Lic. Daniel Paredes', email: 'daniel.instructor@eva.local' }
+];
+
 export const SEED_COURSES: SeedCourse[] = [
   {
     code: 'INF-PG-201',

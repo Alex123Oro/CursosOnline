@@ -1,3 +1,4 @@
+@if (session.currentUser()?.role === 'ADMIN') {
 <section class="page-header">
   <div>
     <p class="eyebrow">ADMINISTRACIÓN / CURSOS</p>
@@ -48,8 +49,10 @@
     [mode]="formMode()"
     [course]="editingCourse()"
     [participantTypes]="participantTypes()"
+    [instructors]="instructors()"
     [saving]="isSaving()"
     (save)="handleSave($event)"
     (cancel)="closeForm()">
   </app-course-form>
 }
+} @else { <p class="app-feedback">La administración de cursos requiere una sesión de administrador.</p> }
