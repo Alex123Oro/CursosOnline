@@ -92,6 +92,11 @@ small, .validation { color: #af3838; } .form-actions { display: flex; justify-co
     .date-fields { grid-template-columns: 1fr; }
     .agenda-row { grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; padding: 10px 12px; }
     .agenda-time { grid-column: 1; grid-row: 2; }
-    .agenda-row button, .agenda-action { grid-column: 2; grid-row: 1 / 3; }
+    .session-actions, .agenda-action { grid-column: 2; grid-row: 1 / 3; }
   }
 
+
+.session-actions, .delete-confirm > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.danger { color: #a12d32; }
+.delete-confirm { border: 1px solid #e6c3c5; border-radius: 10px; padding: 16px; margin: 16px 0; background: #fff8f8; }
+.delete-confirm p { line-height: 1.6; margin: 0 0 12px; }

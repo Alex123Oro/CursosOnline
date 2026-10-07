@@ -18,6 +18,7 @@ export class CourseSessionService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBaseUrl;
   list(courseId: string) { return this.http.get<CourseSessions>(`${this.base}/courses/${courseId}/sessions`); }
+  remove(courseId: string, sessionId: string) { return this.http.delete<void>(`${this.base}/courses/${courseId}/sessions/${sessionId}`); }
   create(courseId: string, payload: SessionPayload) { return this.http.post<CourseSession>(`${this.base}/courses/${courseId}/sessions`, payload); }
   schedule(courseId: string, payload: SchedulePayload) { return this.http.post<ScheduleResult>(`${this.base}/courses/${courseId}/sessions/schedule`, payload); }
   update(courseId: string, id: string, payload: SessionPayload) { return this.http.put<CourseSession>(`${this.base}/courses/${courseId}/sessions/${id}`, payload); }

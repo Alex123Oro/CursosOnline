@@ -33,6 +33,22 @@ describe('CourseSessionsPage', () => {
     expect(fixture.nativeElement.textContent).toContain('21:00');
     expect(fixture.nativeElement.textContent).toContain('Fuera del periodo');
   });
+  it('requires confirmation, deletes once and removes the persisted session from the agenda', () => {
+    const page = fixture.componentInstance;
+    page.openEdit(session); page.requestDelete(session);
+    http.expectNone(request => request.method === 'DELETE');
+    fixture.detectChanges(); expect(fixture.nativeElement.textContent).toContain('Confirmar eliminación');
+    page.confirmDelete(); page.confirmDelete();
+    const request = http.expectOne(`${base}/courses/2/sessions/3`);
+    expect(request.request.method).toBe('DELETE'); request.flush(null, { status: 204, statusText: 'No Content' });
+    expect(page.sessions()).toEqual([]); expect(page.formOpen()).toBe(false); expect(page.deleting()).toBeNull();
+  });
+  it('preserves the session when attendance prevents deletion', () => {
+    const page = fixture.componentInstance; page.requestDelete(session); page.confirmDelete();
+    http.expectOne(`${base}/courses/2/sessions/3`).flush({ message: 'No se puede eliminar una sesión con asistencia registrada.' }, { status: 409, statusText: 'Conflict' });
+    expect(page.sessions()).toEqual([session]); expect(page.saving()).toBe(false);
+    expect(page.feedback()).toContain('asistencia registrada');
+  });
   it('lets instructors consult classes and open attendance without exposing or sending writes', () => {
     TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
     http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
@@ -40,7 +56,8 @@ describe('CourseSessionsPage', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Programar sesiones');
     expect(fixture.nativeElement.textContent).not.toContain('Editar');
     expect(fixture.nativeElement.querySelector('a[href="/cursos/2/asistencia?session=3"]')).toBeTruthy();
-    page.openCreate(); page.openSchedule(); page.openEdit(session); page.submit(); page.submitSchedule();
+    page.openCreate(); page.openSchedule(); page.openEdit(session); page.submit(); page.submitSchedule(); page.requestDelete(session); page.confirmDelete();
+    expect(fixture.nativeElement.textContent).not.toContain('Eliminar');
     expect(page.formOpen()).toBe(false);
     http.expectNone(request => request.method !== 'GET');
   });

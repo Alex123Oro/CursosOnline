@@ -57,6 +57,7 @@ export class CourseSessionsPage {
   readonly feedback = signal('');
   readonly formOpen = signal(false);
   readonly editingId = signal<string | null>(null);
+  readonly deleting = signal<CourseSession | null>(null);
   private readonly planner = viewChild<ElementRef<HTMLElement>>('planner');
   readonly weekly = signal(false);
   readonly showAllPreview = signal(false);
@@ -111,7 +112,7 @@ export class CourseSessionsPage {
       untracked(() => {
         this.course.set(null); this.sessions.set([]); this.loading.set(false); this.saving.set(false);
         this.page.set(0);
-        this.feedback.set(''); this.formOpen.set(false); this.editingId.set(null); this.form.reset();
+        this.feedback.set(''); this.formOpen.set(false); this.editingId.set(null); this.deleting.set(null); this.form.reset();
         this.weekly.set(false); this.scheduleForm.reset(); this.showAllPreview.set(false);
         if (!user || !id) return;
         if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') { this.feedback.set('No tienes permisos para gestionar sesiones.'); return; }
@@ -130,6 +131,23 @@ export class CourseSessionsPage {
     const start = course.startDate ?? today;
     this.scheduleForm.reset({ startDate: start, endDate: course.endDate && course.endDate >= start ? course.endDate : start, weekdays: [new Date(start).getUTCDay()], startTime: '18:00', durationMinutes: 60 });
     this.weekly.set(true); this.editingId.set(null); this.feedback.set(''); this.showAllPreview.set(false); this.formOpen.set(true);
+  }
+  requestDelete(session: CourseSession) {
+    if (!this.canManage() || this.saving()) return;
+    this.deleting.set(session); this.feedback.set('');
+  }
+  confirmDelete() {
+    const session = this.deleting();
+    if (!this.canManage() || this.saving() || !session || !this.course()) return;
+    this.saving.set(true);
+    this.active.add(this.api.remove(this.id(), session.id).subscribe({
+      next: () => {
+        this.sessions.update(rows => rows.filter(row => row.id !== session.id));
+        if (this.editingId() === session.id) { this.formOpen.set(false); this.editingId.set(null); }
+        this.deleting.set(null); this.saving.set(false); this.feedback.set('Sesión eliminada correctamente.');
+      },
+      error: error => { this.saving.set(false); this.deleting.set(null); this.feedback.set(this.errorMessage(error)); }
+    }));
   }
   toggleDay(day: number) { const control = this.scheduleForm.controls.weekdays; control.setValue(control.value.includes(day) ? control.value.filter(value => value !== day) : [...control.value, day]); control.markAsTouched(); }
   submitSchedule() {

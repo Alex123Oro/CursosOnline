@@ -5,6 +5,12 @@
     @if (course()) { <div class="header-actions">@if (identity.currentUser()?.role === 'ADMIN' && course()!.instructorId) { <a class="secondary-btn attendance-link" routerLink="/asistencia-instructores" [queryParams]="{ instructor: course()!.instructorId, course: course()!.id }">Asistencia del instructor</a> }<a class="secondary-btn attendance-link" [routerLink]="['/cursos', course()!.id, 'asistencia']">Asistencia</a>@if (canManage()) { <button class="primary-btn add-session" (click)="openSchedule()" [disabled]="saving()">+ Programar sesiones</button> }</div> }
   </header>
   @if (feedback() && !formOpen()) { <p class="feedback" role="status">{{ feedback() }}</p> }
+  @if (deleting(); as target) {
+    <section class="delete-confirm" role="alert" aria-label="Confirmar eliminación de sesión">
+      <p>¿Eliminar la clase del {{ agendaDate(target.date) }} a las {{ target.startTime }}? Esta acción no se puede deshacer. Las sesiones con asistencia registrada se conservarán.</p>
+      <div><button class="secondary-btn" (click)="deleting.set(null)" [disabled]="saving()">Cancelar</button><button class="secondary-btn danger" (click)="confirmDelete()" [disabled]="saving()">{{ saving() ? 'Eliminando…' : 'Confirmar eliminación' }}</button></div>
+    </section>
+  }
   @if (loading()) { <p class="feedback" role="status">Cargando agenda…</p> }
   @if (course(); as current) {
     <section class="course-banner" aria-label="Resumen del curso">
@@ -56,7 +62,7 @@
       <section class="agenda" aria-labelledby="agenda-title"><div class="agenda-heading"><h2 id="agenda-title">Agenda de clases</h2><span>{{ sessions().length }} sesiones</span></div>
         <ul class="agenda-list">
         @for (session of visibleSessions(); track session.id) {
-          <li class="agenda-row"><div class="agenda-date"><time [attr.datetime]="session.date">{{ agendaDate(session.date) }}</time>@if (session.warning) { <small class="session-warning" [title]="session.warning">Fuera del periodo</small> }</div><strong class="agenda-time">{{ session.startTime }} <span>—</span> {{ session.endTime }}</strong>@if (canManage()) { <button class="secondary-btn" (click)="openEdit(session)" [disabled]="saving()" [attr.aria-label]="'Editar sesión del ' + session.date + ' a las ' + session.startTime">Editar</button> } @else { <a class="secondary-btn attendance-link agenda-action" [routerLink]="['/cursos', current.id, 'asistencia']" [queryParams]="{ session: session.id }">Ver asistencia</a> }</li>
+          <li class="agenda-row"><div class="agenda-date"><time [attr.datetime]="session.date">{{ agendaDate(session.date) }}</time>@if (session.warning) { <small class="session-warning" [title]="session.warning">Fuera del periodo</small> }</div><strong class="agenda-time">{{ session.startTime }} <span>—</span> {{ session.endTime }}</strong>@if (canManage()) { <div class="session-actions"><button class="secondary-btn" (click)="openEdit(session)" [disabled]="saving()" [attr.aria-label]="'Editar sesión del ' + session.date + ' a las ' + session.startTime">Editar</button><button class="secondary-btn danger" (click)="requestDelete(session)" [disabled]="saving()" [attr.aria-label]="'Eliminar sesión del ' + session.date + ' a las ' + session.startTime">Eliminar</button></div> } @else { <a class="secondary-btn attendance-link agenda-action" [routerLink]="['/cursos', current.id, 'asistencia']" [queryParams]="{ session: session.id }">Ver asistencia</a> }</li>
         }
         </ul>
         @if (!sessions().length) { <div class="empty-agenda"><h3>No hay clases programadas</h3>@if (canManage()) { <p>Elige los días de la semana y programa las clases de tu curso.</p><button class="primary-btn" (click)="openSchedule()" [disabled]="saving()">Programar primeras clases</button> } @else { <p>El administrador todavía no ha programado clases.</p> }</div> }
