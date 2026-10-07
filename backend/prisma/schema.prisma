@@ -57,6 +57,8 @@ model User {
   enrollments       Enrollment[]
   teachingCourses   Course[]         @relation("CourseInstructor")
   recordedAttendance Attendance[]
+  teachingAttendance InstructorAttendance[] @relation("AttendanceInstructor")
+  recordedInstructorAttendance InstructorAttendance[] @relation("InstructorAttendanceRecorder")
 
   @@map("usuarios")
 }
@@ -97,6 +99,7 @@ model CourseSession {
   updatedAt       DateTime @updatedAt @map("updated_at")
   course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
   attendance      Attendance[]
+  instructorAttendance InstructorAttendance?
 
   @@unique([id, courseId])
   @@unique([courseId, date, startTime])
@@ -154,6 +157,24 @@ model Attendance {
   @@unique([sessionId, enrollmentId])
   @@index([enrollmentId])
   @@map("asistencias")
+}
+
+model InstructorAttendance {
+  id           Int              @id @default(autoincrement())
+  courseId     Int              @map("curso_id")
+  sessionId    Int              @unique @map("sesion_id")
+  instructorId Int              @map("instructor_id")
+  status       AttendanceStatus @map("estado")
+  recordedById Int              @map("registrado_por_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  session      CourseSession    @relation(fields: [sessionId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
+  instructor   User             @relation("AttendanceInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  recordedBy   User             @relation("InstructorAttendanceRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([instructorId])
+  @@unique([sessionId, courseId])
+  @@map("asistencias_instructor")
 }
 
 model Payment {
