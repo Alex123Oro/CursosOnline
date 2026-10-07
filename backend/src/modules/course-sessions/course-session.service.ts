@@ -34,8 +34,10 @@ const handleError = (error: unknown): never => {
   }
   throw error;
 };
+const authorizeWrite = (user: RequestUser) => { if (user.role !== 'ADMIN') throw new HttpError(403, 'Solo el administrador puede programar o editar sesiones.'); };
 export const courseSessionService = {
   async schedule(courseId: number, input: RecurrenceInput, user: RequestUser) {
+    authorizeWrite(user);
     const course = await authorizedCourse(courseId, user);
     const dates = recurrenceDates(input);
     const created = await prisma.courseSession.createManyAndReturn({
@@ -56,6 +58,7 @@ export const courseSessionService = {
     return { course: courseResponse(course), sessions: sessions.map(session => sessionResponse(session, course)) };
   },
   async create(courseId: number, input: SessionInput, user: RequestUser) {
+    authorizeWrite(user);
     const course = await authorizedCourse(courseId, user);
     try {
       const session = await prisma.courseSession.create({ data: { ...input, date: new Date(input.date), courseId } });
@@ -63,6 +66,7 @@ export const courseSessionService = {
     } catch (error) { handleError(error); }
   },
   async update(courseId: number, sessionId: number, input: SessionInput, user: RequestUser) {
+    authorizeWrite(user);
     const course = await authorizedCourse(courseId, user);
     const existing = await prisma.courseSession.findUnique({ where: { id: sessionId } });
     if (!existing || existing.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');

@@ -29,10 +29,14 @@ describe('session HTTP contract and authorization', () => {
   });
   it('returns 201 on creation and 200 on edit with string ids', async () => {
     for (const method of ['POST', 'PUT']) {
-      const response = await fetch(`${base}/courses/2/sessions${method === 'PUT' ? '/3' : ''}`, { method, headers: { 'X-User-Id': '8', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await fetch(`${base}/courses/2/sessions${method === 'PUT' ? '/3' : ''}`, { method, headers: { 'X-User-Id': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       expect(response.status).toBe(method === 'POST' ? 201 : 200);
       expect(await response.json()).toMatchObject({ id: '3', courseId: '2', date: payload.date, warning: expect.any(String) });
     }
+  });
+  it.each(['POST', 'PUT'])('denies the assigned instructor on %s', async method => {
+    const response = await fetch(`${base}/courses/2/sessions${method === 'PUT' ? '/3' : ''}`, { method, headers: { 'X-User-Id': '8', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    expect(response.status).toBe(403); expect(mocks.courseSession.create).not.toHaveBeenCalled(); expect(mocks.courseSession.update).not.toHaveBeenCalled();
   });
   it.each(['9', '10'])('denies unrelated user %s through the actual route', async id => {
     const response = await fetch(`${base}/courses/2/sessions`, { headers: { 'X-User-Id': id } });
@@ -49,11 +53,11 @@ describe('session HTTP contract and authorization', () => {
   });
   it('creates a weekly batch and returns counts with the refreshed agenda', async () => {
     mocks.courseSession.createManyAndReturn.mockResolvedValue([record]);
-    const response = await fetch(`${base}/courses/2/sessions/schedule`, { method: 'POST', headers: { 'X-User-Id': '8', 'Content-Type': 'application/json' }, body: JSON.stringify({ startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1, 3], startTime: '18:00', durationMinutes: 90 }) });
+    const response = await fetch(`${base}/courses/2/sessions/schedule`, { method: 'POST', headers: { 'X-User-Id': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1, 3], startTime: '18:00', durationMinutes: 90 }) });
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({ createdCount: 1, skippedCount: 3, sessions: [expect.objectContaining({ id: '3' })] });
   });
-  it.each([['', 401], ['9', 403], ['10', 403]])('denies unauthorized batches for user %s', async (id, status) => {
+  it.each([['', 401], ['8', 403], ['9', 403], ['10', 403]])('denies unauthorized batches for user %s', async (id, status) => {
     const response = await fetch(`${base}/courses/2/sessions/schedule`, { method: 'POST', headers: { 'X-User-Id': id, 'Content-Type': 'application/json' }, body: JSON.stringify({ startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1], startTime: '18:00', durationMinutes: 90 }) });
     expect(response.status).toBe(status); expect(mocks.courseSession.createManyAndReturn).not.toHaveBeenCalled();
   });

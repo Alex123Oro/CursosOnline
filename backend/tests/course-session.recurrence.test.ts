@@ -4,7 +4,7 @@ vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { recurrenceInputSchema, recurrenceDates } from '../src/modules/course-sessions/course-session.rules.js';
 import { courseSessionService } from '../src/modules/course-sessions/course-session.service.js';
 const input = { startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1, 3], startTime: '18:00', durationMinutes: 90 };
-const user = { id: 8, name: 'Carla', email: 'test', role: 'INSTRUCTOR' as const, participantTypeId: null };
+const user = { id: 8, name: 'Carla', email: 'test', role: 'ADMIN' as const, participantTypeId: null };
 const course = { id: 2, code: 'PG', name: 'PostgreSQL', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-10-20') };
 describe('weekly session scheduling', () => {
   beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.createManyAndReturn.mockResolvedValue([{ id: 4 }]); mocks.courseSession.findMany.mockResolvedValue([]); });
@@ -25,7 +25,7 @@ describe('weekly session scheduling', () => {
     expect(mocks.courseSession.createManyAndReturn).toHaveBeenCalledWith({ skipDuplicates: true, data: ['2026-10-12', '2026-10-14', '2026-10-19', '2026-10-21'].map(date => ({ courseId: 2, date: new Date(date), startTime: '18:00', durationMinutes: 90 })) });
   });
   it.each([
-    { instructorId: 9, statusCode: 403 }, { status: 'DRAFT', statusCode: 400 }
+    { status: 'DRAFT', statusCode: 400 }
   ])('authorizes the whole batch before writing %j', async ({ statusCode, ...change }) => {
     mocks.course.findUnique.mockResolvedValue({ ...course, ...change });
     await expect(courseSessionService.schedule(2, input, user)).rejects.toMatchObject({ statusCode });

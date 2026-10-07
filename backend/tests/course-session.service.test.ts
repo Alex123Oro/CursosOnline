@@ -12,7 +12,7 @@ const record = { id: 3, courseId: 2, ...input, date: new Date(input.date), creat
 describe('course session service', () => {
   beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record); });
   it('creates an out-of-period session with a warning and string identifiers', async () => {
-    const result = await courseSessionService.create(2, input, instructor);
+    const result = await courseSessionService.create(2, input, admin);
     expect(result).toMatchObject({ id: '3', courseId: '2', date: input.date, endTime: '21:00' });
     expect(result.warning).toBeTruthy();
   });
@@ -33,8 +33,15 @@ describe('course session service', () => {
   it('denies participants', async () => { await expect(courseSessionService.list(2, { ...admin, role: 'PARTICIPANT' })).rejects.toMatchObject({ statusCode: 403 }); });
   it('rejects draft courses', async () => { mocks.course.findUnique.mockResolvedValue({ ...course, status: 'DRAFT' }); await expect(courseSessionService.create(2, input, admin)).rejects.toMatchObject({ statusCode: 400 }); });
   it('returns 404 for a missing course', async () => { mocks.course.findUnique.mockResolvedValue(null); await expect(courseSessionService.list(2, admin)).rejects.toMatchObject({ statusCode: 404 }); });
-  it('rejects editing a session belonging to another course', async () => { mocks.courseSession.findUnique.mockResolvedValue({ ...record, courseId: 99 }); await expect(courseSessionService.update(2, 3, input, instructor)).rejects.toMatchObject({ statusCode: 404 }); });
-  it('edits an existing session', async () => { expect((await courseSessionService.update(2, 3, input, instructor)).id).toBe('3'); });
+  it('rejects editing a session belonging to another course', async () => { mocks.courseSession.findUnique.mockResolvedValue({ ...record, courseId: 99 }); await expect(courseSessionService.update(2, 3, input, admin)).rejects.toMatchObject({ statusCode: 404 }); });
+  it('edits an existing session', async () => { expect((await courseSessionService.update(2, 3, input, admin)).id).toBe('3'); });
+  it('allows the assigned instructor to read but rejects every session write', async () => {
+    expect((await courseSessionService.list(2, instructor)).sessions).toHaveLength(1);
+    await expect(courseSessionService.create(2, input, instructor)).rejects.toMatchObject({statusCode:403});
+    await expect(courseSessionService.update(2, 3, input, instructor)).rejects.toMatchObject({statusCode:403});
+    await expect(courseSessionService.schedule(2, {startDate:'2026-10-12',endDate:'2026-10-12',weekdays:[1],startTime:'19:00',durationMinutes:60}, instructor)).rejects.toMatchObject({statusCode:403});
+    expect(mocks.courseSession.create).not.toHaveBeenCalled(); expect(mocks.courseSession.update).not.toHaveBeenCalled();
+  });
   it.each(['create', 'update'] as const)('maps concurrent duplicate failures on %s to 409', async method => {
     mocks.courseSession[method].mockRejectedValue(new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }));
     const call = method === 'create' ? courseSessionService.create(2, input, admin) : courseSessionService.update(2, 3, input, admin);
