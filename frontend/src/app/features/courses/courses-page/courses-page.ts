@@ -19,7 +19,8 @@ type FormMode = 'create' | 'edit';
 })
 export class CoursesPage {
   private readonly courseService = inject(CourseService);
-  private readonly session = inject(SessionService);
+  readonly session = inject(SessionService);
+  readonly instructors = computed(() => this.session.users().filter(user => user.role === 'INSTRUCTOR'));
 
   readonly courses = signal<Course[]>([]);
   readonly participantTypes = signal<ParticipantType[]>([]);
@@ -42,7 +43,7 @@ export class CoursesPage {
       this.feedback.set('');
       this.isLoading.set(false);
       this.closeForm();
-      if (!user) return;
+      if (!user || user.role !== 'ADMIN') return;
       const subscription = untracked(() => this.loadCourses());
       onCleanup(() => subscription.unsubscribe());
     });

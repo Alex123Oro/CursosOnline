@@ -24,6 +24,17 @@ describe('Administrative data and session startup', () => {
     TestBed.inject(HttpTestingController).verify();
     localStorage.removeItem('eva-user-id');
   });
+  it('keeps the initial users and all instructors, excludes demo students and preserves an instructor on reload', () => {
+    localStorage.setItem('eva-user-id', '6');
+    const session = TestBed.inject(SessionService);
+    TestBed.inject(HttpTestingController).expectOne(request => request.url.endsWith('/session/users')).flush([
+      ...Array.from({ length: 4 }, (_, i) => ({ id: String(i + 1), role: i === 0 ? 'ADMIN' : 'PARTICIPANT' })),
+      { id: '5', role: 'INSTRUCTOR' }, { id: '6', role: 'INSTRUCTOR' }, { id: '7', role: 'PARTICIPANT' }
+    ]);
+    expect(session.sessionUsers().map(user => user.id)).toEqual(['1', '2', '3', '4', '5', '6']);
+    expect(session.userId()).toBe('6');
+    expect(session.ready()).toBe(true);
+  });
 
   for (const [page, endpoint] of [[CoursesPage, '/courses'], [EnrollmentsPage, '/enrollments']] as const) {
     it(`waits for the session and reloads ${endpoint} on user changes`, () => {

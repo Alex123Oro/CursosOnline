@@ -11,6 +11,9 @@ import { enrollmentRoutes } from './modules/enrollments/enrollment.routes.js';
 import { participantTypeRoutes } from './modules/participant-types/participant-type.routes.js';
 import { sessionRoutes } from './modules/session/session.routes.js';
 import { errorMiddleware } from './shared/error.middleware.js';
+import { courseSessionRoutes, teachingRoutes } from './modules/course-sessions/course-session.routes.js';
+import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
+import { instructorAttendanceRoutes } from './modules/instructor-attendance/instructor-attendance.routes.js';
 
 const app = express();
 const allowAnyOrigin = env.corsOrigins.includes('*');
@@ -26,6 +29,10 @@ app.get('/api/health', (_request, response) => {
 });
 
 app.use('/api/courses', courseRoutes);
+app.use('/api/courses', courseSessionRoutes);
+app.use('/api/courses', attendanceRoutes);
+app.use('/api/admin', instructorAttendanceRoutes);
+app.use('/api/teaching', teachingRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/participant-types', participantTypeRoutes);
 app.use('/api/session', sessionRoutes);

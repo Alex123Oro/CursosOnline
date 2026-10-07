@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Course, CoursePayload, CoursePricesPayload, ParticipantType } from '../../../core/course.service';
+import { SessionUser } from '../../../core/session.service';
 
 const dateRangeValidator = (group: AbstractControl): ValidationErrors | null => {
   const startDate = group.get('startDate')?.value;
@@ -31,6 +32,7 @@ export class CourseForm implements OnChanges {
   @Input() mode: 'create' | 'edit' = 'create';
   @Input() course: Course | null = null;
   @Input() participantTypes: ParticipantType[] = [];
+  @Input() instructors: SessionUser[] = [];
   @Input() saving = false;
   @Output() save = new EventEmitter<{ course: CoursePayload; prices: CoursePricesPayload }>();
   @Output() cancel = new EventEmitter<void>();
@@ -43,6 +45,7 @@ export class CourseForm implements OnChanges {
     content: ['', [Validators.required, Validators.minLength(10)]],
     durationHours: [1, [Validators.required, Validators.min(1)]],
     instructor: ['', [Validators.required, Validators.minLength(2)]],
+    instructorId: [''],
     schedule: ['', [Validators.required, Validators.minLength(3)]],
     startDate: [''],
     endDate: [''],
@@ -69,6 +72,7 @@ export class CourseForm implements OnChanges {
         content: course?.content ?? '',
         durationHours: course?.durationHours ?? 1,
         instructor: course?.instructor ?? '',
+        instructorId: course?.instructorId ?? '',
         schedule: course?.schedule ?? '',
         startDate: course?.startDate ?? '',
         endDate: course?.endDate ?? '',
@@ -91,7 +95,7 @@ export class CourseForm implements OnChanges {
 
   submit() {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.saving) return;
 
     const value = this.form.getRawValue();
     this.save.emit({
@@ -101,6 +105,7 @@ export class CourseForm implements OnChanges {
         content: value.content.trim(),
         durationHours: Number(value.durationHours),
         instructor: value.instructor.trim(),
+        instructorId: value.instructorId || null,
         schedule: value.schedule.trim(),
         startDate: value.startDate || null,
         endDate: value.endDate || null,
@@ -126,5 +131,10 @@ export class CourseForm implements OnChanges {
         basePrice: [existing?.basePrice ?? 0, [Validators.required, Validators.min(0)]]
       }));
     }
+  }
+
+  selectInstructor(id: string) {
+    const instructor = this.instructors.find(user => user.id === id);
+    if (instructor) this.form.controls.instructor.setValue(instructor.name);
   }
 }

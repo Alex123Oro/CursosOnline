@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
-import { SEED_COURSES, SEED_PARTICIPANT_TYPES, SEED_PRICES, SEED_USERS } from './seed-data.js';
+import { SEED_COURSES, SEED_PARTICIPANT_TYPES, SEED_PRICES, SEED_USERS, SEED_INSTRUCTORS } from './seed-data.js';
 
 const prisma = new PrismaClient();
 
@@ -39,9 +39,16 @@ const seed = async () => {
     });
   }
 
+  const instructorByName = new Map<string, number>();
+  for (const instructor of SEED_INSTRUCTORS) {
+    const user = await prisma.user.upsert({ where: { email: instructor.email }, create: { ...instructor, authId: crypto.randomUUID(), role: 'INSTRUCTOR' }, update: { name: instructor.name, role: 'INSTRUCTOR' } });
+    instructorByName.set(instructor.name, user.id);
+  }
+
   for (const course of SEED_COURSES) {
     const data = {
       ...course,
+      instructorId: instructorByName.get(course.instructor) ?? null,
       startDate: new Date(course.startDate),
       endDate: new Date(course.endDate),
       preinscriptionStart: new Date(course.preinscriptionStart),

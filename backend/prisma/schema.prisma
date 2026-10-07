@@ -17,6 +17,7 @@ enum CourseStatus {
 enum UserRole {
   ADMIN       @map("administrador")
   PARTICIPANT @map("participante")
+  INSTRUCTOR  @map("instructor")
 
   @@map("rol_usuario")
 }
@@ -26,6 +27,13 @@ enum EnrollmentStatus {
   INSCRITO    @map("inscrito")
 
   @@map("estado_inscripcion")
+}
+
+enum AttendanceStatus {
+  PRESENT @map("presente")
+  ABSENT  @map("ausente")
+
+  @@map("estado_asistencia")
 }
 
 model ParticipantType {
@@ -47,6 +55,10 @@ model User {
   participantTypeId Int?             @map("tipo_participante_id")
   participantType   ParticipantType? @relation(fields: [participantTypeId], references: [id])
   enrollments       Enrollment[]
+  teachingCourses   Course[]         @relation("CourseInstructor")
+  recordedAttendance Attendance[]
+  teachingAttendance InstructorAttendance[] @relation("AttendanceInstructor")
+  recordedInstructorAttendance InstructorAttendance[] @relation("InstructorAttendanceRecorder")
 
   @@map("usuarios")
 }
@@ -58,6 +70,8 @@ model Course {
   content              String?        @map("contenido")
   durationHours        Int?           @map("duracion_horas")
   instructor           String?        @map("instructor")
+  instructorId         Int?           @map("instructor_id")
+  assignedInstructor   User?          @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: SetNull)
   schedule             String?        @map("horario")
   approvalCriteria     String?        @map("criterios_aprobacion")
   status               CourseStatus   @default(DRAFT) @map("estado")
@@ -70,8 +84,26 @@ model Course {
   updatedAt            DateTime       @updatedAt @map("updated_at")
   prices               CoursePrice[]
   enrollments          Enrollment[]
+  sessions             CourseSession[]
 
   @@map("cursos")
+}
+
+model CourseSession {
+  id              Int      @id @default(autoincrement())
+  courseId        Int      @map("curso_id")
+  date            DateTime @db.Date @map("fecha")
+  startTime       String   @db.VarChar(5) @map("hora_inicio")
+  durationMinutes Int      @map("duracion_minutos")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  attendance      Attendance[]
+  instructorAttendance InstructorAttendance?
+
+  @@unique([id, courseId])
+  @@unique([courseId, date, startTime])
+  @@map("sesiones_curso")
 }
 
 model CoursePrice {
@@ -102,9 +134,47 @@ model Enrollment {
   participant        User             @relation(fields: [participantId], references: [id])
   participantType    ParticipantType  @relation(fields: [participantTypeId], references: [id])
   payment            Payment?
+  attendance         Attendance[]
 
+  @@unique([id, courseId])
   @@unique([courseId, participantId])
   @@map("inscripciones")
+}
+
+model Attendance {
+  id           Int              @id @default(autoincrement())
+  courseId     Int              @map("curso_id")
+  sessionId    Int              @map("sesion_id")
+  enrollmentId Int              @map("inscripcion_id")
+  status       AttendanceStatus @map("estado")
+  recordedById Int              @map("registrado_por_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  session      CourseSession   @relation(fields: [sessionId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
+  enrollment   Enrollment      @relation(fields: [enrollmentId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
+  recordedBy   User            @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, enrollmentId])
+  @@index([enrollmentId])
+  @@map("asistencias")
+}
+
+model InstructorAttendance {
+  id           Int              @id @default(autoincrement())
+  courseId     Int              @map("curso_id")
+  sessionId    Int              @unique @map("sesion_id")
+  instructorId Int              @map("instructor_id")
+  status       AttendanceStatus @map("estado")
+  recordedById Int              @map("registrado_por_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  session      CourseSession    @relation(fields: [sessionId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
+  instructor   User             @relation("AttendanceInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  recordedBy   User             @relation("InstructorAttendanceRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([instructorId])
+  @@unique([sessionId, courseId])
+  @@map("asistencias_instructor")
 }
 
 model Payment {

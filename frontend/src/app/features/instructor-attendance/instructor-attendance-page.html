@@ -1,0 +1,27 @@
+<section class="instructor-attendance">
+  <header><p class="eyebrow">CONTROL ADMINISTRATIVO</p><h1>Asistencia de instructores</h1><p class="helper">Consulta las clases y registra la presencia de cada instructor. Hora de Bolivia.</p></header>
+  @if (error()) { <div class="notice error" role="alert">{{ error() }} @if (identity.currentUser()?.role === 'ADMIN') { <button (click)="reload()">Reintentar</button> }</div> }
+  @if (identity.currentUser()?.role === 'ADMIN') {
+    <div class="filters">
+      <label for="instructor">Instructor<select id="instructor" [value]="instructorId()" (change)="selectInstructor($any($event.target).value)">@for (instructor of instructors(); track instructor.id) { <option [value]="instructor.id" [selected]="instructor.id === instructorId()">{{ instructor.name }}</option> }</select></label>
+      <label for="course">Curso<select id="course" [value]="courseId()" (change)="setFilter('courseId', $any($event.target).value)"><option value="" [selected]="!courseId()">Todos los cursos</option>@for (course of courses(); track course.id) { <option [value]="course.id" [selected]="course.id === courseId()">{{ course.name }}</option> }</select></label>
+      <label for="from">Desde<input id="from" type="date" [value]="from()" (change)="setFilter('from', $any($event.target).value)"></label>
+      <label for="to">Hasta<input id="to" type="date" [value]="to()" (change)="setFilter('to', $any($event.target).value)"></label>
+    </div>
+    @if (loading()) { <p class="notice" role="status">Cargando historial…</p> }
+    @if (!loading() && !error()) {
+      @if (selectedInstructor(); as instructor) {
+        <div class="history-toolbar"><div><h2>{{ instructor.name }}</h2><p class="helper">{{ summary().present }} presentes · {{ summary().absent }} ausentes · {{ summary().pending }} pendientes</p></div><label for="state">Mostrar<select id="state" [value]="stateFilter()" (change)="setStateFilter($any($event.target).value)"><option value="ALL">Todas las sesiones</option><option value="PRESENT">Presentes</option><option value="ABSENT">Ausentes</option><option value="PENDING">Pendientes</option></select></label></div>
+        <div class="history"><div class="history-heading" aria-hidden="true"><span>Fecha y horario</span><span>Curso</span><span>Asistencia</span></div><ul>
+          @for (row of visibleSessions(); track row.id) {
+            <li class="session-row"><div class="session-date"><strong>{{ formatDate(row.date) }}</strong><small>{{ row.startTime }}–{{ row.endTime }}</small></div><div class="course-info"><strong>{{ row.course.name }}</strong><small>{{ row.course.code }}</small></div><div class="mark-area"><div class="mark-controls" role="group" [attr.aria-label]="'Asistencia de ' + instructor.name + ', ' + row.course.name + ', ' + formatDate(row.date)"><button [class.present]="row.status === 'PRESENT'" [attr.aria-pressed]="row.status === 'PRESENT'" [disabled]="!row.editable || rowState()[row.id]?.phase === 'saving'" (click)="mark(row, 'PRESENT')">Presente</button><button [class.absent]="row.status === 'ABSENT'" [attr.aria-pressed]="row.status === 'ABSENT'" [disabled]="!row.editable || rowState()[row.id]?.phase === 'saving'" (click)="mark(row, 'ABSENT')">Ausente</button></div>
+              @if (!row.editable) { <small class="helper">{{ row.blockedReason || 'Futura · disponible el día de la clase' }}</small> } @else if (rowState()[row.id]; as state) { @if (state.phase !== 'error') { <small class="save-note" role="status">{{ state.phase === 'saving' ? 'Guardando…' : 'Guardado' }}</small> } } @else if (!row.status) { <small class="helper">Pendiente</small> }
+            </div>@if (rowState()[row.id]?.phase === 'error') { <div class="row-error" role="alert">{{ rowState()[row.id].message }}<button (click)="retry(row)">Reintentar</button></div> }</li>
+          } @empty { <li class="empty">No hay sesiones para este instructor con los filtros seleccionados.</li> }
+        </ul></div>
+        @if (pageCount() > 1) { <nav class="pagination" aria-label="Páginas de sesiones"><span role="status">Página {{ currentPage() + 1 }} de {{ pageCount() }} · {{ filteredSessions().length }} sesiones</span><div><button aria-label="Página anterior" [disabled]="currentPage() === 0" (click)="changePage(-1)">←</button><button aria-label="Página siguiente" [disabled]="currentPage() + 1 === pageCount()" (click)="changePage(1)">→</button></div></nav> }
+        <p class="helper calculation-note">Las sesiones sin registrar quedan pendientes. Las futuras no cuentan en el resumen. El historial guardado conserva al instructor original aunque el curso cambie de instructor.</p>
+      } @else { <p class="notice">Todavía no hay instructores disponibles.</p> }
+    }
+  }
+</section>

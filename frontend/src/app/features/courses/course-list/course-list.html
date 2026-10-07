@@ -27,6 +27,7 @@
               </span>
             </td>
             <td class="actions">
+              @if (course.status === 'PUBLISHED') { <a class="more" [routerLink]="['/cursos', course.id, 'sesiones']">Sesiones</a> }
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
               <button class="more" (click)="editCourse.emit(course)">Precios</button>
               <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">

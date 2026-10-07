@@ -6,7 +6,7 @@ const toUserResponse = (user: {
   id: number;
   name: string;
   email: string;
-  role: 'ADMIN' | 'PARTICIPANT';
+  role: 'ADMIN' | 'PARTICIPANT' | 'INSTRUCTOR';
   participantTypeId: number | null;
   participantType: { name: string } | null;
 }) => ({

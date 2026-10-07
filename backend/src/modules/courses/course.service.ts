@@ -11,6 +11,7 @@ const courseSelect = {
   content: true,
   durationHours: true,
   instructor: true,
+  instructorId: true,
   schedule: true,
   approvalCriteria: true,
   status: true,
@@ -55,6 +56,7 @@ export const toCourseResponse = (course: CourseRecord, enrollment?: {
   content: course.content ?? '',
   durationHours: course.durationHours ?? 0,
   instructor: course.instructor ?? '',
+  instructorId: course.instructorId == null ? null : String(course.instructorId),
   schedule: course.schedule ?? '',
   approvalCriteria: course.approvalCriteria ?? '',
   status: course.status ?? 'DRAFT',
@@ -92,7 +94,7 @@ const toCourseData = (input: CourseInput) => ({
   durationHours: input.durationHours,
   instructor: input.instructor,
   schedule: input.schedule,
-  approvalCriteria: input.approvalCriteria,
+  ...(input.approvalCriteria === undefined ? {} : { approvalCriteria: input.approvalCriteria }),
   startDate: input.startDate ? new Date(input.startDate) : null,
   endDate: input.endDate ? new Date(input.endDate) : null,
   capacity: input.capacity ?? null,
@@ -109,6 +111,14 @@ const publicationContext = (input: CourseInput) => ({
   preinscriptionStart: input.preinscriptionStart ?? null,
   preinscriptionEnd: input.preinscriptionEnd ?? null
 });
+
+const instructorAssignment = async (input: CourseInput, existingId: number | null = null) => {
+  const instructorId = input.instructorId === undefined ? existingId : input.instructorId;
+  if (instructorId == null) return { instructorId: null, instructor: input.instructor };
+  const instructor = await prisma.user.findUnique({ where: { id: instructorId }, select: { id: true, name: true, role: true } });
+  if (!instructor || instructor.role !== 'INSTRUCTOR') throw new HttpError(400, 'Selecciona un usuario instructor válido.', [{ path: 'instructorId', message: 'El instructor no existe o no tiene el rol requerido.' }]);
+  return { instructorId: instructor.id, instructor: instructor.name };
+};
 
 const handlePrismaError = (error: unknown): never => {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -168,10 +178,12 @@ export const courseService = {
   },
 
   async create(input: CourseInput) {
+    const assignment = await instructorAssignment(input);
     try {
       const course = await prisma.course.create({
         data: {
           ...toCourseData(input),
+          ...assignment,
           status: 'DRAFT'
         },
         select: courseSelect
@@ -186,7 +198,7 @@ export const courseService = {
   async update(id: number, input: CourseInput) {
     const existing = await prisma.course.findUnique({
       where: { id },
-      select: { status: true }
+      select: { status: true, instructorId: true }
     });
 
     if (!existing) {
@@ -197,10 +209,12 @@ export const courseService = {
       canPublishCourse(publicationContext(input));
     }
 
+    const assignment = await instructorAssignment(input, existing.instructorId ?? null);
+
     try {
       const course = await prisma.course.update({
         where: { id },
-        data: toCourseData(input),
+        data: { ...toCourseData(input), ...assignment },
         select: courseSelect
       });
 
