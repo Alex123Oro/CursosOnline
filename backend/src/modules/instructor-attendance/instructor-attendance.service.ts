@@ -11,7 +11,8 @@ const sessionInclude = { course: { select: courseSelect }, instructorAttendance:
 type Session = Prisma.CourseSessionGetPayload<{ include: typeof sessionInclude }>;
 const toRow = (session: Session, today: string) => ({
   id: String(session.id), date: session.date.toISOString().slice(0, 10), startTime: session.startTime,
-  endTime: endTime(session.startTime, session.durationMinutes), editable: session.date.toISOString().slice(0, 10) <= today,
+  endTime: endTime(session.startTime, session.durationMinutes), editable: session.date.toISOString().slice(0, 10) <= today && session.course.instructorId !== null,
+  blockedReason: session.date.toISOString().slice(0, 10) > today ? 'Futura · disponible el día de la clase' : session.course.instructorId === null ? 'Asigna un usuario instructor al curso para registrar o corregir asistencia.' : null,
   course: { id: String(session.courseId), name: session.course.name, code: session.course.code ?? '' },
   status: session.instructorAttendance?.status ?? null, updatedAt: session.instructorAttendance?.updatedAt.toISOString() ?? null,
   recordedById: session.instructorAttendance ? String(session.instructorAttendance.recordedById) : null
@@ -38,7 +39,7 @@ export const instructorAttendanceService = {
       })
     ]);
     const rows = sessions.map(session => toRow(session, today));
-    const eligible = rows.filter(row => row.editable);
+    const eligible = rows.filter(row => row.date <= today);
     return { instructor: { id: String(instructor.id), name: instructor.name }, today,
       courses: courses.map(course => ({ id: String(course.id), name: course.name, code: course.code ?? '' })), sessions: rows,
       summary: { present: eligible.filter(row => row.status === 'PRESENT').length, absent: eligible.filter(row => row.status === 'ABSENT').length, pending: eligible.filter(row => row.status === null).length }

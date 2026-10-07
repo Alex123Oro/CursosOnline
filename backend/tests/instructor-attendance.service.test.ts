@@ -33,6 +33,12 @@ describe('instructor attendance', () => {
     expect(result.summary).toEqual({ present: 0, absent: 1, pending: 1 });
     expect(result.sessions[2].editable).toBe(false); expect(result).not.toHaveProperty('percentage');
   });
+  it('retains saved summary but blocks corrections while the course has no assigned user', async () => {
+    db.courseSession.findMany.mockResolvedValue([{...session,course:{...course,instructorId:null},instructorAttendance:record}]);
+    const result=await instructorAttendanceService.list(8,{},admin);
+    expect(result.summary.absent).toBe(1); expect(result.sessions[0].editable).toBe(false);
+    expect(result.sessions[0].blockedReason).toContain('Asigna');
+  });
   it('queries own records and unmarked currently assigned sessions with inclusive filters', async () => {
     await instructorAttendanceService.list(8, { courseId: 2, from: '2026-10-01', to: '2026-10-06' }, admin);
     expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ courseId: 2, date: { gte: new Date('2026-10-01'), lte: new Date('2026-10-06') }, OR: [{ instructorAttendance: { is: { instructorId: 8 } } }, { course: { instructorId: 8 }, instructorAttendance: { is: null } }] }) }));
