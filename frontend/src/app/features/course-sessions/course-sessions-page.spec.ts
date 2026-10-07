@@ -33,6 +33,14 @@ describe('CourseSessionsPage', () => {
     expect(fixture.nativeElement.textContent).toContain('21:00');
     expect(fixture.nativeElement.textContent).toContain('Fuera del periodo');
   });
+  it('offers the instructor attendance link only to administrators', () => {
+    const link = fixture.nativeElement.querySelector('a[href^="/asistencia-instructores"]');
+    expect(link?.getAttribute('href')).toContain('instructor=8');
+    expect(link?.getAttribute('href')).toContain('course=2');
+    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
+    http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[href^="/asistencia-instructores"]')).toBe(null);
+  });
   it('shows six compact rows per page and reaches the last class without a long list', () => {
     const page = fixture.componentInstance;
     page.sessions.set(Array.from({ length: 21 }, (_, index) => ({ ...session, id: String(index + 1), date: `2026-10-${String(index + 1).padStart(2, '0')}`, warning: null })));

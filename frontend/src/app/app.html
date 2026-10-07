@@ -27,6 +27,7 @@
       @if (session.currentUser()?.role === 'ADMIN') {
       <a class="nav-item" routerLink="/cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Cursos</a>
       <a class="nav-item" routerLink="/inscripciones" routerLinkActive="active"><span aria-hidden="true">☰</span> Inscripciones</a>
+      <a class="nav-item" routerLink="/asistencia-instructores" routerLinkActive="active">Asistencia de instructores</a>
       }
       @if (session.currentUser()?.role === 'INSTRUCTOR') { <a class="nav-item" routerLink="/mis-cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Mis cursos</a> }
       <a class="nav-item" routerLink="/catalogo" routerLinkActive="active"><span aria-hidden="true">▤</span> Catálogo</a>
