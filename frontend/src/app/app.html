@@ -29,7 +29,7 @@
       <a class="nav-item" routerLink="/inscripciones" routerLinkActive="active"><span aria-hidden="true">☰</span> Inscripciones</a>
       <a class="nav-item" routerLink="/asistencia-instructores" routerLinkActive="active">Asistencia de instructores</a>
       }
-      @if (session.currentUser()?.role === 'INSTRUCTOR') { <a class="nav-item" routerLink="/mis-cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Mis cursos</a> }
+      @if (session.currentUser()?.role === 'INSTRUCTOR') { <a class="nav-item" routerLink="/cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Cursos</a> }
       <a class="nav-item" routerLink="/catalogo" routerLinkActive="active"><span aria-hidden="true">▤</span> Catálogo</a>
     </nav>
     <div class="sidebar-footer">
@@ -38,10 +38,13 @@
       <label class="session-select">
         <span>Sesión</span>
         <select [value]="session.userId()" (change)="onSessionChange($any($event.target).value)">
-          @for (user of session.sessionUsers(); track user.id) {
-            <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option>
-          }
-        </select>
+          <optgroup label="Usuarios">
+          @for (user of session.baseSessionUsers(); track user.id) { <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option> }
+        </optgroup>
+        <optgroup label="Instructores">
+          @for (user of session.instructorSessionUsers(); track user.id) { <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option> }
+        </optgroup>
+      </select>
       </label>
     </div>
   </aside>

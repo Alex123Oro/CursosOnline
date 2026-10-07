@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { SessionNavigationService } from './core/session-navigation.service';
 import { SessionService } from './core/session.service';
 
 @Component({
@@ -13,6 +14,7 @@ import { SessionService } from './core/session.service';
 export class App {
   private readonly router = inject(Router);
   readonly session = inject(SessionService);
+  readonly navigation = inject(SessionNavigationService);
   readonly sidebarOpen = signal(false);
   readonly isPublicRoute = signal(this.router.url.startsWith('/catalogo'));
 
@@ -27,7 +29,6 @@ export class App {
 
   onSessionChange(id: string) {
     this.session.selectUser(id);
-    const role = this.session.currentUser()?.role;
-    void this.router.navigateByUrl(role === 'INSTRUCTOR' ? '/mis-cursos' : role === 'ADMIN' ? '/cursos' : '/catalogo');
+    this.sidebarOpen.set(false);
   }
 }

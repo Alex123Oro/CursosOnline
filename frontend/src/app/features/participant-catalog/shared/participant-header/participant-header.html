@@ -5,9 +5,12 @@
     <label class="session-select">
       <span>Sesión</span>
       <select [value]="session.userId()" (change)="onSessionChange($any($event.target).value)">
-        @for (user of session.sessionUsers(); track user.id) {
-          <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option>
-        }
+        <optgroup label="Usuarios">
+          @for (user of session.baseSessionUsers(); track user.id) { <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option> }
+        </optgroup>
+        <optgroup label="Instructores">
+          @for (user of session.instructorSessionUsers(); track user.id) { <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option> }
+        </optgroup>
       </select>
     </label>
   </div>
