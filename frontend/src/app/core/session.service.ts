@@ -19,6 +19,7 @@ const STORAGE_KEY = 'eva-user-id';
 export class SessionService {
   private readonly usersState = signal<SessionUser[]>([]);
   readonly users = computed(() => this.usersState());
+  readonly sessionUsers = computed(() => this.usersState().slice(0, 4));
   readonly userId = signal(localStorage.getItem(STORAGE_KEY) ?? '');
   readonly currentUser = computed(() => this.usersState().find(user => user.id === this.userId()) ?? null);
 
@@ -34,10 +35,9 @@ export class SessionService {
     this.http.get<SessionUser[]>(`${environment.apiBaseUrl}/session/users`).subscribe({
       next: users => {
         this.usersState.set(users);
-        if (!this.userId() && users[0]) {
-          this.selectUser(users[0].id);
-        } else if (this.userId() && !users.some(user => user.id === this.userId()) && users[0]) {
-          this.selectUser(users[0].id);
+        const available = this.sessionUsers();
+        if (!available.some(user => user.id === this.userId()) && available[0]) {
+          this.selectUser(available[0].id);
         }
       },
       error: () => this.usersState.set([])
