@@ -6,6 +6,11 @@ import { courseSessionService } from './course-session.service.js';
 
 const courseId = (request: Request) => parsePositiveInt(request.params.courseId, 'El identificador del curso no es válido.');
 export const courseSessionController = {
+  async remove(request: Request, response: Response) {
+    const id = parsePositiveInt(request.params.sessionId, 'El identificador de la sesión no es válido.');
+    await courseSessionService.remove(courseId(request), id, currentUser(request));
+    response.status(204).send();
+  },
   async schedule(request: Request, response: Response) { response.status(201).json(await courseSessionService.schedule(courseId(request), recurrenceInputSchema.parse(request.body), currentUser(request))); },
   async teachingCourses(request: Request, response: Response) { response.json(await courseSessionService.teachingCourses(currentUser(request))); },
   async list(request: Request, response: Response) { response.json(await courseSessionService.list(courseId(request), currentUser(request))); },

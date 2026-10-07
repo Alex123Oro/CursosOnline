@@ -8,5 +8,6 @@ courseSessionRoutes.get('/:courseId/sessions', requireUser, asyncHandler(courseS
 courseSessionRoutes.post('/:courseId/sessions', requireAdmin, asyncHandler(courseSessionController.create));
 courseSessionRoutes.post('/:courseId/sessions/schedule', requireAdmin, asyncHandler(courseSessionController.schedule));
 courseSessionRoutes.put('/:courseId/sessions/:sessionId', requireAdmin, asyncHandler(courseSessionController.update));
+courseSessionRoutes.delete('/:courseId/sessions/:sessionId', requireAdmin, asyncHandler(courseSessionController.remove));
 export const teachingRoutes = Router();
 teachingRoutes.get('/courses', requireUser, asyncHandler(courseSessionController.teachingCourses));

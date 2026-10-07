@@ -2,7 +2,7 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ user: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { findMany: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ user: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionRoutes, teachingRoutes } from '../src/modules/course-sessions/course-session.routes.js';
 import { errorMiddleware } from '../src/shared/error.middleware.js';
@@ -11,6 +11,11 @@ const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', ins
 const payload = { date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
 const record = { id: 3, courseId: 2, ...payload, date: new Date(payload.date), createdAt: new Date(), updatedAt: new Date() };
 describe('session HTTP contract and authorization', () => {
+  it.each([['1', 204], ['8', 403], ['10', 403], ['', 401]])('deletion requires administrator identity %s', async (id, status) => {
+    const response = await fetch(`${base}/courses/2/sessions/3`, { method: 'DELETE', headers: id ? { 'X-User-Id': id } : {} });
+    expect(response.status).toBe(status);
+    if (status !== 204) expect(mocks.courseSession.delete).not.toHaveBeenCalled();
+  });
   beforeAll(async () => {
     const app = express(); app.use(express.json()); app.use('/api/courses', courseSessionRoutes); app.use('/api/teaching', teachingRoutes); app.use(errorMiddleware);
     server = await new Promise<Server>(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });

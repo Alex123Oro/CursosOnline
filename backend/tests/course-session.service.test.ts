@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
-const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionService } from '../src/modules/course-sessions/course-session.service.js';
 
@@ -10,6 +10,19 @@ const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', ins
 const input = { date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
 const record = { id: 3, courseId: 2, ...input, date: new Date(input.date), createdAt: new Date('2026-10-01'), updatedAt: new Date('2026-10-01') };
 describe('course session service', () => {
+  it('deletes only the session in the requested course', async () => {
+    mocks.course.findUnique.mockResolvedValue(course);
+    await courseSessionService.remove(2, 3, admin);
+    expect(mocks.courseSession.delete).toHaveBeenCalledWith({ where: { id: 3, courseId: 2 } });
+  });
+  it('denies instructor deletion without touching the database', async () => {
+    await expect(courseSessionService.remove(2, 3, instructor)).rejects.toMatchObject({ statusCode: 403 });
+    expect(mocks.courseSession.delete).not.toHaveBeenCalled();
+  });
+  it.each([['P2003', 409], ['P2025', 404]])('maps deletion failure %s to %s', async (code, statusCode) => {
+    mocks.courseSession.delete.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('restricted', { code: String(code), clientVersion: '6' }));
+    await expect(courseSessionService.remove(2, 3, admin)).rejects.toMatchObject({ statusCode });
+  });
   beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record); });
   it('creates an out-of-period session with a warning and string identifiers', async () => {
     const result = await courseSessionService.create(2, input, admin);

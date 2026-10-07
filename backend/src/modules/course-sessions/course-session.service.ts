@@ -34,8 +34,20 @@ const handleError = (error: unknown): never => {
   }
   throw error;
 };
-const authorizeWrite = (user: RequestUser) => { if (user.role !== 'ADMIN') throw new HttpError(403, 'Solo el administrador puede programar o editar sesiones.'); };
+const authorizeWrite = (user: RequestUser) => { if (user.role !== 'ADMIN') throw new HttpError(403, 'Solo el administrador puede programar, editar o eliminar sesiones.'); };
 export const courseSessionService = {
+  async remove(courseId: number, sessionId: number, user: RequestUser) {
+    authorizeWrite(user);
+    await authorizedCourse(courseId, user);
+    try {
+      await prisma.courseSession.delete({ where: { id: sessionId, courseId } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new HttpError(409, 'No se puede eliminar una sesión con asistencia registrada de alumnos o del instructor.');
+      }
+      handleError(error);
+    }
+  },
   async schedule(courseId: number, input: RecurrenceInput, user: RequestUser) {
     authorizeWrite(user);
     const course = await authorizedCourse(courseId, user);
