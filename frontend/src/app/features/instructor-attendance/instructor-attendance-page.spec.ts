@@ -26,14 +26,33 @@ describe('InstructorAttendancePage', () => {
     expect(fixture.nativeElement.querySelector('#instructor').value).toBe('8');
     expect(fixture.nativeElement.textContent).toContain('1 pendiente');
     expect(fixture.nativeElement.textContent).not.toContain('%');
+    expect(fixture.componentInstance.stateFilter()).toBe('PENDING');
+    expect(fixture.nativeElement.querySelector('#state').value).toBe('PENDING');
+    expect(fixture.componentInstance.visibleSessions().map(session => session.id)).toEqual(['3']);
   });
   it('autosaves and corrects only after server confirmation', () => {
+    fixture.componentInstance.setStateFilter('ALL');
+    http.expectOne(`${base}/instructors/8/attendance?courseId=2`).flush(data);
     const page = fixture.componentInstance; page.mark(page.sessions()[0], 'PRESENT'); page.mark(page.sessions()[0], 'ABSENT');
     expect(page.sessions()[0].status).toBe(null);
     const request = http.expectOne(`${base}/instructors/8/sessions/3/attendance`); expect(request.request.body).toEqual({status:'PRESENT'});
     request.flush({...row,status:'PRESENT'}); expect(page.summary().present).toBe(1);
     page.mark(page.sessions()[0],'ABSENT'); http.expectOne(`${base}/instructors/8/sessions/3/attendance`).flush({...row,status:'ABSENT'});
     expect(page.summary().absent).toBe(1); expect(page.summary().pending).toBe(0);
+  });
+  it('keeps the most recent pending dates and times first, and removes a saved mark from pending', () => {
+    const page = fixture.componentInstance;
+    page.sessions.set([
+      { ...row, id: '7', startTime: '18:00' },
+      row,
+      { ...row, id: '6', date: '2026-10-05' },
+      { ...row, id: '5', date: '2026-10-04', status: 'PRESENT' },
+      { ...row, id: '4', date: '2026-10-07', editable: false }
+    ]);
+    expect(page.visibleSessions().map(session => session.id)).toEqual(['7', '3', '6']);
+    page.mark(page.sessions()[0], 'PRESENT');
+    http.expectOne(`${base}/instructors/8/sessions/7/attendance`).flush({ ...row, id: '7', startTime: '18:00', status: 'PRESENT' });
+    expect(page.visibleSessions().map(session => session.id)).toEqual(['3', '6']);
   });
   it('keeps old marks after failure and retries the intended choice', () => {
     const page=fixture.componentInstance; page.mark(page.sessions()[0],'ABSENT');

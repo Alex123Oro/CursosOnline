@@ -18,7 +18,7 @@ export class InstructorAttendancePage {
   readonly selectedInstructor = computed(() => this.instructors().find(instructor => instructor.id === this.instructorId()));
   readonly courses = signal<InstructorAttendanceRow['course'][]>([]);
   readonly courseId = signal(''); readonly from = signal(''); readonly to = signal('');
-  readonly stateFilter = signal<StateFilter>('ALL');
+  readonly stateFilter = signal<StateFilter>('PENDING');
   readonly sessions = signal<InstructorAttendanceRow[]>([]);
   private readonly today = signal('');
   readonly loading = signal(false); readonly error = signal('');
@@ -40,7 +40,7 @@ export class InstructorAttendancePage {
       const user = this.identity.currentUser(), query = this.query();
       onCleanup(() => this.active.unsubscribe());
       untracked(() => {
-        this.cancel(); this.instructors.set([]); this.courses.set([]); this.instructorId.set(''); this.courseId.set(''); this.from.set(''); this.to.set(''); this.stateFilter.set('ALL'); this.error.set(''); this.loading.set(false);
+        this.cancel(); this.instructors.set([]); this.courses.set([]); this.instructorId.set(''); this.courseId.set(''); this.from.set(''); this.to.set(''); this.stateFilter.set('PENDING'); this.error.set(''); this.loading.set(false);
         if (!user) return;
         if (user.role !== 'ADMIN') { this.error.set('Solo el administrador puede gestionar asistencia de instructores.'); return; }
         this.loading.set(true);
