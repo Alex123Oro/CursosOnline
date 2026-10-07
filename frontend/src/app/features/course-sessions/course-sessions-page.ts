@@ -38,6 +38,7 @@ const weeklyRange = (control: AbstractControl) => {
 export class CourseSessionsPage {
   private readonly api = inject(CourseSessionService);
   readonly identity = inject(SessionService);
+  readonly canManage = computed(() => this.identity.currentUser()?.role === 'ADMIN');
   private readonly route = inject(ActivatedRoute);
   private readonly id = toSignal(this.route.paramMap.pipe(map(params => params.get('courseId') ?? '')), { initialValue: '' });
   private active = new Subscription();
@@ -123,7 +124,7 @@ export class CourseSessionsPage {
     });
   }
   openSchedule() {
-    if (!this.course() || this.saving()) return;
+    if (!this.canManage() || !this.course() || this.saving()) return;
     const course = this.course()!;
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const start = course.startDate ?? today;
@@ -132,6 +133,7 @@ export class CourseSessionsPage {
   }
   toggleDay(day: number) { const control = this.scheduleForm.controls.weekdays; control.setValue(control.value.includes(day) ? control.value.filter(value => value !== day) : [...control.value, day]); control.markAsTouched(); }
   submitSchedule() {
+    if (!this.canManage()) return;
     this.scheduleForm.markAllAsTouched();
     if (this.scheduleForm.invalid || this.saving() || !this.course() || !this.formOpen() || !this.weekly()) return;
     this.saving.set(true); this.feedback.set('');
@@ -143,10 +145,11 @@ export class CourseSessionsPage {
       error: error => { this.saving.set(false); this.feedback.set(this.errorMessage(error)); }
     }));
   }
-  openCreate() { if (!this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(null); this.form.reset({ date: '', startTime: '', durationMinutes: 60 }); this.feedback.set(''); this.formOpen.set(true); }
-  openEdit(session: CourseSession) { if (!this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(session.id); this.form.setValue({ date: session.date, startTime: session.startTime, durationMinutes: session.durationMinutes }); this.feedback.set(''); this.formOpen.set(true); }
+  openCreate() { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(null); this.form.reset({ date: '', startTime: '', durationMinutes: 60 }); this.feedback.set(''); this.formOpen.set(true); }
+  openEdit(session: CourseSession) { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(session.id); this.form.setValue({ date: session.date, startTime: session.startTime, durationMinutes: session.durationMinutes }); this.feedback.set(''); this.formOpen.set(true); }
   closeForm() { if (!this.saving()) this.formOpen.set(false); }
   submit() {
+    if (!this.canManage()) return;
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving() || !this.course() || !this.formOpen()) return;
     this.saving.set(true); this.feedback.set('');

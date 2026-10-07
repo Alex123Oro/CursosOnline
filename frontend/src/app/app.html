@@ -8,7 +8,7 @@
     <span aria-hidden="true">{{ sidebarOpen() ? '✕' : '☰' }}</span>
     <span>MENÚ</span>
   </button>
-  <a class="mobile-brand" routerLink="/cursos" aria-label="EVA, administración de cursos">
+  <a class="mobile-brand" [routerLink]="navigation.home()" aria-label="EVA, inicio">
     <span class="brand-mark" aria-hidden="true">E</span><span>EVA</span>
   </a>
   <span class="mobile-user" [attr.title]="session.currentUser()?.name ?? 'Invitado'">

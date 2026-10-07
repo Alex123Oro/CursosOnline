@@ -33,6 +33,17 @@ describe('CourseSessionsPage', () => {
     expect(fixture.nativeElement.textContent).toContain('21:00');
     expect(fixture.nativeElement.textContent).toContain('Fuera del periodo');
   });
+  it('lets instructors consult classes and open attendance without exposing or sending writes', () => {
+    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
+    http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
+    const page = fixture.componentInstance;
+    expect(fixture.nativeElement.textContent).not.toContain('Programar sesiones');
+    expect(fixture.nativeElement.textContent).not.toContain('Editar');
+    expect(fixture.nativeElement.querySelector('a[href="/cursos/2/asistencia?session=3"]')).toBeTruthy();
+    page.openCreate(); page.openSchedule(); page.openEdit(session); page.submit(); page.submitSchedule();
+    expect(page.formOpen()).toBe(false);
+    http.expectNone(request => request.method !== 'GET');
+  });
   it('offers the instructor attendance link only to administrators', () => {
     const link = fixture.nativeElement.querySelector('a[href^="/asistencia-instructores"]');
     expect(link?.getAttribute('href')).toContain('instructor=8');
