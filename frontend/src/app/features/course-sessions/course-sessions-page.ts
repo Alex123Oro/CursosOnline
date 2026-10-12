@@ -38,7 +38,7 @@ const weeklyRange = (control: AbstractControl) => {
 export class CourseSessionsPage {
   private readonly api = inject(CourseSessionService);
   readonly identity = inject(SessionService);
-  readonly canManage = computed(() => this.identity.currentUser()?.role === 'ADMIN');
+  readonly canManage = computed(() => ['ADMIN', 'INSTRUCTOR'].includes(this.identity.currentUser()?.role ?? ''));
   private readonly route = inject(ActivatedRoute);
   private readonly id = toSignal(this.route.paramMap.pipe(map(params => params.get('courseId') ?? '')), { initialValue: '' });
   private active = new Subscription();
@@ -87,6 +87,7 @@ export class CourseSessionsPage {
   formatDate(date: string, short = false) { return new Intl.DateTimeFormat('es-BO', { timeZone: 'UTC', ...(short ? { day: 'numeric', month: 'short' } : { weekday: 'long', day: 'numeric', month: 'long' }) }).format(new Date(`${date}T12:00:00Z`)); }
   agendaDate(date: string) { return new Intl.DateTimeFormat('es-BO', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)); }
   readonly form = inject(FormBuilder).nonNullable.group({
+    sessionNumber: [1, [Validators.required, Validators.min(1), integer]],
     date: ['', [Validators.required, validDate]],
     startTime: ['', [Validators.required, Validators.pattern(/^([01]\d|2[0-3]):[0-5]\d$/)]],
     durationMinutes: [60, [Validators.required, Validators.min(1), integer]]
@@ -163,8 +164,8 @@ export class CourseSessionsPage {
       error: error => { this.saving.set(false); this.feedback.set(this.errorMessage(error)); }
     }));
   }
-  openCreate() { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(null); this.form.reset({ date: '', startTime: '', durationMinutes: 60 }); this.feedback.set(''); this.formOpen.set(true); }
-  openEdit(session: CourseSession) { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(session.id); this.form.setValue({ date: session.date, startTime: session.startTime, durationMinutes: session.durationMinutes }); this.feedback.set(''); this.formOpen.set(true); }
+  openCreate() { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(null); this.form.reset({ sessionNumber: Math.max(0, ...this.sessions().map(row => row.sessionNumber)) + 1, date: '', startTime: '', durationMinutes: 60 }); this.feedback.set(''); this.formOpen.set(true); }
+  openEdit(session: CourseSession) { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(session.id); this.form.setValue({ sessionNumber: session.sessionNumber, date: session.date, startTime: session.startTime, durationMinutes: session.durationMinutes }); this.feedback.set(''); this.formOpen.set(true); }
   closeForm() { if (!this.saving()) this.formOpen.set(false); }
   submit() {
     if (!this.canManage()) return;

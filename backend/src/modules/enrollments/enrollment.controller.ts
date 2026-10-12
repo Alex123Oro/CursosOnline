@@ -17,7 +17,12 @@ export const enrollmentController = {
   async assignScholarship(request: Request, response: Response) {
     const id = parsePositiveInt(request.params.id, 'El identificador de la inscripcion no es valido.');
     const input = scholarshipSchema.parse(request.body);
-    response.json(await enrollmentService.assignScholarship(id, input.scholarshipPercent));
+    response.json(await enrollmentService.assignScholarship(id, input.scholarshipPercent, input.reason));
+  },
+
+  async deactivateScholarship(request: Request, response: Response) {
+    const id = parsePositiveInt(request.params.id, 'El identificador de la inscripción no es válido.');
+    response.json(await enrollmentService.deactivateScholarship(id));
   },
 
   async registerPayment(request: Request, response: Response) {

@@ -3,9 +3,10 @@ import { courseInputSchema } from '../src/modules/courses/course.rules.js';
 import { SEED_COURSES } from '../prisma/seed-data.js';
 
 describe('course seed data', () => {
-  it('provides six unique published courses for Informática y Sistemas', () => {
-    expect(SEED_COURSES).toHaveLength(6);
-    expect(new Set(SEED_COURSES.map(course => course.code)).size).toBe(6);
+  it('provides nine unique published courses for Informática y Sistemas', () => {
+    // HU4: Keep the three pre-registration demo courses in the seed.
+    expect(SEED_COURSES).toHaveLength(9);
+    expect(new Set(SEED_COURSES.map(course => course.code)).size).toBe(9);
     expect(SEED_COURSES.every(course => course.status === 'PUBLISHED')).toBe(true);
   });
 

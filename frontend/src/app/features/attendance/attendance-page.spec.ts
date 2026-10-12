@@ -7,6 +7,7 @@ import { AttendancePage } from './attendance-page';
 import { SessionService } from '../../core/session.service';
 import type { AttendanceStudent } from '../../core/attendance.service';
 import { environment } from '../../../environments/environment';
+import { authenticateAdminFixture, clearFixtureSession } from '../../../testing/session-fixture';
 const base = environment.apiBaseUrl;
 const users = [{ id: '1', name: 'Admin', role: 'ADMIN', email: '', participantTypeId: null }, { id: '8', name: 'Carla', role: 'INSTRUCTOR', email: '', participantTypeId: null }, { id: '10', name: 'Luis', role: 'PARTICIPANT', email: '', participantTypeId: null }];
 const student: AttendanceStudent = { enrollmentId: '3', participantId: '10', name: 'Luis', percentage: 75, presentCount: 3, absentCount: 1, pendingCount: 2, attendance: [{ sessionId: '1', status: 'ABSENT', updatedAt: '' }] };
@@ -16,11 +17,11 @@ describe('AttendancePage', () => {
   beforeEach(async () => {
     localStorage.removeItem('eva-user-id');
     await TestBed.configureTestingModule({ imports: [AttendancePage], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ courseId: '2' })), queryParamMap: new BehaviorSubject(convertToParamMap({})) } }] }).compileComponents();
-    fixture = TestBed.createComponent(AttendancePage); http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${base}/session/users`).flush(users); fixture.detectChanges();
+    http = TestBed.inject(HttpTestingController); authenticateAdminFixture(http);
+    fixture = TestBed.createComponent(AttendancePage); fixture.detectChanges();
     http.expectOne(`${base}/courses/2/attendance`).flush({ ...data, sessions: [{ ...data.sessions[0], id: 'older', date: '2026-10-05' }, ...data.sessions] }); fixture.detectChanges();
   });
-  afterEach(() => { fixture.destroy(); http.verify(); localStorage.removeItem('eva-user-id'); });
+  afterEach(() => { fixture.destroy(); http.verify(); clearFixtureSession(); });
   it('displays percentage, pending classes and the current local-day session', () => {
     expect(fixture.componentInstance.sessionId()).toBe('1');
     expect(fixture.nativeElement.textContent).toContain('75'); expect(fixture.nativeElement.textContent).toContain('2 pendientes');

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
-const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionService } from '../src/modules/course-sessions/course-session.service.js';
 
 const admin = { id: 1, name: 'Admin', email: 'admin@test', role: 'ADMIN' as const, participantTypeId: null };
 const instructor = { ...admin, id: 8, role: 'INSTRUCTOR' as const };
 const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-11-12') };
-const input = { date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
+const input = { sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
 const record = { id: 3, courseId: 2, ...input, date: new Date(input.date), createdAt: new Date('2026-10-01'), updatedAt: new Date('2026-10-01') };
 describe('course session service', () => {
   it('deletes only the session in the requested course', async () => {
@@ -15,15 +15,16 @@ describe('course session service', () => {
     await courseSessionService.remove(2, 3, admin);
     expect(mocks.courseSession.delete).toHaveBeenCalledWith({ where: { id: 3, courseId: 2 } });
   });
-  it('denies instructor deletion without touching the database', async () => {
-    await expect(courseSessionService.remove(2, 3, instructor)).rejects.toMatchObject({ statusCode: 403 });
-    expect(mocks.courseSession.delete).not.toHaveBeenCalled();
+  it('allows the assigned instructor to delete a session', async () => {
+    mocks.course.findUnique.mockResolvedValue(course);
+    await courseSessionService.remove(2, 3, instructor);
+    expect(mocks.courseSession.delete).toHaveBeenCalledWith({ where: { id: 3, courseId: 2 } });
   });
   it.each([['P2003', 409], ['P2025', 404]])('maps deletion failure %s to %s', async (code, statusCode) => {
     mocks.courseSession.delete.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('restricted', { code: String(code), clientVersion: '6' }));
     await expect(courseSessionService.remove(2, 3, admin)).rejects.toMatchObject({ statusCode });
   });
-  beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record); });
+  beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.findFirst.mockResolvedValue(null); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record); });
   it('creates an out-of-period session with a warning and string identifiers', async () => {
     const result = await courseSessionService.create(2, input, admin);
     expect(result).toMatchObject({ id: '3', courseId: '2', date: input.date, endTime: '21:00' });
@@ -48,12 +49,12 @@ describe('course session service', () => {
   it('returns 404 for a missing course', async () => { mocks.course.findUnique.mockResolvedValue(null); await expect(courseSessionService.list(2, admin)).rejects.toMatchObject({ statusCode: 404 }); });
   it('rejects editing a session belonging to another course', async () => { mocks.courseSession.findUnique.mockResolvedValue({ ...record, courseId: 99 }); await expect(courseSessionService.update(2, 3, input, admin)).rejects.toMatchObject({ statusCode: 404 }); });
   it('edits an existing session', async () => { expect((await courseSessionService.update(2, 3, input, admin)).id).toBe('3'); });
-  it('allows the assigned instructor to read but rejects every session write', async () => {
+  it('allows the assigned instructor to read and write sessions', async () => {
     expect((await courseSessionService.list(2, instructor)).sessions).toHaveLength(1);
-    await expect(courseSessionService.create(2, input, instructor)).rejects.toMatchObject({statusCode:403});
-    await expect(courseSessionService.update(2, 3, input, instructor)).rejects.toMatchObject({statusCode:403});
-    await expect(courseSessionService.schedule(2, {startDate:'2026-10-12',endDate:'2026-10-12',weekdays:[1],startTime:'19:00',durationMinutes:60}, instructor)).rejects.toMatchObject({statusCode:403});
-    expect(mocks.courseSession.create).not.toHaveBeenCalled(); expect(mocks.courseSession.update).not.toHaveBeenCalled();
+    await expect(courseSessionService.create(2, input, instructor)).resolves.toMatchObject({ id: '3' });
+    await expect(courseSessionService.update(2, 3, input, instructor)).resolves.toMatchObject({ id: '3' });
+    mocks.courseSession.createManyAndReturn.mockResolvedValue([record]);
+    await expect(courseSessionService.schedule(2, {startDate:'2026-10-12',endDate:'2026-10-12',weekdays:[1],startTime:'19:00',durationMinutes:60}, instructor)).resolves.toMatchObject({createdCount:1});
   });
   it.each(['create', 'update'] as const)('maps concurrent duplicate failures on %s to 409', async method => {
     mocks.courseSession[method].mockRejectedValue(new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }));

@@ -6,7 +6,7 @@ export interface SessionCourse {
   id: string; code: string; name: string; instructor: string; instructorId: string | null;
   startDate: string | null; endDate: string | null;
 }
-export interface SessionPayload { date: string; startTime: string; durationMinutes: number; }
+export interface SessionPayload { sessionNumber: number; date: string; startTime: string; durationMinutes: number; }
 export interface CourseSession extends SessionPayload {
   id: string; courseId: string; endTime: string; warning: string | null; createdAt: string; updatedAt: string;
 }

@@ -11,6 +11,7 @@ export const roleGuard = (roles: UserRole[]): CanActivateFn => () => {
   const router = inject(Router);
   return toObservable(session.ready).pipe(filter(Boolean), take(1), map(() => {
     const role = session.currentUser()?.role;
-    return role && roles.includes(role) ? true : router.parseUrl(profileHome(role));
+    if (!role) return router.parseUrl('/iniciar-sesion');
+    return roles.includes(role) ? true : router.parseUrl(profileHome(role));
   }));
 };

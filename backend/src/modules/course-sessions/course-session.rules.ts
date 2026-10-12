@@ -5,6 +5,7 @@ const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
 const minutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
 
 export const sessionInputSchema = z.object({
+  sessionNumber: z.number().int('El número debe ser entero.').positive('El número de sesión debe ser mayor a 0.'),
   date: z.string().refine(validDate, 'La fecha no es válida.'),
   startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'La hora no es válida.'),
   durationMinutes: z.number().int('La duración debe ser un número entero.').positive('La duración debe ser mayor a 0.')

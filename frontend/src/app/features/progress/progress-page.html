@@ -1,0 +1,68 @@
+<section class="progress-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">PARTICIPANTE / SEGUIMIENTO</p>
+      <h1>Mi progreso</h1>
+      <p class="subtitle">Consulta tus inscripciones, asistencia y calificaciones.</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p role="status">Cargando tu progreso...</p>
+  } @else if (error()) {
+    <p class="progress-message error" role="alert">{{ error() }}</p>
+  } @else if (items().length === 0) {
+    <p class="progress-message" role="status">Aún no tienes inscripciones para mostrar.</p>
+  } @else {
+    <div class="progress-list">
+      @for (item of items(); track item.enrollmentId) {
+        <article class="progress-item">
+          <header class="course-heading">
+            <div>
+              <p class="course-code">{{ item.course.code }}</p>
+              <h2>{{ item.course.name }}</h2>
+              <p class="course-dates">{{ formatDate(item.course.startDate) }} — {{ formatDate(item.course.endDate) }}</p>
+            </div>
+            <span class="status">{{ enrollmentLabel(item.enrollmentStatus) }}</span>
+          </header>
+
+          <section class="attendance" aria-label="Asistencia acumulada">
+            <div><span>Asistencia acumulada</span><strong>{{ item.attendance.percentage === null ? 'Sin sesiones realizadas' : item.attendance.percentage + '%' }}</strong></div>
+            @if (item.attendance.percentage !== null) {
+              <progress max="100" [value]="item.attendance.percentage" [attr.aria-label]="'Asistencia ' + item.attendance.percentage + '%'">{{ item.attendance.percentage }}%</progress>
+              <small>{{ item.attendance.presentSessions }} de {{ item.attendance.completedSessions }} sesiones</small>
+            }
+          </section>
+
+          <section class="evaluations" aria-label="Evaluaciones y notas">
+            <h3>Evaluaciones</h3>
+            <p class="muted">Aprobación: nota mínima {{ item.minimumPassingScore }} / 100 y asistencia mínima {{ item.requirements.minimumAttendancePercent }}%.</p>
+            @if (item.evaluations.length) {
+              <ul>
+                @for (evaluation of item.evaluations; track evaluation.id) {
+                  <li>
+                    <span>{{ evaluation.title }}</span>
+                    <strong>{{ evaluation.score === null ? 'Pendiente' : evaluation.score + ' / ' + evaluation.maxScore }}</strong>
+                    @if (evaluation.comment) { <small>{{ evaluation.comment }}</small> }
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="muted">No hay evaluaciones registradas.</p>
+            }
+            @if (item.currentGrade !== null) { <p class="grade-summary">Promedio actual <strong>{{ item.currentGrade }} / 100</strong></p> }
+            @if (item.finalGrade !== null) {
+              <p class="final-result" [class.passed]="item.finalStatus === 'APROBADO'" [class.failed]="item.finalStatus === 'REPROBADO'">
+                Resultado final: <strong>{{ item.finalStatus }}</strong> · {{ item.finalGrade }} / 100
+              </p>
+            }
+            @if (item.finalGrade !== null) {
+              <p>Requisito académico: {{ item.requirements.academicMet ? 'Cumplido' : 'No cumplido' }}</p>
+              <p>Requisito de asistencia: {{ item.requirements.attendanceMet ? 'Cumplido' : 'No cumplido' }}</p>
+            }
+          </section>
+        </article>
+      }
+    </div>
+  }
+</section>

@@ -19,7 +19,13 @@ const run = async () => {
   } });
   await prisma.coursePrice.upsert({ where: { courseId_participantTypeId: { courseId: course.id, participantTypeId: type.id } }, update: {}, create: { courseId: course.id, participantTypeId: type.id, basePrice: 0 } });
   const sessions = [];
-  for (let offset = -5; offset <= 1; offset++) sessions.push(await prisma.courseSession.upsert({ where: { courseId_date_startTime: { courseId: course.id, date: dateAt(offset), startTime: '15:00' } }, update: {}, create: { courseId: course.id, date: dateAt(offset), startTime: '15:00', durationMinutes: 60 } }));
+  const sessionAggregate = await prisma.courseSession.aggregate({ where: { courseId: course.id }, _max: { sessionNumber: true } });
+  let nextSessionNumber = (sessionAggregate._max.sessionNumber ?? 0) + 1;
+  for (let offset = -5; offset <= 1; offset++) {
+    const date = dateAt(offset);
+    const existing = await prisma.courseSession.findUnique({ where: { courseId_date_startTime: { courseId: course.id, date, startTime: '15:00' } } });
+    sessions.push(existing ?? await prisma.courseSession.create({ data: { courseId: course.id, sessionNumber: nextSessionNumber++, date, startTime: '15:00', durationMinutes: 60 } }));
+  }
   const names = ['Ana Álvarez', 'Bruno Barrientos', 'Camila Castro', 'Daniel Díaz', 'Elena Espinoza', 'Felipe Flores', 'Gabriela Gómez', 'Hugo Herrera', 'Inés Ibáñez', 'Jorge Jiménez'];
   for (const [index, name] of names.entries()) {
     const participant = await prisma.user.upsert({ where: { email: `hu09.alumno${index + 1}@eva.local` }, update: {}, create: { name, email: `hu09.alumno${index + 1}@eva.local`, authId: randomUUID(), role: 'PARTICIPANT', participantTypeId: type.id } });

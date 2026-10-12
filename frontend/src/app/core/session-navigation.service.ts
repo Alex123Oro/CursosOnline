@@ -7,7 +7,7 @@ import { profileHome } from './role.guard';
 export class SessionNavigationService {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
-  readonly home = computed(() => profileHome(this.session.currentUser()?.role));
+  readonly home = computed(() => this.session.currentUser() ? profileHome(this.session.currentUser()?.role) : '/iniciar-sesion');
   constructor() {
     let previousId: string | null = null;
     effect(() => {
@@ -15,7 +15,7 @@ export class SessionNavigationService {
       const user = this.session.currentUser();
       const id = user?.id ?? '';
       if (previousId !== null && previousId !== id) {
-        untracked(() => { void this.router.navigateByUrl(profileHome(user?.role)); });
+        untracked(() => { void this.router.navigateByUrl(user ? profileHome(user.role) : '/iniciar-sesion'); });
       }
       previousId = id;
     });

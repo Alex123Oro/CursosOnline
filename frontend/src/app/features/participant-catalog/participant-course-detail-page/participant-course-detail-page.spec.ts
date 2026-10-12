@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { BehaviorSubject } from 'rxjs';
 import { Course } from '../../../core/course.service';
 import { ParticipantCourseDetailPage } from './participant-course-detail-page';
+import { SessionService } from '../../../core/session.service';
 import { environment } from '../../../../environments/environment';
 
 describe('ParticipantCourseDetailPage', () => {
@@ -53,13 +54,17 @@ describe('ParticipantCourseDetailPage', () => {
   });
 
   afterEach(() => {
-    httpTesting.match(req => req.url.includes('/session/users')).forEach(req => req.flush([]));
     httpTesting.verify();
   });
 
   it('shows all available public course information', async () => {
     const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
     request.flush(course);
+    // HU4: Use a participant session to exercise the pre-registration state.
+    TestBed.inject(SessionService).login('participante@example.com', 'secret').subscribe();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/auth/login`).flush({ accessToken: 'participant-token', refreshToken: 'refresh', expiresAt: null, user: {
+      id: '9', name: 'Participante de prueba', email: 'participante@example.com', role: 'PARTICIPANT', participantTypeId: '1', participantTypeName: 'Estudiante'
+    } });
 
     await fixture.whenStable();
 
@@ -74,6 +79,15 @@ describe('ParticipantCourseDetailPage', () => {
     const backLink = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.back-link');
     expect(backLink?.getAttribute('href')).toBe('/catalogo');
     expect(content).toContain('Preinscribirme');
+  });
+
+  // HU4: A missing participant session must not expose the pre-registration action.
+  it('asks the visitor to sign in as a participant before pre-registering', async () => {
+    httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`).flush(course);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Inicia sesión como participante');
+    expect(fixture.nativeElement.querySelector('.enrol-btn')).toBeNull();
   });
 
   it('shows a not-available message when the course cannot be loaded', async () => {

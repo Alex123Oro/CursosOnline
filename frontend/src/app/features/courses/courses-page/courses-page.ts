@@ -1,12 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { switchMap } from 'rxjs';
-import { finalize } from 'rxjs/operators';
-import { Course, CoursePayload, CoursePricesPayload, CourseService, ParticipantType } from '../../../core/course.service';
+import { Component, inject, signal } from '@angular/core';
+import { finalize, of, switchMap } from 'rxjs';
+import { Course, CoursePayload, CourseService, ParticipantTypeOption } from '../../../core/course.service';
 import { CourseForm } from '../course-form/course-form';
 import { CourseList } from '../course-list/course-list';
-import { SessionService } from '../../../core/session.service';
 
 type FormMode = 'create' | 'edit';
 
@@ -19,37 +17,19 @@ type FormMode = 'create' | 'edit';
 })
 export class CoursesPage {
   private readonly courseService = inject(CourseService);
-  readonly session = inject(SessionService);
-  readonly instructors = computed(() => this.session.users().filter(user => user.role === 'INSTRUCTOR'));
 
   readonly courses = signal<Course[]>([]);
-  readonly participantTypes = signal<ParticipantType[]>([]);
+  readonly participantTypes = signal<ParticipantTypeOption[]>([]);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
   readonly isFormOpen = signal(false);
   readonly formMode = signal<FormMode>('create');
   readonly editingCourse = signal<Course | null>(null);
   readonly feedback = signal('');
-  readonly publishedCount = computed(() => this.courses().filter(course => course.status === 'PUBLISHED').length);
-  readonly openEnrollmentCount = computed(() => this.courses().filter(course =>
-    course.status === 'PUBLISHED' && (course.remainingSlots === null || course.remainingSlots > 0)
-  ).length);
-  readonly periodCount = computed(() => this.courses().filter(course => course.preinscriptionStart && course.preinscriptionEnd).length);
 
   constructor() {
-    effect(onCleanup => {
-      const user = this.session.currentUser();
-      this.courses.set([]);
-      this.feedback.set('');
-      this.isLoading.set(false);
-      this.closeForm();
-      if (!user || user.role !== 'ADMIN') return;
-      const subscription = untracked(() => this.loadCourses());
-      onCleanup(() => subscription.unsubscribe());
-    });
-    this.courseService.participantTypes().subscribe({
-      next: types => this.participantTypes.set(types)
-    });
+    this.loadCourses();
+    this.courseService.participantTypes().subscribe({ next: types => this.participantTypes.set(types), error: error => this.feedback.set(this.errorMessage(error)) });
   }
 
   openCreateForm() {
@@ -70,17 +50,15 @@ export class CoursesPage {
     this.isFormOpen.set(false);
   }
 
-  handleSave(payload: { course: CoursePayload; prices: CoursePricesPayload }) {
+  handleSave(payload: CoursePayload) {
     const editing = this.editingCourse();
+    const prices = payload.prices ?? [];
     const request = editing
-      ? this.courseService.update(editing.id, payload.course)
-      : this.courseService.create(payload.course);
+      ? this.courseService.update(editing.id, payload)
+      : this.courseService.create(payload);
 
     this.isSaving.set(true);
-    request.pipe(
-      switchMap(course => this.courseService.replacePrices(course.id, payload.prices)),
-      finalize(() => this.isSaving.set(false))
-    ).subscribe({
+    request.pipe(switchMap(course => prices.length ? this.courseService.replacePrices(course.id, prices) : of(course)), finalize(() => this.isSaving.set(false))).subscribe({
       next: () => {
         this.feedback.set(editing ? 'Curso actualizado correctamente.' : 'Curso registrado correctamente.');
         this.closeForm();
@@ -105,7 +83,7 @@ export class CoursesPage {
 
   private loadCourses() {
     this.isLoading.set(true);
-    return this.courseService.list()
+    this.courseService.list()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: courses => this.courses.set(courses),

@@ -1,18 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, computed, input, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, input, signal } from '@angular/core';
 import { Course } from '../../../core/course.service';
-import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-course-list',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './course-list.html',
   styleUrl: './course-list.scss'
 })
 export class CourseList {
   readonly courses = input<Course[]>([]);
-  readonly loading = input(false);
+  @Input() loading = false;
   @Output() editCourse = new EventEmitter<Course>();
   @Output() publishCourse = new EventEmitter<Course>();
 

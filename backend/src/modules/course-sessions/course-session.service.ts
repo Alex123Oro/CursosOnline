@@ -14,6 +14,7 @@ const courseResponse = (course: SessionCourse) => ({
 });
 const sessionResponse = (session: CourseSession, course: SessionCourse) => ({
   id: String(session.id), courseId: String(session.courseId), date: dateOnly(session.date)!,
+  sessionNumber: session.sessionNumber,
   startTime: session.startTime, durationMinutes: session.durationMinutes,
   endTime: endTime(session.startTime, session.durationMinutes),
   warning: periodWarning(dateOnly(session.date)!, dateOnly(course.startDate), dateOnly(course.endDate)),
@@ -29,12 +30,12 @@ const authorizedCourse = async (courseId: number, user: RequestUser) => {
 };
 const handleError = (error: unknown): never => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') throw new HttpError(409, 'Ya existe una sesión del curso con esa fecha y hora.');
+    if (error.code === 'P2002') throw new HttpError(409, 'Ya existe una sesión con ese número, fecha y hora en el curso.');
     if (error.code === 'P2025') throw new HttpError(404, 'Sesión no encontrada.');
   }
   throw error;
 };
-const authorizeWrite = (user: RequestUser) => { if (user.role !== 'ADMIN') throw new HttpError(403, 'Solo el administrador puede programar, editar o eliminar sesiones.'); };
+const authorizeWrite = (user: RequestUser) => { if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Solo el administrador o el instructor asignado puede gestionar sesiones.'); };
 export const courseSessionService = {
   async remove(courseId: number, sessionId: number, user: RequestUser) {
     authorizeWrite(user);
@@ -52,9 +53,11 @@ export const courseSessionService = {
     authorizeWrite(user);
     const course = await authorizedCourse(courseId, user);
     const dates = recurrenceDates(input);
+    const last = await prisma.courseSession.findFirst({ where: { courseId }, orderBy: { sessionNumber: 'desc' }, select: { sessionNumber: true } });
+    const nextNumber = (last?.sessionNumber ?? 0) + 1;
     const created = await prisma.courseSession.createManyAndReturn({
       skipDuplicates: true,
-      data: dates.map(date => ({ courseId, date: new Date(date), startTime: input.startTime, durationMinutes: input.durationMinutes }))
+      data: dates.map((date, index) => ({ courseId, sessionNumber: nextNumber + index, date: new Date(date), startTime: input.startTime, durationMinutes: input.durationMinutes }))
     });
     const sessions = await prisma.courseSession.findMany({ where: { courseId }, orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }] });
     return { createdCount: created.length, skippedCount: dates.length - created.length, sessions: sessions.map(session => sessionResponse(session, course)) };

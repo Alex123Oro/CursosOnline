@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
+import { SessionService } from './core/session.service';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -20,21 +21,24 @@ describe('App', () => {
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
   });
-  it('shows the persisted instructor after user options arrive', () => {
-    localStorage.setItem('eva-user-id', '8');
+  it('shows the header return link for a signed-in instructor', () => {
     const fixture = TestBed.createComponent(App);
+    const session = TestBed.inject(SessionService);
+    session.login('carla@example.test', 'secret').subscribe();
+    TestBed.inject(HttpTestingController).expectOne(`${environment.apiBaseUrl}/auth/login`).flush({
+      accessToken: 'token', refreshToken: 'refresh', expiresAt: null,
+      user: { id: '8', name: 'Carla', email: 'carla@example.test', role: 'INSTRUCTOR', participantTypeId: null, participantTypeName: null }
+    });
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne(`${environment.apiBaseUrl}/session/users`).flush([
-      { id: '1', name: 'Admin', role: 'ADMIN' }, { id: '8', name: 'Carla', role: 'INSTRUCTOR' }
-    ]);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('select').value).toBe('8');
+    expect(fixture.nativeElement.querySelector('.workspace-header .header-courses-link')?.getAttribute('href')).toBe('/cursos');
+    expect(fixture.nativeElement.querySelector('select')).toBeNull();
     fixture.destroy(); localStorage.removeItem('eva-user-id');
+    localStorage.removeItem('eva-user'); localStorage.removeItem('eva-access-token');
   });
 
-  it('keeps the root route pointing to course administration', () => {
+  it('opens the public catalogue at the root route', () => {
     expect(routes.find(route => route.path === '')).toMatchObject({
-      redirectTo: 'cursos',
+      redirectTo: 'catalogo',
       pathMatch: 'full'
     });
   });

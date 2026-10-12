@@ -85,6 +85,7 @@ model Course {
   prices               CoursePrice[]
   enrollments          Enrollment[]
   sessions             CourseSession[]
+  evaluations          CourseEvaluation[]
 
   @@map("cursos")
 }
@@ -92,6 +93,7 @@ model Course {
 model CourseSession {
   id              Int      @id @default(autoincrement())
   courseId        Int      @map("curso_id")
+  sessionNumber   Int      @map("numero_sesion")
   date            DateTime @db.Date @map("fecha")
   startTime       String   @db.VarChar(5) @map("hora_inicio")
   durationMinutes Int      @map("duracion_minutos")
@@ -103,6 +105,7 @@ model CourseSession {
 
   @@unique([id, courseId])
   @@unique([courseId, date, startTime])
+  @@unique([courseId, sessionNumber])
   @@map("sesiones_curso")
 }
 
@@ -126,15 +129,19 @@ model Enrollment {
   status             EnrollmentStatus @default(PREINSCRITO) @map("estado")
   basePrice          Decimal          @map("precio_base") @db.Decimal(10, 2)
   scholarshipPercent Decimal          @default(0) @map("porcentaje_beca") @db.Decimal(5, 2)
+  scholarshipReason  String?          @map("motivo_beca")
+  scholarshipActive  Boolean          @default(false) @map("beca_activa")
   benefitAmount      Decimal          @default(0) @map("beneficio") @db.Decimal(10, 2)
   finalAmount        Decimal          @map("monto_final") @db.Decimal(10, 2)
   createdAt          DateTime         @default(now()) @map("created_at")
+  confirmedAt        DateTime?        @map("confirmada_en")
   updatedAt          DateTime         @updatedAt @map("updated_at")
   course             Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   participant        User             @relation(fields: [participantId], references: [id])
   participantType    ParticipantType  @relation(fields: [participantTypeId], references: [id])
   payment            Payment?
   attendance         Attendance[]
+  grades             EvaluationGrade[]
 
   @@unique([id, courseId])
   @@unique([courseId, participantId])
@@ -185,4 +192,31 @@ model Payment {
   enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   @@map("pagos")
+}
+
+model CourseEvaluation {
+  id        Int               @id @default(autoincrement())
+  courseId  Int               @map("curso_id")
+  title     String            @map("titulo")
+  maxScore  Decimal           @default(100) @map("puntaje_maximo") @db.Decimal(7, 2)
+  weight    Decimal           @default(100) @map("ponderacion") @db.Decimal(7, 2)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  course    Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  grades    EvaluationGrade[]
+  @@unique([courseId, title])
+  @@map("evaluaciones")
+}
+
+model EvaluationGrade {
+  id           Int             @id @default(autoincrement())
+  evaluationId Int             @map("evaluacion_id")
+  enrollmentId Int             @map("inscripcion_id")
+  score        Decimal         @map("nota") @db.Decimal(7, 2)
+  comment      String?         @map("observacion")
+  gradedAt     DateTime        @default(now()) @map("calificada_en")
+  evaluation   CourseEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  @@unique([evaluationId, enrollmentId])
+  @@map("calificaciones")
 }

@@ -17,7 +17,13 @@ const run = async () => {
     capacity: 20, preinscriptionStart: dateAt(-15), preinscriptionEnd: dateAt(1)
   } });
   await prisma.coursePrice.upsert({ where: { courseId_participantTypeId: { courseId: course.id, participantTypeId: type.id } }, update: {}, create: { courseId: course.id, participantTypeId: type.id, basePrice: 0 } });
-  for (let offset = -8; offset <= 1; offset++) await prisma.courseSession.upsert({ where: { courseId_date_startTime: { courseId: course.id, date: dateAt(offset), startTime: '17:00' } }, update: {}, create: { courseId: course.id, date: dateAt(offset), startTime: '17:00', durationMinutes: 60 } });
+  const sessionAggregate = await prisma.courseSession.aggregate({ where: { courseId: course.id }, _max: { sessionNumber: true } });
+  let nextSessionNumber = (sessionAggregate._max.sessionNumber ?? 0) + 1;
+  for (let offset = -8; offset <= 1; offset++) {
+    const date = dateAt(offset);
+    const existing = await prisma.courseSession.findUnique({ where: { courseId_date_startTime: { courseId: course.id, date, startTime: '17:00' } } });
+    if (!existing) await prisma.courseSession.create({ data: { courseId: course.id, sessionNumber: nextSessionNumber++, date, startTime: '17:00', durationMinutes: 60 } });
+  }
   console.log(`Curso local HU-10: ${course.id}. Instructor: ${instructor.name}. 10 sesiones; los registros existentes se conservan.`);
 };
 run().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());

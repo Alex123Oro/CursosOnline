@@ -13,6 +13,7 @@ export class EnrollmentList {
   readonly enrollments = input<Enrollment[]>([]);
   readonly loading = input(false);
   @Output() assignScholarship = new EventEmitter<Enrollment>();
+  @Output() deactivateScholarship = new EventEmitter<Enrollment>();
   @Output() registerPayment = new EventEmitter<Enrollment>();
   @Output() confirmEnrollment = new EventEmitter<Enrollment>();
 
@@ -29,4 +30,9 @@ export class EnrollmentList {
   onSearch(value: string) {
     this.query.set(value);
   }
+
+  formatPaymentDate(value: string) {
+    return new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  }
+  formatDate(value: string) { return new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium' }).format(new Date(value)); }
 }

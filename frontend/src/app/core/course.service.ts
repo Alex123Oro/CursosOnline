@@ -11,16 +11,7 @@ export interface CoursePrice {
   participantTypeName: string;
   basePrice: number;
 }
-
-export interface CourseEnrollmentSummary {
-  id: string;
-  status: EnrollmentStatus;
-  basePrice: number;
-  scholarshipPercent: number;
-  benefitAmount: number;
-  finalAmount: number;
-  paymentRegistered: boolean;
-}
+export interface ParticipantTypeOption { id: string; name: string; }
 
 export interface Course {
   id: string;
@@ -29,21 +20,26 @@ export interface Course {
   content: string;
   durationHours: number;
   instructor: string;
-  instructorId?: string | null;
   schedule: string;
   approvalCriteria: string;
   status: CourseStatus;
   startDate: string | null;
   endDate: string | null;
-  capacity: number | null;
-  preinscriptionStart: string | null;
-  preinscriptionEnd: string | null;
-  occupiedSlots: number;
-  remainingSlots: number | null;
-  prices: CoursePrice[];
-  enrollment: CourseEnrollmentSummary | null;
   createdAt: string;
   updatedAt: string;
+  capacity?: number | null;
+  remainingSlots: number | null;
+  occupiedSlots: number;
+  preinscriptionStart: string | null;
+  preinscriptionEnd: string | null;
+  prices: CoursePrice[];
+  enrollment: {
+    status: EnrollmentStatus;
+    scholarshipPercent: number;
+    benefitAmount: number;
+    finalAmount: number;
+    confirmedAt?: string | null;
+  } | null;
 }
 
 export interface CoursePayload {
@@ -52,22 +48,12 @@ export interface CoursePayload {
   content: string;
   durationHours: number;
   instructor: string;
-  instructorId?: string | null;
   schedule: string;
+  approvalCriteria: string;
+  status?: CourseStatus;
   startDate?: string | null;
   endDate?: string | null;
-  capacity?: number | null;
-  preinscriptionStart?: string | null;
-  preinscriptionEnd?: string | null;
-}
-
-export interface CoursePricesPayload {
-  items: { participantTypeId: string; basePrice: number }[];
-}
-
-export interface ParticipantType {
-  id: string;
-  name: string;
+  prices?: { participantTypeId: string; basePrice: number }[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -88,27 +74,29 @@ export class CourseService {
     return this.http.get<Course>(`${this.apiUrl}/catalog/${id}`);
   }
 
+  preenroll(id: string): Observable<unknown> {
+    return this.http.post(`${environment.apiBaseUrl}/enrollments/${id}/preenroll`, {});
+  }
+
   create(payload: CoursePayload): Observable<Course> {
-    return this.http.post<Course>(this.apiUrl, payload);
+    const { prices: _prices, ...course } = payload;
+    return this.http.post<Course>(this.apiUrl, course);
   }
 
   update(id: string, payload: CoursePayload): Observable<Course> {
-    return this.http.put<Course>(`${this.apiUrl}/${id}`, payload);
+    const { prices: _prices, ...course } = payload;
+    return this.http.put<Course>(`${this.apiUrl}/${id}`, course);
   }
 
   publish(id: string): Observable<Course> {
     return this.http.patch<Course>(`${this.apiUrl}/${id}/publish`, {});
   }
 
-  replacePrices(id: string, payload: CoursePricesPayload): Observable<Course> {
-    return this.http.put<Course>(`${this.apiUrl}/${id}/prices`, payload);
+  participantTypes(): Observable<ParticipantTypeOption[]> {
+    return this.http.get<ParticipantTypeOption[]>(`${environment.apiBaseUrl}/participant-types`);
   }
 
-  preenroll(id: string): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/${id}/preenroll`, {});
-  }
-
-  participantTypes(): Observable<ParticipantType[]> {
-    return this.http.get<ParticipantType[]>(`${environment.apiBaseUrl}/participant-types`);
+  replacePrices(id: string, items: { participantTypeId: string; basePrice: number }[]): Observable<Course> {
+    return this.http.put<Course>(`${this.apiUrl}/${id}/prices`, { items });
   }
 }

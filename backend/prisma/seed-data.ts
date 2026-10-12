@@ -129,5 +129,53 @@ export const SEED_COURSES: SeedCourse[] = [
     capacity: 22,
     preinscriptionStart: '2026-09-01',
     preinscriptionEnd: '2026-12-31'
+  },
+  // HU4: Public test course with one slot for the full-capacity scenario.
+  {
+    code: 'INF-UX-150',
+    name: 'Diseño de Experiencia de Usuario',
+    content: 'Principios de investigación, arquitectura de información, prototipado y evaluación de interfaces digitales.',
+    durationHours: 24,
+    instructor: 'Ing. Carla Mendoza',
+    schedule: 'Martes y jueves de 18:00 a 20:00',
+    approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
+    status: 'PUBLISHED',
+    startDate: '2026-11-02',
+    endDate: '2026-11-30',
+    capacity: 1,
+    preinscriptionStart: '2026-10-01',
+    preinscriptionEnd: '2026-12-01'
+  },
+  // HU4: Public test course with available slots for successful pre-registration.
+  {
+    code: 'INF-PY-160',
+    name: 'Python para Análisis de Datos',
+    content: 'Procesamiento de datos con Python, estructuras tabulares, limpieza de información y visualización básica.',
+    durationHours: 30,
+    instructor: 'Téc. Diego Quispe',
+    schedule: 'Lunes y miércoles de 18:30 a 21:00',
+    approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
+    status: 'PUBLISHED',
+    startDate: '2026-12-01',
+    endDate: '2026-12-22',
+    capacity: 20,
+    preinscriptionStart: '2026-10-01',
+    preinscriptionEnd: '2026-11-25'
+  },
+  // HU4: Public test course for catalog, detail, and open-period checks.
+  {
+    code: 'INF-CYB-170',
+    name: 'Fundamentos de Ciberseguridad',
+    content: 'Buenas prácticas de seguridad, amenazas comunes, protección de cuentas y respuesta inicial ante incidentes.',
+    durationHours: 20,
+    instructor: 'Lic. Valeria Ríos',
+    schedule: 'Sábados de 09:00 a 13:00',
+    approvalCriteria: 'Nota final mínima de 70/100 y asistencia mínima de 80%.',
+    status: 'PUBLISHED',
+    startDate: '2027-01-11',
+    endDate: '2027-02-08',
+    capacity: 18,
+    preinscriptionStart: '2026-10-01',
+    preinscriptionEnd: '2027-01-05'
   }
 ];

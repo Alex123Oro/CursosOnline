@@ -37,19 +37,29 @@
               <span class="badge" [class.draft]="enrollment.status !== 'INSCRITO'" [class.published]="enrollment.status === 'INSCRITO'">
                 {{ enrollment.status === 'INSCRITO' ? 'Inscrito' : 'Preinscrito' }}
               </span>
+              @if (enrollment.confirmedAt) { <small>Confirmado {{ formatDate(enrollment.confirmedAt) }}</small> }
             </td>
             <td>{{ enrollment.basePrice }} Bs</td>
-            <td>{{ enrollment.scholarshipPercent }} %</td>
+            <td><span class="badge" [class.published]="enrollment.scholarshipActive" [class.draft]="!enrollment.scholarshipActive">{{ enrollment.scholarshipActive ? 'Activa · ' + enrollment.scholarshipPercent + ' %' : 'Inactiva' }}</span>
+              @if (enrollment.scholarshipReason) { <small>{{ enrollment.scholarshipReason }}</small> }
+            </td>
             <td class="final">{{ enrollment.finalAmount }} Bs</td>
             <td>
-              <span class="badge" [class.published]="enrollment.paymentRegistered || enrollment.finalAmount === 0" [class.draft]="!enrollment.paymentRegistered && enrollment.finalAmount > 0">
-                {{ enrollment.finalAmount === 0 ? 'No requiere' : (enrollment.paymentRegistered ? 'Registrado' : 'Pendiente') }}
+              <span class="badge" [class.published]="enrollment.paymentStatus === 'PAGADO' || enrollment.paymentStatus === 'NO_REQUIERE'" [class.draft]="enrollment.paymentStatus === 'PENDIENTE' || enrollment.paymentStatus === 'PARCIAL'">
+                {{ enrollment.paymentStatus === 'NO_REQUIERE' ? 'No requiere' : enrollment.paymentStatus === 'PAGADO' ? 'Pagado' : enrollment.paymentStatus === 'PARCIAL' ? 'Parcial' : 'Pendiente' }}
               </span>
+              @if (enrollment.paymentAmount !== null) {
+                <small class="payment-detail">{{ enrollment.paymentAmount }} Bs</small>
+              }
+              @if (enrollment.paymentRegisteredAt) {
+                <small class="payment-detail">{{ formatPaymentDate(enrollment.paymentRegisteredAt) }}</small>
+              }
             </td>
             <td class="actions">
-              <button class="more" (click)="assignScholarship.emit(enrollment)">Asignar beca</button>
+              @if (!enrollment.scholarshipActive) { <button class="more" (click)="assignScholarship.emit(enrollment)">Asignar beca</button> }
+              @else { <button class="more" (click)="deactivateScholarship.emit(enrollment)">Desactivar beca</button> }
               <button class="more" [disabled]="enrollment.finalAmount === 0" (click)="registerPayment.emit(enrollment)">Registrar pago</button>
-              <button class="more publish" [disabled]="enrollment.status !== 'PREINSCRITO'" (click)="confirmEnrollment.emit(enrollment)">Confirmar inscripción</button>
+              <button class="more publish" [disabled]="enrollment.status !== 'PREINSCRITO' || (enrollment.finalAmount > 0 && enrollment.paymentStatus !== 'PAGADO')" (click)="confirmEnrollment.emit(enrollment)">Confirmar inscripción</button>
             </td>
           </tr>
         } @empty {

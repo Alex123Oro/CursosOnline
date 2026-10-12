@@ -5,6 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { CourseSessionsPage } from './course-sessions-page';
 import { SessionService } from '../../core/session.service';
 import { environment } from '../../../environments/environment';
+import { authenticateAdminFixture, clearFixtureSession } from '../../../testing/session-fixture';
 
 const base = environment.apiBaseUrl;
 const users = [
@@ -13,21 +14,21 @@ const users = [
   { id: '9', name: 'Luis', role: 'PARTICIPANT', email: 'luis@test', participantTypeId: null, participantTypeName: null }
 ];
 const course = { id: '2', code: 'PG', name: 'PostgreSQL', instructor: 'Carla', instructorId: '8', startDate: '2026-10-12', endDate: '2026-11-12' };
-const session = { id: '3', courseId: '2', date: '2026-10-11', startTime: '19:00', durationMinutes: 120, endTime: '21:00', warning: 'Fuera del periodo', createdAt: '', updatedAt: '' };
+const session = { id: '3', courseId: '2', sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120, endTime: '21:00', warning: 'Fuera del periodo', createdAt: '', updatedAt: '' };
 describe('CourseSessionsPage', () => {
   let fixture: ComponentFixture<CourseSessionsPage>;
   let http: HttpTestingController;
   beforeEach(async () => {
     localStorage.removeItem('eva-user-id');
     await TestBed.configureTestingModule({ imports: [CourseSessionsPage], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: ActivatedRoute, useValue: { paramMap: new (await import('rxjs')).BehaviorSubject(convertToParamMap({ courseId: '2' })) } }] }).compileComponents();
-    fixture = TestBed.createComponent(CourseSessionsPage);
     http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${base}/session/users`).flush(users);
+    authenticateAdminFixture(http);
+    fixture = TestBed.createComponent(CourseSessionsPage);
     fixture.detectChanges();
     http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] });
     fixture.detectChanges();
   });
-  afterEach(() => { fixture.destroy(); http.verify(); localStorage.removeItem('eva-user-id'); });
+  afterEach(() => { fixture.destroy(); http.verify(); clearFixtureSession(); });
   it('renders existing sessions and their period warnings', () => {
     expect(fixture.nativeElement.textContent).toContain('PostgreSQL');
     expect(fixture.nativeElement.textContent).toContain('21:00');
@@ -49,17 +50,14 @@ describe('CourseSessionsPage', () => {
     expect(page.sessions()).toEqual([session]); expect(page.saving()).toBe(false);
     expect(page.feedback()).toContain('asistencia registrada');
   });
-  it('lets instructors consult classes and open attendance without exposing or sending writes', () => {
+  it('lets the assigned instructor manage their course sessions', () => {
     TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
     http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
     const page = fixture.componentInstance;
-    expect(fixture.nativeElement.textContent).not.toContain('Programar sesiones');
-    expect(fixture.nativeElement.textContent).not.toContain('Editar');
+    expect(fixture.nativeElement.textContent).toContain('Programar sesiones');
+    expect(fixture.nativeElement.textContent).toContain('Editar');
     expect(fixture.nativeElement.querySelector('a[href="/cursos/2/asistencia?session=3"]')).toBeTruthy();
-    page.openCreate(); page.openSchedule(); page.openEdit(session); page.submit(); page.submitSchedule(); page.requestDelete(session); page.confirmDelete();
-    expect(fixture.nativeElement.textContent).not.toContain('Eliminar');
-    expect(page.formOpen()).toBe(false);
-    http.expectNone(request => request.method !== 'GET');
+    page.openCreate(); expect(page.formOpen()).toBe(true);
   });
   it('offers the instructor attendance link only to administrators', () => {
     const link = fixture.nativeElement.querySelector('a[href^="/asistencia-instructores"]');
@@ -121,7 +119,7 @@ describe('CourseSessionsPage', () => {
   it('preserves the form on duplicate error and prevents concurrent submits', () => {
     const page = fixture.componentInstance;
     page.openCreate();
-    page.form.setValue({ date: '2026-10-11', startTime: '19:00', durationMinutes: 120 });
+    page.form.setValue({ sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120 });
     expect(page.formWarning()).toBeTruthy();
     page.submit(); page.submit();
     const request = http.expectOne(`${base}/courses/2/sessions`);

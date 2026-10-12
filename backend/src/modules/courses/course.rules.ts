@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 import { HttpError } from '../../shared/http-error.js';
 
 const requiredText = (field: string, minLength = 1) =>
@@ -15,6 +15,8 @@ const dateStringSchema = z
   .refine(value => !value || !Number.isNaN(Date.parse(value)), {
     message: 'La fecha no es valida.'
   });
+
+export const courseStatusSchema = z.enum(['DRAFT', 'PUBLISHED']);
 
 const hasDateOrder = (startDate?: string | null, endDate?: string | null) => {
   if (!startDate || !endDate) {
@@ -97,7 +99,8 @@ export const courseInputSchema = z
     instructor: requiredText('El instructor', 2),
     instructorId: z.preprocess(value => value === '' ? null : value, z.coerce.number().int().positive().nullable().optional()),
     schedule: requiredText('El horario', 3),
-    approvalCriteria: z.string().trim().optional(),
+    approvalCriteria: requiredText('Los criterios de aprobación', 3),
+    status: courseStatusSchema.optional(),
     startDate: dateStringSchema,
     endDate: dateStringSchema,
     capacity: z.preprocess(
@@ -135,7 +138,8 @@ export const scholarshipSchema = z.object({
   scholarshipPercent: z.coerce
     .number({ error: 'El porcentaje de beca es obligatorio.' })
     .min(0, 'El porcentaje de beca debe estar entre 0 % y 100 %.')
-    .max(100, 'El porcentaje de beca debe estar entre 0 % y 100 %.')
+    .max(100, 'El porcentaje de beca debe estar entre 0 % y 100 %.'),
+  reason: requiredText('El motivo de la beca', 3).max(500, 'El motivo no puede superar 500 caracteres.')
 });
 
 export type ScholarshipInput = z.infer<typeof scholarshipSchema>;

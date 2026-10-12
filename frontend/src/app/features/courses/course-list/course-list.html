@@ -9,14 +9,14 @@
       <tr><th>CURSO</th><th>HORAS</th><th>HORARIO</th><th>INSTRUCTOR</th><th>ESTADO</th><th>ACCIÓN</th></tr>
     </thead>
     <tbody>
-      @if (loading()) {
+      @if (loading) {
         <tr><td colspan="6">Cargando cursos...</td></tr>
       } @else {
         @for (course of filteredCourses(); track course.id) {
           <tr>
             <td>
               <button class="course-name" (click)="editCourse.emit(course)">{{ course.name }}</button>
-              <small>{{ course.code }}@if (course.capacity) { · {{ course.occupiedSlots }}/{{ course.capacity }} cupos }</small>
+              <small>{{ course.code }}</small>
             </td>
             <td>{{ course.durationHours }}</td>
             <td>{{ course.schedule }}</td>
@@ -27,9 +27,7 @@
               </span>
             </td>
             <td class="actions">
-              @if (course.status === 'PUBLISHED') { <a class="more" [routerLink]="['/cursos', course.id, 'sesiones']">Sesiones</a> }
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
-              <button class="more" (click)="editCourse.emit(course)">Precios</button>
               <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">
                 {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Publicar' }}
               </button>

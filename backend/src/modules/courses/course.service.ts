@@ -1,8 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
-import type { RequestUser } from '../../shared/auth.js';
 import { HttpError } from '../../shared/http-error.js';
-import { canPublishCourse, type CourseInput, type CoursePricesInput } from './course.rules.js';
+import { canPublishCourse, type CourseInput } from './course.rules.js';
 
 const courseSelect = {
   id: true,
@@ -20,36 +19,15 @@ const courseSelect = {
   capacity: true,
   preinscriptionStart: true,
   preinscriptionEnd: true,
+  prices: { select: { participantTypeId: true, basePrice: true, participantType: { select: { name: true } } } },
+  _count: { select: { enrollments: true } },
   createdAt: true,
-  updatedAt: true,
-  prices: {
-    select: {
-      participantTypeId: true,
-      basePrice: true,
-      participantType: {
-        select: { name: true }
-      }
-    },
-    orderBy: { participantTypeId: 'asc' }
-  },
-  _count: {
-    select: { enrollments: true }
-  }
+  updatedAt: true
 } satisfies Prisma.CourseSelect;
 
 type CourseRecord = Prisma.CourseGetPayload<{ select: typeof courseSelect }>;
 
-const toMoney = (value: Prisma.Decimal | number) => Number(value);
-
-export const toCourseResponse = (course: CourseRecord, enrollment?: {
-  id: number;
-  status: string;
-  basePrice: Prisma.Decimal | number;
-  scholarshipPercent: Prisma.Decimal | number;
-  benefitAmount: Prisma.Decimal | number;
-  finalAmount: Prisma.Decimal | number;
-  payment: { id: number } | null;
-} | null) => ({
+const toCourseResponse = (course: CourseRecord) => ({
   id: String(course.id),
   code: course.code ?? '',
   name: course.name,
@@ -62,62 +40,30 @@ export const toCourseResponse = (course: CourseRecord, enrollment?: {
   status: course.status ?? 'DRAFT',
   startDate: course.startDate ? course.startDate.toISOString().slice(0, 10) : null,
   endDate: course.endDate ? course.endDate.toISOString().slice(0, 10) : null,
-  capacity: course.capacity ?? null,
-  preinscriptionStart: course.preinscriptionStart ? course.preinscriptionStart.toISOString().slice(0, 10) : null,
-  preinscriptionEnd: course.preinscriptionEnd ? course.preinscriptionEnd.toISOString().slice(0, 10) : null,
+  capacity: course.capacity,
   occupiedSlots: course._count.enrollments,
   remainingSlots: course.capacity === null ? null : Math.max(0, course.capacity - course._count.enrollments),
-  prices: course.prices.map(price => ({
-    participantTypeId: String(price.participantTypeId),
-    participantTypeName: price.participantType.name,
-    basePrice: toMoney(price.basePrice)
-  })),
+  preinscriptionStart: course.preinscriptionStart ? course.preinscriptionStart.toISOString().slice(0, 10) : null,
+  preinscriptionEnd: course.preinscriptionEnd ? course.preinscriptionEnd.toISOString().slice(0, 10) : null,
+  prices: course.prices.map(price => ({ participantTypeId: String(price.participantTypeId), participantTypeName: price.participantType.name, basePrice: Number(price.basePrice) })),
+  enrollment: null,
   createdAt: course.createdAt.toISOString(),
-  updatedAt: course.updatedAt.toISOString(),
-  enrollment: enrollment
-    ? {
-        id: String(enrollment.id),
-        status: enrollment.status,
-        basePrice: toMoney(enrollment.basePrice),
-        scholarshipPercent: toMoney(enrollment.scholarshipPercent),
-        benefitAmount: toMoney(enrollment.benefitAmount),
-        finalAmount: toMoney(enrollment.finalAmount),
-        paymentRegistered: Boolean(enrollment.payment)
-      }
-    : null
+  updatedAt: course.updatedAt.toISOString()
 });
 
-const toCourseData = (input: CourseInput) => ({
-  code: input.code ?? null,
-  name: input.name,
-  content: input.content,
-  durationHours: input.durationHours,
-  instructor: input.instructor,
-  schedule: input.schedule,
-  ...(input.approvalCriteria === undefined ? {} : { approvalCriteria: input.approvalCriteria }),
-  startDate: input.startDate ? new Date(input.startDate) : null,
-  endDate: input.endDate ? new Date(input.endDate) : null,
-  capacity: input.capacity ?? null,
+const toCourseData = (input: CourseInput): Prisma.CourseUncheckedCreateInput => {
+  const { instructorId, status, ...fields } = input;
+  return {
+  ...fields,
+  ...(instructorId === undefined ? {} : { instructorId }),
+  approvalCriteria: input.approvalCriteria ?? null,
   preinscriptionStart: input.preinscriptionStart ? new Date(input.preinscriptionStart) : null,
-  preinscriptionEnd: input.preinscriptionEnd ? new Date(input.preinscriptionEnd) : null
-});
-
-const publicationContext = (input: CourseInput) => ({
-  instructor: input.instructor,
-  schedule: input.schedule,
-  startDate: input.startDate ?? null,
-  endDate: input.endDate ?? null,
-  capacity: input.capacity ?? null,
-  preinscriptionStart: input.preinscriptionStart ?? null,
-  preinscriptionEnd: input.preinscriptionEnd ?? null
-});
-
-const instructorAssignment = async (input: CourseInput, existingId: number | null = null) => {
-  const instructorId = input.instructorId === undefined ? existingId : input.instructorId;
-  if (instructorId == null) return { instructorId: null, instructor: input.instructor };
-  const instructor = await prisma.user.findUnique({ where: { id: instructorId }, select: { id: true, name: true, role: true } });
-  if (!instructor || instructor.role !== 'INSTRUCTOR') throw new HttpError(400, 'Selecciona un usuario instructor válido.', [{ path: 'instructorId', message: 'El instructor no existe o no tiene el rol requerido.' }]);
-  return { instructorId: instructor.id, instructor: instructor.name };
+  preinscriptionEnd: input.preinscriptionEnd ? new Date(input.preinscriptionEnd) : null,
+  code: input.code ?? null,
+  ...(status === 'DRAFT' || status === 'PUBLISHED' ? { status } : {}),
+  startDate: input.startDate ? new Date(input.startDate) : null,
+  endDate: input.endDate ? new Date(input.endDate) : null
+  };
 };
 
 const handlePrismaError = (error: unknown): never => {
@@ -131,15 +77,35 @@ const handlePrismaError = (error: unknown): never => {
 };
 
 export const courseService = {
+  async replacePrices(id: number, items: { participantTypeId: number; basePrice: number }[]) {
+    const course = await prisma.course.findUnique({ where: { id }, select: { id: true } });
+    if (!course) throw new HttpError(404, 'Curso no encontrado.');
+    const typeIds = items.map(item => item.participantTypeId);
+    const types = await prisma.participantType.findMany({ where: { id: { in: typeIds } }, select: { id: true } });
+    if (types.length !== new Set(typeIds).size || typeIds.length !== new Set(typeIds).size) throw new HttpError(400, 'Una o más categorías no existen o están duplicadas.');
+    await prisma.$transaction([
+      prisma.coursePrice.deleteMany({ where: { courseId: id } }),
+      prisma.coursePrice.createMany({ data: items.map(item => ({ courseId: id, ...item })) })
+    ]);
+    const updated = await prisma.course.findUnique({ where: { id }, select: courseSelect });
+    if (!updated) throw new HttpError(404, 'Curso no encontrado.');
+    return toCourseResponse(updated);
+  },
+  /**
+   * Lista todos los cursos para el panel administrativo.
+   */
   async list() {
     const courses = await prisma.course.findMany({
       select: courseSelect,
       orderBy: { createdAt: 'desc' }
     });
 
-    return courses.map(course => toCourseResponse(course));
+    return courses.map(toCourseResponse);
   },
 
+  /**
+   * Devuelve solo los cursos publicados para el catálogo público.
+   */
   async catalog() {
     const courses = await prisma.course.findMany({
       where: { status: 'PUBLISHED' },
@@ -147,45 +113,48 @@ export const courseService = {
       orderBy: { createdAt: 'desc' }
     });
 
-    return courses.map(course => toCourseResponse(course));
+    return courses.map(toCourseResponse);
   },
 
-  async catalogById(id: number, user?: RequestUser | null) {
+  async catalogById(id: number, participantId?: number) {
     const course = await prisma.course.findFirst({
       where: { id, status: 'PUBLISHED' },
       select: courseSelect
     });
-
-    if (!course) {
-      return null;
-    }
-
-    if (!user || user.role !== 'PARTICIPANT') {
-      return toCourseResponse(course);
-    }
-
+    if (!course) return null;
+    const response = toCourseResponse(course);
+    if (!participantId) return response;
     const enrollment = await prisma.enrollment.findUnique({
-      where: {
-        courseId_participantId: {
-          courseId: id,
-          participantId: user.id
-        }
-      },
-      include: { payment: { select: { id: true } } }
+      where: { courseId_participantId: { courseId: id, participantId } },
+      select: { status: true, scholarshipPercent: true, scholarshipActive: true, benefitAmount: true, finalAmount: true, confirmedAt: true }
     });
-
-    return toCourseResponse(course, enrollment);
+    return { ...response, enrollment: enrollment ? {
+      status: enrollment.status,
+      scholarshipPercent: enrollment.scholarshipActive ? Number(enrollment.scholarshipPercent) : 0,
+      benefitAmount: Number(enrollment.benefitAmount), finalAmount: Number(enrollment.finalAmount),
+      confirmedAt: enrollment.confirmedAt?.toISOString() ?? null
+    } : null };
   },
 
+  /**
+   * Crea un curso nuevo en estado borrador.
+   */
   async create(input: CourseInput) {
-    const assignment = await instructorAssignment(input);
     try {
+      const selectedInstructor = input.instructorId ? await prisma.user.findUnique({
+        where: { id: input.instructorId },
+        select: { id: true, name: true, role: true }
+      }) : null;
+      if (input.instructorId && (!selectedInstructor || selectedInstructor.role !== 'INSTRUCTOR')) {
+        throw new HttpError(400, 'El usuario seleccionado no es un instructor valido.');
+      }
+      const data = toCourseData(input);
+      if (selectedInstructor) {
+        data.instructorId = selectedInstructor.id;
+        data.instructor = selectedInstructor.name;
+      }
       const course = await prisma.course.create({
-        data: {
-          ...toCourseData(input),
-          ...assignment,
-          status: 'DRAFT'
-        },
+        data,
         select: courseSelect
       });
 
@@ -195,26 +164,45 @@ export const courseService = {
     }
   },
 
+  /**
+   * Actualiza la información del curso.
+   */
   async update(id: number, input: CourseInput) {
-    const existing = await prisma.course.findUnique({
-      where: { id },
-      select: { status: true, instructorId: true }
-    });
-
-    if (!existing) {
-      throw new HttpError(404, 'Curso no encontrado.');
-    }
-
-    if (existing.status === 'PUBLISHED') {
-      canPublishCourse(publicationContext(input));
-    }
-
-    const assignment = await instructorAssignment(input, existing.instructorId ?? null);
-
     try {
+      const existing = await prisma.course.findUnique({
+        where: { id },
+        select: { id: true, status: true, instructorId: true }
+      });
+      if (!existing) throw new HttpError(404, 'Curso no encontrado.');
+      if (existing.status === 'PUBLISHED' && (!input.startDate || !input.endDate)) {
+        throw new HttpError(400, 'Un curso publicado debe conservar sus fechas de inicio y fin.');
+      }
+      const data = toCourseData(input);
+      if (input.instructorId === undefined && existing.instructorId != null) {
+        const assignedInstructor = await prisma.user.findUnique({
+          where: { id: existing.instructorId },
+          select: { id: true, name: true, role: true }
+        });
+        if (assignedInstructor?.role === 'INSTRUCTOR') {
+          data.instructorId = assignedInstructor.id;
+          data.instructor = assignedInstructor.name;
+        } else {
+          data.instructorId = existing.instructorId;
+        }
+      } else if (input.instructorId) {
+        const selectedInstructor = await prisma.user.findUnique({
+          where: { id: input.instructorId },
+          select: { id: true, name: true, role: true }
+        });
+        if (!selectedInstructor || selectedInstructor.role !== 'INSTRUCTOR') {
+          throw new HttpError(400, 'El usuario seleccionado no es un instructor valido.');
+        }
+        data.instructorId = selectedInstructor.id;
+        data.instructor = selectedInstructor.name;
+      }
       const course = await prisma.course.update({
         where: { id },
-        data: { ...toCourseData(input), ...assignment },
+        data,
         select: courseSelect
       });
 
@@ -228,6 +216,9 @@ export const courseService = {
     }
   },
 
+  /**
+   * Publica un curso solo si cumple con la información mínima requerida.
+   */
   async publish(id: number) {
     const existing = await prisma.course.findUnique({
       where: { id },
@@ -263,44 +254,5 @@ export const courseService = {
 
       throw error;
     }
-  },
-
-  async replacePrices(id: number, input: CoursePricesInput) {
-    const existing = await prisma.course.findUnique({
-      where: { id },
-      select: { id: true }
-    });
-
-    if (!existing) {
-      throw new HttpError(404, 'Curso no encontrado.');
-    }
-
-    const typeIds = [...new Set(input.items.map(item => item.participantTypeId))];
-    const types = await prisma.participantType.findMany({
-      where: { id: { in: typeIds } },
-      select: { id: true }
-    });
-
-    if (types.length !== typeIds.length) {
-      throw new HttpError(400, 'Uno o mas tipos de participante no existen.');
-    }
-
-    await prisma.$transaction([
-      prisma.coursePrice.deleteMany({ where: { courseId: id } }),
-      prisma.coursePrice.createMany({
-        data: input.items.map(item => ({
-          courseId: id,
-          participantTypeId: item.participantTypeId,
-          basePrice: item.basePrice
-        }))
-      })
-    ]);
-
-    const course = await prisma.course.findUniqueOrThrow({
-      where: { id },
-      select: courseSelect
-    });
-
-    return toCourseResponse(course);
   }
 };

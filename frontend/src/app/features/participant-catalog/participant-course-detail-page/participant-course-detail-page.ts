@@ -24,6 +24,9 @@ export class ParticipantCourseDetailPage {
   readonly feedback = signal('');
   readonly courseId = signal<string | null>(null);
 
+  // HU4: Require a participant session before allowing pre-registration.
+  readonly isParticipant = computed(() => this.session.currentUser()?.role === 'PARTICIPANT');
+
   readonly applicablePrice = computed(() => {
     const course = this.course();
     const typeId = this.session.currentUser()?.participantTypeId;
@@ -59,6 +62,13 @@ export class ParticipantCourseDetailPage {
     if (!course.preinscriptionStart || !course.preinscriptionEnd) return true;
     const today = new Date().toISOString().slice(0, 10);
     return today < course.preinscriptionStart || today > course.preinscriptionEnd;
+  }
+
+  // HU4: Distinguish a future registration window from one that has ended.
+  preinscriptionNotStarted(course: Course) {
+    if (!course.preinscriptionStart) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return today < course.preinscriptionStart;
   }
 
   noSlots(course: Course) {

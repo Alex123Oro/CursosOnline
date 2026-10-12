@@ -7,10 +7,12 @@
     "test": "vitest run",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node start.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
+    "auth:seed-demo": "tsx prisma/seed-auth-users.ts",
+    "supabase:setup-demo": "node scripts/setup-supabase-demo.mjs",
     "prisma:seed:instructors": "tsx prisma/seed-instructors.ts",
     "prisma:seed:attendance-demo": "tsx prisma/seed-attendance-demo.ts",
     "prisma:seed:instructor-attendance-demo": "tsx prisma/seed-instructor-attendance-demo.ts"

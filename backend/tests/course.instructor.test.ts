@@ -3,7 +3,8 @@ const mocks = vi.hoisted(() => ({ user: { findUnique: vi.fn() }, course: { creat
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseService } from '../src/modules/courses/course.service.js';
 import { courseInputSchema } from '../src/modules/courses/course.rules.js';
-const input = { name: 'Curso prueba', content: 'Contenido de curso prueba', durationHours: 10, instructor: 'Nombre anterior', schedule: 'Lunes 19:00', instructorId: '8' };
+// HU4: Provide the newly required approval criteria in course service fixtures.
+const input = { name: 'Curso prueba', content: 'Contenido de curso prueba', approvalCriteria: 'Proyecto final aprobado.', durationHours: 10, instructor: 'Nombre anterior', schedule: 'Lunes 19:00', instructorId: '8' };
 const record = { id: 1, ...input, instructorId: 8, status: 'DRAFT', prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date(), startDate: null, endDate: null, preinscriptionStart: null, preinscriptionEnd: null, capacity: null };
 describe('course instructor assignment', () => {
   beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 8, name: 'Carla', role: 'INSTRUCTOR' }); mocks.course.create.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.update.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.findUnique.mockResolvedValue({ status: 'DRAFT', instructorId: 8 }); });
@@ -29,8 +30,9 @@ describe('course instructor assignment', () => {
     await courseService.update(1, courseInputSchema.parse({ ...input, instructorId: null }));
     expect(mocks.course.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ instructorId: null, instructor: 'Nombre anterior' }) }));
   });
-  it('preserves approval criteria when editing only ordinary course fields', async () => {
+  it('updates approval criteria when editing the course', async () => {
     await courseService.update(1, courseInputSchema.parse(input));
-    expect(mocks.course.update.mock.calls[0][0].data).not.toHaveProperty('approvalCriteria');
+    // HU4: Ensure criteria reach persistence during course updates.
+    expect(mocks.course.update.mock.calls[0][0].data).toHaveProperty('approvalCriteria', input.approvalCriteria);
   });
 });

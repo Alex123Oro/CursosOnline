@@ -1,4 +1,3 @@
-@if (session.currentUser()?.role === 'ADMIN') {
 <section class="page-header">
   <div>
     <p class="eyebrow">ADMINISTRACIÓN / CURSOS</p>
@@ -16,17 +15,17 @@
   <article class="metric">
     <span class="dot teal"></span>
     <small>Cursos activos</small>
-    <strong>{{ publishedCount() }}</strong>
+    <strong>{{ courses().filter(course => course.status === 'PUBLISHED').length }}</strong>
   </article>
-  <article class="metric">
+  <article class="metric muted">
     <span class="dot mint"></span>
     <small>Matrícula abierta</small>
-    <strong>{{ openEnrollmentCount() }}</strong>
+    <strong>—</strong>
   </article>
-  <article class="metric">
+  <article class="metric muted">
     <span class="dot orange"></span>
-    <small>Con periodo</small>
-    <strong>{{ periodCount() }}</strong>
+    <small>Periodo</small>
+    <strong>—</strong>
   </article>
   <article class="metric muted">
     <span class="dot red"></span>
@@ -49,10 +48,8 @@
     [mode]="formMode()"
     [course]="editingCourse()"
     [participantTypes]="participantTypes()"
-    [instructors]="instructors()"
     [saving]="isSaving()"
     (save)="handleSave($event)"
     (cancel)="closeForm()">
   </app-course-form>
 }
-} @else { <p class="app-feedback">La administración de cursos requiere una sesión de administrador.</p> }

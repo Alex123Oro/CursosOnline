@@ -1,0 +1,123 @@
+.progress-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 36px 42px;
+}
+
+.progress-list {
+  display: grid;
+  gap: 18px;
+}
+
+.progress-item {
+  padding: 20px 0;
+  border-top: 1px solid #d9e2dc;
+}
+
+.course-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.course-code,
+.course-dates,
+.muted {
+  color: #68796f;
+  font-size: 13px;
+}
+
+.course-heading h2 {
+  margin: 4px 0;
+  color: #1c3025;
+  font-size: 20px;
+}
+
+.course-dates {
+  margin: 0;
+}
+
+.status {
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: #e5f3ed;
+  color: #17634a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.attendance,
+.evaluations {
+  margin-top: 20px;
+}
+
+.attendance > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #384c40;
+  font-size: 14px;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  height: 9px;
+  margin: 9px 0 5px;
+  accent-color: #178067;
+}
+
+.attendance small {
+  color: #68796f;
+}
+
+.evaluations h3 {
+  margin: 0 0 8px;
+  color: #284236;
+  font-size: 15px;
+}
+
+.evaluations ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.evaluations li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 14px;
+  padding: 9px 0;
+  border-top: 1px solid #edf1ee;
+  color: #34483c;
+  font-size: 13px;
+}
+
+.evaluations li small {
+  grid-column: 1 / -1;
+  color: #68796f;
+}
+
+.grade-summary,
+.final-result {
+  margin: 13px 0 0;
+  color: #34483c;
+  font-size: 14px;
+}
+
+.final-result.passed { color: #17634a; }
+.final-result.failed,
+.progress-message.error { color: #a33028; }
+
+.progress-message {
+  padding: 18px 0;
+  border-top: 1px solid #d9e2dc;
+  color: #52645a;
+}
+
+@media (max-width: 680px) {
+  .progress-page { padding: 24px 18px; }
+  .course-heading { flex-direction: column; }
+}

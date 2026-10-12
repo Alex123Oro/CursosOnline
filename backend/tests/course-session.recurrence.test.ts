@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn() }, courseSession: { createManyAndReturn: vi.fn(), findMany: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn() }, courseSession: { createManyAndReturn: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { recurrenceInputSchema, recurrenceDates } from '../src/modules/course-sessions/course-session.rules.js';
 import { courseSessionService } from '../src/modules/course-sessions/course-session.service.js';
@@ -7,7 +7,7 @@ const input = { startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1, 3]
 const user = { id: 8, name: 'Carla', email: 'test', role: 'ADMIN' as const, participantTypeId: null };
 const course = { id: 2, code: 'PG', name: 'PostgreSQL', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-10-20') };
 describe('weekly session scheduling', () => {
-  beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.createManyAndReturn.mockResolvedValue([{ id: 4 }]); mocks.courseSession.findMany.mockResolvedValue([]); });
+  beforeEach(() => { vi.resetAllMocks(); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findFirst.mockResolvedValue(null); mocks.courseSession.createManyAndReturn.mockResolvedValue([{ id: 4 }]); mocks.courseSession.findMany.mockResolvedValue([]); });
   it('includes both boundaries and selected weekdays in chronological order', () => {
     expect(recurrenceDates(recurrenceInputSchema.parse(input))).toEqual(['2026-10-12', '2026-10-14', '2026-10-19', '2026-10-21']);
   });
@@ -22,7 +22,7 @@ describe('weekly session scheduling', () => {
   it('atomically creates the batch, skips exact duplicates and returns authoritative counts', async () => {
     const result = await courseSessionService.schedule(2, input, user);
     expect(result).toMatchObject({ createdCount: 1, skippedCount: 3, sessions: [] });
-    expect(mocks.courseSession.createManyAndReturn).toHaveBeenCalledWith({ skipDuplicates: true, data: ['2026-10-12', '2026-10-14', '2026-10-19', '2026-10-21'].map(date => ({ courseId: 2, date: new Date(date), startTime: '18:00', durationMinutes: 90 })) });
+    expect(mocks.courseSession.createManyAndReturn).toHaveBeenCalledWith({ skipDuplicates: true, data: ['2026-10-12', '2026-10-14', '2026-10-19', '2026-10-21'].map((date, index) => ({ courseId: 2, sessionNumber: index + 1, date: new Date(date), startTime: '18:00', durationMinutes: 90 })) });
   });
   it.each([
     { status: 'DRAFT', statusCode: 400 }

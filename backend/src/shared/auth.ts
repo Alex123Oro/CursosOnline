@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../config/prisma.js';
 import { asyncHandler } from './async-handler.js';
 import { HttpError } from './http-error.js';
+import { verifyAccessToken } from '../modules/auth/auth.service.js';
+import { env } from '../config/env.js';
 
 export type RequestUser = {
   id: number;
@@ -22,18 +24,22 @@ const toRequestUser = (user: {
 }): RequestUser => user;
 
 const loadUser = async (request: AuthedRequest) => {
-  const header = request.header('x-user-id');
-  if (!header) {
+  const authorization = request.header('authorization');
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    if (env.nodeEnv === 'development' || env.nodeEnv === 'test') {
+      return loadTestUser(request);
+    }
     return null;
   }
 
-  const userId = Number(header);
-  if (!Number.isInteger(userId) || userId <= 0) {
+  const identity = await verifyAccessToken(match[1] ?? '');
+  if (!identity) {
     throw new HttpError(401, 'La sesion no es valida.');
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { authId: identity.id },
     select: {
       id: true,
       name: true,
@@ -43,10 +49,34 @@ const loadUser = async (request: AuthedRequest) => {
     }
   });
 
-  if (!user) {
+  const account = user ?? (identity.email ? await prisma.user.findUnique({
+    where: { email: identity.email },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      participantTypeId: true
+    }
+  }) : null);
+
+  if (!account) {
     throw new HttpError(401, 'La sesion no es valida.');
   }
 
+  request.user = toRequestUser(account);
+  return request.user;
+};
+
+const loadTestUser = async (request: AuthedRequest) => {
+  const header = request.header('x-user-id');
+  if (!header) return null;
+  const userId = Number(header);
+  if (!Number.isInteger(userId) || userId <= 0) throw new HttpError(401, 'La sesion no es valida.');
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: {
+    id: true, name: true, email: true, role: true, participantTypeId: true
+  } });
+  if (!user) throw new HttpError(401, 'La sesion no es valida.');
   request.user = toRequestUser(user);
   return request.user;
 };

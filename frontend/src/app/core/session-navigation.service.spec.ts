@@ -3,20 +3,21 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { SessionNavigationService } from './session-navigation.service';
-import { SessionService } from './session.service';
+import { authenticateAdminFixture, clearFixtureSession } from '../../testing/session-fixture';
 
 describe('Profile navigation', () => {
-  it('preserves startup deep links and navigates on each subsequent profile change', () => {
-    localStorage.removeItem('eva-user-id');
+  it('navigates to the home page for each authenticated role change', () => {
+    clearFixtureSession();
     const navigateByUrl = vi.fn().mockResolvedValue(true);
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), { provide: Router, useValue: { navigateByUrl } }] });
+    const http = TestBed.inject(HttpTestingController);
+    const session = authenticateAdminFixture(http);
     TestBed.inject(SessionNavigationService); TestBed.tick();
-    TestBed.inject(HttpTestingController).expectOne(request => request.url.endsWith('/session/users')).flush([{ id: '1', role: 'ADMIN' }, { id: '3', role: 'PARTICIPANT' }, { id: '5', role: 'INSTRUCTOR' }]);
-    TestBed.tick(); expect(navigateByUrl).not.toHaveBeenCalled();
-    const session = TestBed.inject(SessionService);
-    session.selectUser('5'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
-    session.selectUser('3'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/catalogo');
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    session.selectUser('8'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
+    session.selectUser('9'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/catalogo');
     session.selectUser('1'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
-    TestBed.inject(HttpTestingController).verify(); localStorage.removeItem('eva-user-id');
+    session.endSessionLocally(); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/iniciar-sesion');
+    http.verify(); clearFixtureSession();
   });
 });

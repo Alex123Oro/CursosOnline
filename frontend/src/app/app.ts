@@ -16,19 +16,20 @@ export class App {
   readonly session = inject(SessionService);
   readonly navigation = inject(SessionNavigationService);
   readonly sidebarOpen = signal(false);
-  readonly isPublicRoute = signal(this.router.url.startsWith('/catalogo'));
+  readonly isPublicRoute = signal(this.router.url.startsWith('/catalogo') || this.router.url.startsWith('/iniciar-sesion'));
+  canReturnToCourses() { const role = this.session.currentUser()?.role; return role === 'ADMIN' || role === 'INSTRUCTOR'; }
+  isCoursesHome() { return this.router.url === '/cursos' || this.router.url === '/cursos/'; }
 
   constructor() {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
-        this.isPublicRoute.set(this.router.url.startsWith('/catalogo'));
+        this.isPublicRoute.set(this.router.url.startsWith('/catalogo') || this.router.url.startsWith('/iniciar-sesion'));
         this.sidebarOpen.set(false);
       });
   }
 
-  onSessionChange(id: string) {
-    this.session.selectUser(id);
-    this.sidebarOpen.set(false);
+  logout() {
+    this.session.logout().subscribe();
   }
 }

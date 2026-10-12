@@ -15,6 +15,7 @@
     [enrollments]="enrollments()"
     [loading]="isLoading()"
     (assignScholarship)="openScholarship($event)"
+    (deactivateScholarship)="deactivateScholarship($event)"
     (registerPayment)="openPayment($event)"
     (confirmEnrollment)="openConfirm($event)">
   </app-enrollment-list>
@@ -34,6 +35,11 @@
             <small>El porcentaje de beca debe estar entre 0 % y 100 %.</small>
           }
         </label>
+        <label class="full">
+          <span>Motivo *</span>
+          <textarea rows="3" formControlName="reason" placeholder="Motivo de autorización de la beca"></textarea>
+          @if (scholarshipForm.controls.reason.invalid && scholarshipForm.controls.reason.touched) { <small>Indica el motivo de la beca.</small> }
+        </label>
         @if (previewAmounts(); as amounts) {
           <div class="economic full">
             <p>Precio base: {{ enrollment.basePrice }} Bs</p>
@@ -48,6 +54,14 @@
       </form>
     </section>
   </div>
+}
+
+@if (modal() === 'deactivate' && selected(); as enrollment) {
+  <div class="modal-backdrop" (click)="closeModal()"><section class="modal form-modal" (click)="$event.stopPropagation()">
+    <p class="eyebrow">DESACTIVAR BECA</p><h2>¿Desactivar la beca de {{ enrollment.participantName }}?</h2>
+    <p>El monto a pagar volverá al precio base de {{ enrollment.basePrice }} Bs.</p>
+    <div class="form-actions"><button class="secondary-btn" (click)="closeModal()">Cancelar</button><button class="primary-btn" [disabled]="isSaving()" (click)="confirmDeactivateScholarship()">Desactivar beca</button></div>
+  </section></div>
 }
 
 @if (modal() === 'payment' && selected(); as enrollment) {

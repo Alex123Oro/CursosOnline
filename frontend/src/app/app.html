@@ -11,6 +11,9 @@
   <a class="mobile-brand" [routerLink]="navigation.home()" aria-label="EVA, inicio">
     <span class="brand-mark" aria-hidden="true">E</span><span>EVA</span>
   </a>
+  @if (canReturnToCourses() && !isCoursesHome()) {
+    <a class="header-courses-link" routerLink="/cursos">Volver a cursos</a>
+  }
   <span class="mobile-user" [attr.title]="session.currentUser()?.name ?? 'Invitado'">
     {{ session.currentUser()?.name ?? 'Invitado' }}
   </span>
@@ -30,27 +33,30 @@
       <a class="nav-item" routerLink="/asistencia-instructores" routerLinkActive="active">Asistencia de instructores</a>
       }
       @if (session.currentUser()?.role === 'INSTRUCTOR') { <a class="nav-item" routerLink="/cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Cursos</a> }
+      @if (session.currentUser()?.role === 'PARTICIPANT') { <a class="nav-item" routerLink="/mi-progreso" routerLinkActive="active">Mi progreso</a> }
       <a class="nav-item" routerLink="/catalogo" routerLinkActive="active"><span aria-hidden="true">▤</span> Catálogo</a>
     </nav>
     <div class="sidebar-footer">
       <strong>{{ session.currentUser()?.role === 'INSTRUCTOR' ? 'Instructor' : 'Administración' }}</strong>
       <small>Formación continua</small>
-      <label class="session-select">
-        <span>Sesión</span>
-        <select [value]="session.userId()" (change)="onSessionChange($any($event.target).value)">
-          <optgroup label="Usuarios">
-          @for (user of session.baseSessionUsers(); track user.id) { <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option> }
-        </optgroup>
-        <optgroup label="Instructores">
-          @for (user of session.instructorSessionUsers(); track user.id) { <option [value]="user.id" [selected]="user.id === session.userId()">{{ user.name }}</option> }
-        </optgroup>
-      </select>
-      </label>
+      @if (session.accessToken()) {
+        <button class="nav-item logout-action" type="button" (click)="logout()">Cerrar sesión</button>
+      } @else {
+        <a class="nav-item" routerLink="/iniciar-sesion">Iniciar sesión</a>
+      }
     </div>
   </aside>
   }
 
   <main id="app-content" class="main-content" [class.public-content]="isPublicRoute()">
+    @if (!isPublicRoute()) {
+      <header class="workspace-header">
+        <span>{{ session.currentUser()?.role === 'INSTRUCTOR' ? 'Panel del instructor' : 'Panel administrativo' }}</span>
+        @if (canReturnToCourses() && !isCoursesHome()) {
+          <a class="header-courses-link" routerLink="/cursos">Volver a cursos</a>
+        }
+      </header>
+    }
     <router-outlet></router-outlet>
   </main>
 </div>

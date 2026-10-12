@@ -6,6 +6,7 @@ import { BehaviorSubject } from 'rxjs';
 import { InstructorAttendancePage } from './instructor-attendance-page';
 import { SessionService } from '../../core/session.service';
 import { environment } from '../../../environments/environment';
+import { authenticateAdminFixture, clearFixtureSession } from '../../../testing/session-fixture';
 const base = `${environment.apiBaseUrl}/admin`;
 const users = [{ id: '1', name: 'Admin', role: 'ADMIN' }, { id: '8', name: 'Carla', role: 'INSTRUCTOR' }];
 const row = { id: '3', date: '2026-10-06', startTime: '15:00', endTime: '16:00', editable: true, course: { id: '2', name: 'Curso', code: 'CUR' }, status: null, updatedAt: null, recordedById: null };
@@ -15,12 +16,12 @@ describe('InstructorAttendancePage', () => {
   beforeEach(async () => {
     localStorage.removeItem('eva-user-id');
     await TestBed.configureTestingModule({ imports: [InstructorAttendancePage], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: ActivatedRoute, useValue: { queryParamMap: new BehaviorSubject(convertToParamMap({ instructor: '8', course: '2' })) } }] }).compileComponents();
-    fixture = TestBed.createComponent(InstructorAttendancePage); http = TestBed.inject(HttpTestingController);
-    http.expectOne(`${environment.apiBaseUrl}/session/users`).flush(users); fixture.detectChanges();
+    http = TestBed.inject(HttpTestingController); authenticateAdminFixture(http);
+    fixture = TestBed.createComponent(InstructorAttendancePage); fixture.detectChanges();
     http.expectOne(`${base}/instructors`).flush([{ id: '9', name: 'Diego' }, { id: '8', name: 'Carla' }]);
     http.expectOne(`${base}/instructors/8/attendance?courseId=2`).flush(data); fixture.detectChanges();
   });
-  afterEach(() => { fixture.destroy(); http.verify(); localStorage.removeItem('eva-user-id'); });
+  afterEach(() => { fixture.destroy(); http.verify(); clearFixtureSession(); });
   it('opens contextual instructor/course with no approval or percentage', () => {
     expect(fixture.componentInstance.instructorId()).toBe('8');
     expect(fixture.nativeElement.querySelector('#instructor').value).toBe('8');

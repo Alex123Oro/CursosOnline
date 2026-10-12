@@ -29,12 +29,23 @@ const toEnrollmentResponse = (enrollment: EnrollmentRecord) => ({
   participantTypeName: enrollment.participantType.name,
   basePrice: toMoney(enrollment.basePrice),
   scholarshipPercent: toMoney(enrollment.scholarshipPercent),
+  scholarshipReason: enrollment.scholarshipReason,
+  scholarshipActive: enrollment.scholarshipActive,
   benefitAmount: toMoney(enrollment.benefitAmount),
   finalAmount: toMoney(enrollment.finalAmount),
   paymentRegistered: Boolean(enrollment.payment),
   paymentAmount: enrollment.payment ? toMoney(enrollment.payment.amount) : null,
+  paymentRegisteredAt: enrollment.payment?.registeredAt.toISOString() ?? null,
+  paymentStatus: toMoney(enrollment.finalAmount) <= 0
+    ? 'NO_REQUIERE'
+    : !enrollment.payment
+      ? 'PENDIENTE'
+      : toMoney(enrollment.payment.amount) >= toMoney(enrollment.finalAmount)
+        ? 'PAGADO'
+        : 'PARCIAL',
   createdAt: enrollment.createdAt.toISOString(),
-  updatedAt: enrollment.updatedAt.toISOString()
+  updatedAt: enrollment.updatedAt.toISOString(),
+  confirmedAt: enrollment.confirmedAt?.toISOString() ?? null
 });
 
 const amountsFor = (basePrice: number, scholarshipPercent: number) =>
@@ -142,7 +153,7 @@ export const enrollmentService = {
     });
   },
 
-  async assignScholarship(id: number, scholarshipPercent: number) {
+  async assignScholarship(id: number, scholarshipPercent: number, scholarshipReason: string) {
     const enrollment = await prisma.enrollment.findUnique({
       where: { id },
       include: enrollmentInclude
@@ -151,6 +162,7 @@ export const enrollmentService = {
     if (!enrollment) {
       throw new HttpError(404, 'Inscripcion no encontrada.');
     }
+    if (enrollment.scholarshipActive) throw new HttpError(409, 'Ya existe una beca activa para este participante y curso. Desactívala antes de asignar otra.');
 
     const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), scholarshipPercent);
 
@@ -158,12 +170,23 @@ export const enrollmentService = {
       where: { id },
       data: {
         scholarshipPercent,
+        scholarshipReason,
+        scholarshipActive: true,
         benefitAmount,
         finalAmount
       },
       include: enrollmentInclude
     });
 
+    return toEnrollmentResponse(updated);
+  },
+
+  async deactivateScholarship(id: number) {
+    const enrollment = await prisma.enrollment.findUnique({ where: { id }, include: enrollmentInclude });
+    if (!enrollment) throw new HttpError(404, 'Inscripción no encontrada.');
+    if (!enrollment.scholarshipActive) throw new HttpError(400, 'La inscripción no tiene una beca activa.');
+    const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), 0);
+    const updated = await prisma.enrollment.update({ where: { id }, data: { scholarshipActive: false, benefitAmount, finalAmount }, include: enrollmentInclude });
     return toEnrollmentResponse(updated);
   },
 
@@ -235,9 +258,13 @@ export const enrollmentService = {
         throw new HttpError(400, 'No se puede confirmar la inscripcion porque el pago correspondiente no ha sido registrado.');
       }
 
+      if (finalAmount > 0 && toMoney(enrollment.payment!.amount) < finalAmount) {
+        throw new HttpError(400, 'No se puede confirmar la inscripcion porque el pago es inferior al monto final.');
+      }
+
       const updated = await tx.enrollment.update({
         where: { id },
-        data: { status: 'INSCRITO' },
+        data: { status: 'INSCRITO', confirmedAt: new Date() },
         include: enrollmentInclude
       });
 

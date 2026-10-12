@@ -8,7 +8,7 @@ import { Enrollment, EnrollmentService } from '../../../core/enrollment.service'
 import { EnrollmentList } from '../enrollment-list/enrollment-list';
 import { SessionService } from '../../../core/session.service';
 
-type ModalMode = 'scholarship' | 'payment' | 'confirm' | null;
+type ModalMode = 'scholarship' | 'payment' | 'confirm' | 'deactivate' | null;
 
 @Component({
   selector: 'app-enrollments-page',
@@ -30,7 +30,8 @@ export class EnrollmentsPage {
   readonly selected = signal<Enrollment | null>(null);
 
   readonly scholarshipForm = this.fb.nonNullable.group({
-    scholarshipPercent: [0, [Validators.required, Validators.min(0), Validators.max(100)]]
+    scholarshipPercent: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
+    reason: ['', [Validators.required, Validators.minLength(3)]]
   });
 
   readonly paymentForm = this.fb.nonNullable.group({
@@ -58,7 +59,7 @@ export class EnrollmentsPage {
 
   openScholarship(enrollment: Enrollment) {
     this.selected.set(enrollment);
-    this.scholarshipForm.reset({ scholarshipPercent: enrollment.scholarshipPercent });
+    this.scholarshipForm.reset({ scholarshipPercent: enrollment.scholarshipPercent, reason: enrollment.scholarshipReason ?? '' });
     this.modal.set('scholarship');
   }
 
@@ -84,7 +85,7 @@ export class EnrollmentsPage {
     if (this.scholarshipForm.invalid || !enrollment) return;
 
     this.isSaving.set(true);
-    this.enrollmentService.assignScholarship(enrollment.id, Number(this.scholarshipForm.controls.scholarshipPercent.value))
+    this.enrollmentService.assignScholarship(enrollment.id, Number(this.scholarshipForm.controls.scholarshipPercent.value), this.scholarshipForm.controls.reason.value.trim())
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: () => {
@@ -94,6 +95,18 @@ export class EnrollmentsPage {
         },
         error: error => this.feedback.set(this.errorMessage(error))
       });
+  }
+
+  deactivateScholarship(enrollment: Enrollment) { this.selected.set(enrollment); this.modal.set('deactivate'); }
+
+  confirmDeactivateScholarship() {
+    const enrollment = this.selected();
+    if (!enrollment || this.isSaving()) return;
+    this.isSaving.set(true);
+    this.enrollmentService.deactivateScholarship(enrollment.id).pipe(finalize(() => this.isSaving.set(false))).subscribe({
+      next: () => { this.feedback.set('Beca desactivada. El importe se recalculó sin el beneficio.'); this.closeModal(); this.loadEnrollments(); },
+      error: error => this.feedback.set(this.errorMessage(error))
+    });
   }
 
   savePayment() {

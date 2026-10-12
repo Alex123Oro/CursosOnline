@@ -1,62 +1,48 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
 import { SessionService, SessionUser } from './session.service';
-import { sessionInterceptor } from './session.interceptor';
-import { CoursesPage } from '../features/courses/courses-page/courses-page';
-import { EnrollmentsPage } from '../features/enrollments/enrollments-page/enrollments-page';
+import { environment } from '../../environments/environment';
 
-const users: SessionUser[] = [
-  { id: '4', name: 'Admin', email: 'admin@eva.local', role: 'ADMIN', participantTypeId: null, participantTypeName: null },
-  { id: '8', name: 'Admin 2', email: 'admin2@eva.local', role: 'ADMIN', participantTypeId: null, participantTypeName: null }
-];
+const admin: SessionUser = { id: '1', name: 'Admin', email: 'admin@example.test', role: 'ADMIN', participantTypeId: null, participantTypeName: null };
+const instructor: SessionUser = { id: '8', name: 'Carla', email: 'carla@example.test', role: 'INSTRUCTOR', participantTypeId: null, participantTypeName: null };
 
-describe('Administrative data and session startup', () => {
+describe('SessionService authentication', () => {
   beforeEach(() => {
-    localStorage.removeItem('eva-user-id');
-    TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideHttpClient(withInterceptors([sessionInterceptor])), provideHttpClientTesting()]
-    });
+    localStorage.clear();
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
   });
+  afterEach(() => { TestBed.inject(HttpTestingController).verify(); localStorage.clear(); });
 
-  afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
-    localStorage.removeItem('eva-user-id');
-  });
-  it('keeps the initial users and all instructors, excludes demo students and preserves an instructor on reload', () => {
-    localStorage.setItem('eva-user-id', '6');
+  it('restores the persisted authenticated instructor from the session endpoint', () => {
+    localStorage.setItem('eva-access-token', 'persisted-token');
+    localStorage.setItem('eva-user-id', instructor.id);
+    localStorage.setItem('eva-user', JSON.stringify(instructor));
     const session = TestBed.inject(SessionService);
-    TestBed.inject(HttpTestingController).expectOne(request => request.url.endsWith('/session/users')).flush([
-      ...Array.from({ length: 4 }, (_, i) => ({ id: String(i + 1), role: i === 0 ? 'ADMIN' : 'PARTICIPANT' })),
-      { id: '5', role: 'INSTRUCTOR' }, { id: '6', role: 'INSTRUCTOR' }, { id: '7', role: 'PARTICIPANT' }
-    ]);
-    expect(session.sessionUsers().map(user => user.id)).toEqual(['1', '2', '3', '4', '5', '6']);
-    expect(session.userId()).toBe('6');
+    TestBed.inject(HttpTestingController).expectOne(request => request.url.endsWith('/session/me')).flush(instructor);
+    expect(session.currentUser()).toEqual(instructor);
     expect(session.ready()).toBe(true);
+    expect(session.accessToken()).toBe('persisted-token');
+    TestBed.inject(HttpTestingController).expectNone(request => request.url.endsWith('/session/users'));
   });
 
-  for (const [page, endpoint] of [[CoursesPage, '/courses'], [EnrollmentsPage, '/enrollments']] as const) {
-    it(`waits for the session and reloads ${endpoint} on user changes`, () => {
-      const session = TestBed.inject(SessionService);
-      const http = TestBed.inject(HttpTestingController);
-      const fixture = TestBed.createComponent<CoursesPage | EnrollmentsPage>(page);
-      fixture.detectChanges();
-      http.match(request => request.url.endsWith('/participant-types')).forEach(request => request.flush([]));
-      http.expectNone(request => request.url.endsWith(endpoint));
-      const discovery = http.expectOne(request => request.url.endsWith('/session/users'));
-      expect(discovery.request.headers.has('X-User-Id')).toBe(false);
-      discovery.flush(users);
-      fixture.detectChanges();
-      const first = http.expectOne(request => request.url.endsWith(endpoint));
-      expect(first.request.headers.get('X-User-Id')).toBe('4');
-      first.flush([]);
-      session.selectUser('8');
-      fixture.detectChanges();
-      const second = http.expectOne(request => request.url.endsWith(endpoint));
-      expect(second.request.headers.get('X-User-Id')).toBe('8');
-      second.flush([]);
-      fixture.destroy();
-    });
-  }
+  it('logs in through credentials and loads the administration directory only for an admin', () => {
+    const session = TestBed.inject(SessionService);
+    const http = TestBed.inject(HttpTestingController);
+    session.login(admin.email, 'secret').subscribe();
+    http.expectOne(`${environment.apiBaseUrl}/auth/login`).flush({ accessToken: 'new-token', refreshToken: 'refresh', expiresAt: null, user: admin });
+    expect(session.currentUser()).toEqual(admin);
+    http.expectOne(request => request.url.endsWith('/session/users')).flush([admin, instructor]);
+    session.selectUser(instructor.id);
+    expect(session.currentUser()).toEqual(instructor);
+    expect(session.accessToken()).toBe('');
+  });
+
+  it('clears local credentials on logout when there is no active token', () => {
+    const session = TestBed.inject(SessionService);
+    session.endSessionLocally();
+    expect(session.currentUser()).toBeNull();
+    expect(session.ready()).toBe(true);
+    expect(localStorage.getItem('eva-access-token')).toBeNull();
+  });
 });

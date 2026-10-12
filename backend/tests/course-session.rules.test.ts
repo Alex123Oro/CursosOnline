@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { sessionInputSchema, periodWarning, endTime } from '../src/modules/course-sessions/course-session.rules.js';
 
-const input = { date: '2026-10-12', startTime: '19:00', durationMinutes: 120 };
+const input = { sessionNumber: 1, date: '2026-10-12', startTime: '19:00', durationMinutes: 120 };
 describe('session rules', () => {
   it('accepts a valid session and calculates its end time', () => {
     expect(sessionInputSchema.parse(input)).toEqual(input);
     expect(endTime('19:00', 120)).toBe('21:00');
+  });
+  it('requires a positive session number', () => {
+    expect(sessionInputSchema.safeParse({ ...input, sessionNumber: 0 }).success).toBe(false);
+    expect(sessionInputSchema.safeParse({ ...input, sessionNumber: 2 }).success).toBe(true);
   });
   it.each(['2026-02-30', '2026-13-01', '2026-1-02', 'invalid'])('rejects impossible date %s', date => {
     expect(sessionInputSchema.safeParse({ ...input, date }).success).toBe(false);

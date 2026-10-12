@@ -149,9 +149,9 @@ describe('confirmacion de inscripcion', () => {
     vi.resetAllMocks();
     transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
     enrollmentCount.mockResolvedValue(0);
-    enrollmentUpdate.mockImplementation(async ({ data }: { data: { status: string } }) => ({
+    enrollmentUpdate.mockImplementation(async ({ data }: { data: { status?: string; confirmedAt?: Date; scholarshipActive?: boolean; benefitAmount?: number; finalAmount?: number; scholarshipPercent?: number; scholarshipReason?: string } }) => ({
       ...includeRecord,
-      status: data.status,
+      ...data,
       payment: includeRecord.payment
     }));
   });
@@ -164,6 +164,8 @@ describe('confirmacion de inscripcion', () => {
 
     const result = await enrollmentService.confirm(10);
     expect(result.status).toBe('INSCRITO');
+    expect(result.confirmedAt).toBeTruthy();
+    expect(enrollmentUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'INSCRITO', confirmedAt: expect.any(Date) }) }));
   });
 
   it('rechaza a una persona que no esta preinscrita', async () => {
@@ -180,6 +182,19 @@ describe('confirmacion de inscripcion', () => {
     await expect(enrollmentService.confirm(10)).rejects.toMatchObject({
       message: 'No se puede confirmar la inscripcion porque el pago correspondiente no ha sido registrado.'
     });
+  });
+
+  it('rechaza confirmar cuando el pago registrado es inferior al monto final', async () => {
+    enrollmentFindUnique.mockResolvedValue({
+      ...includeRecord,
+      payment: { id: 1, amount: 499, registeredAt: new Date('2026-10-08T12:00:00.000Z') }
+    });
+
+    await expect(enrollmentService.confirm(10)).rejects.toMatchObject({
+      statusCode: 400,
+      message: 'No se puede confirmar la inscripcion porque el pago es inferior al monto final.'
+    });
+    expect(enrollmentUpdate).not.toHaveBeenCalled();
   });
 
   it('permite confirmar beca del 100 % sin pago', async () => {
@@ -205,5 +220,13 @@ describe('confirmacion de inscripcion', () => {
     await expect(enrollmentService.confirm(10)).rejects.toMatchObject({
       message: 'No existen cupos disponibles.'
     });
+  });
+
+  it('desactiva la beca, conserva su historial y restaura el importe base', async () => {
+    enrollmentFindUnique.mockResolvedValue({ ...includeRecord, scholarshipPercent: 50, scholarshipReason: 'Apoyo socioeconómico', scholarshipActive: true, benefitAmount: 250, finalAmount: 250 });
+    enrollmentUpdate.mockResolvedValue({ ...includeRecord, scholarshipPercent: 50, scholarshipReason: 'Apoyo socioeconómico', scholarshipActive: false, benefitAmount: 0, finalAmount: 500 });
+    const result = await enrollmentService.deactivateScholarship(10);
+    expect(result).toMatchObject({ scholarshipPercent: 50, scholarshipReason: 'Apoyo socioeconómico', scholarshipActive: false, benefitAmount: 0, finalAmount: 500 });
+    expect(enrollmentUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { scholarshipActive: false, benefitAmount: 0, finalAmount: 500 } }));
   });
 });

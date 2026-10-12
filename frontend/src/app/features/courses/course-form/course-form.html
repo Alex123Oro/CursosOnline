@@ -16,6 +16,14 @@
         @if (fieldError('name')) { <small>El nombre es obligatorio.</small> }
       </label>
 
+      <fieldset class="full prices-block" [disabled]="saving">
+        <legend>Precios por categoría *</legend>
+        @for (type of participantTypes; track type.id) {
+          <label><span>{{ type.name }} (Bs)</span><input type="number" min="0" step="0.01" [value]="priceValue(type.id)" (input)="setPrice(type.id, $any($event.target).value)"></label>
+        } @empty { <p>No hay categorías de participantes configuradas.</p> }
+        @if (priceError()) { <small role="alert">{{ priceError() }}</small> }
+      </fieldset>
+
       <label class="full">
         <span>Contenido *</span>
         <textarea formControlName="content" rows="3" placeholder="Contenido del curso"></textarea>
@@ -36,62 +44,25 @@
 
       <label>
         <span>Instructor *</span>
-        <input formControlName="instructor" placeholder="Nombre del instructor" [readOnly]="!!form.controls.instructorId.value">
+        <input formControlName="instructor" placeholder="Nombre del instructor">
         @if (fieldError('instructor')) { <small>El instructor es obligatorio.</small> }
       </label>
 
       <label>
-        <span>Usuario instructor asignado</span>
-        <select formControlName="instructorId" (change)="selectInstructor($any($event.target).value)">
-          <option value="">Sin usuario asignado (nombre manual)</option>
-          @for (instructor of instructors; track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }
-        </select>
-      </label>
-
-      <label>
-        <span>Capacidad</span>
-        <input type="number" min="1" formControlName="capacity">
-        @if (fieldError('capacity')) { <small>La capacidad debe ser mayor a 0.</small> }
-      </label>
-
-      <label>
-        <span>Fecha de inicio</span>
+        <span>Fecha de inicio *</span>
         <input type="date" formControlName="startDate">
       </label>
 
       <label>
-        <span>Fecha de fin</span>
+        <span>Fecha de fin *</span>
         <input type="date" formControlName="endDate">
-        @if (form.hasError('dateRange') && (form.touched || form.dirty)) {
-          <small>La fecha de fin no puede ser anterior a la de inicio.</small>
-        }
       </label>
 
-      <label>
-        <span>Inicio de preinscripción</span>
-        <input type="date" formControlName="preinscriptionStart">
+      <label class="full">
+        <span>Criterios de aprobación *</span>
+        <input formControlName="approvalCriteria" placeholder="Proyecto final">
+        @if (fieldError('approvalCriteria')) { <small>Los criterios son obligatorios.</small> }
       </label>
-
-      <label>
-        <span>Fin de preinscripción</span>
-        <input type="date" formControlName="preinscriptionEnd">
-        @if (form.hasError('preinscriptionRange') && (form.touched || form.dirty)) {
-          <small>La fecha de fin no puede ser anterior a la de inicio.</small>
-        }
-      </label>
-
-      <div class="full prices-block">
-        <p class="eyebrow">PRECIOS POR TIPO DE PARTICIPANTE</p>
-        <div formArrayName="prices" class="prices-grid">
-          @for (type of participantTypes; track type.id; let i = $index) {
-            <label [formGroupName]="i">
-              <span>{{ type.name }} (Bs) *</span>
-              <input type="number" min="0" step="0.01" formControlName="basePrice">
-              @if (priceError(i)) { <small>El precio no puede ser negativo.</small> }
-            </label>
-          }
-        </div>
-      </div>
 
       <div class="form-actions full">
         <button type="button" class="secondary-btn" (click)="cancel.emit()">Cancelar</button>
