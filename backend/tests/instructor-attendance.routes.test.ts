@@ -1,0 +1,23 @@
+import express from 'express';
+import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+const mocks = vi.hoisted(() => ({ user: { findUnique: vi.fn() }, instructors: vi.fn(), list: vi.fn(), save: vi.fn() }));
+vi.mock('../src/config/prisma.js', () => ({ prisma: { user: mocks.user } }));
+vi.mock('../src/modules/instructor-attendance/instructor-attendance.service.js', () => ({ instructorAttendanceService: mocks }));
+import { instructorAttendanceRoutes } from '../src/modules/instructor-attendance/instructor-attendance.routes.js';
+import { errorMiddleware } from '../src/shared/error.middleware.js';
+let server: Server; let base: string;
+describe('instructor attendance HTTP', () => {
+  beforeAll(async () => { const app = express(); app.use(express.json()); app.use('/api/admin', instructorAttendanceRoutes); app.use(errorMiddleware); server = await new Promise<Server>(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); }); base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/admin`; });
+  afterAll(() => new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections(); }));
+  beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 1, role: 'ADMIN' }); mocks.instructors.mockResolvedValue([{ id: '8', name: 'Carla' }]); mocks.list.mockResolvedValue({ sessions: [] }); mocks.save.mockResolvedValue({ id: '3', status: 'PRESENT' }); });
+  const get = (path: string, user='1') => fetch(`${base}${path}`, { headers: { 'X-User-Id': user } });
+  const put = (path='/instructors/8/sessions/3/attendance', status:unknown='PRESENT', user='1') => fetch(`${base}${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-User-Id': user }, body: JSON.stringify({ status }) });
+  it('denies guests on every endpoint', async () => { expect((await get('/instructors','')).status).toBe(401); expect((await get('/instructors/8/attendance','')).status).toBe(401); expect((await put(undefined,undefined,'')).status).toBe(401); });
+  it.each(['INSTRUCTOR','PARTICIPANT'])('denies %s on every endpoint', async role => { mocks.user.findUnique.mockResolvedValue({ id: 8, role }); expect((await get('/instructors')).status).toBe(403); expect((await get('/instructors/8/attendance')).status).toBe(403); expect((await put()).status).toBe(403); expect(mocks.save).not.toHaveBeenCalled(); });
+  it('returns instructors and parses inclusive filters', async () => { expect((await get('/instructors')).status).toBe(200); expect((await get('/instructors/8/attendance?courseId=2&from=2026-10-01&to=2026-10-06')).status).toBe(200); expect(mocks.list).toHaveBeenCalledWith(8,{courseId:2,from:'2026-10-01',to:'2026-10-06'},expect.objectContaining({id:1})); });
+  it.each(['PRESENT','ABSENT'])('saves %s with 200', async status => { expect((await put(undefined,status)).status).toBe(200); expect(mocks.save).toHaveBeenCalledWith(8,3,status,expect.objectContaining({id:1})); });
+  it.each(['/instructors/8/attendance?from=2026-02-30','/instructors/8/attendance?from=2026-10-07&to=2026-10-06','/instructors/8/attendance?courseId=-1'])('rejects filters %s', async path => { expect((await get(path)).status).toBe(400); expect(mocks.list).not.toHaveBeenCalled(); });
+  it('rejects invalid identifiers and unsupported marks', async () => { expect((await put('/instructors/abc/sessions/3/attendance')).status).toBe(400); expect((await put(undefined,'JUSTIFIED')).status).toBe(400); expect(mocks.save).not.toHaveBeenCalled(); });
+});

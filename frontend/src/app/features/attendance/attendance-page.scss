@@ -1,0 +1,37 @@
+:host { display: block; color: #174b48; }
+.attendance-page { max-width: 1240px; margin: auto; padding: 36px 42px; }
+.back-link { color: #087f78; font-size: 13px; text-decoration: none; }
+header { margin: 24px 0; }
+.eyebrow { color: #087f78; font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+h1 { font-size: 30px; margin: 0; letter-spacing: -.03em; } h2 { font-size: 20px; }
+.course-name { font-weight: 600; margin: 12px 0 6px; font-size: 17px; }
+.helper { color: #526d66; font-size: 12px; line-height: 1.6; }
+button, input, select { font: inherit; border: 1px solid #cadbd8; border-radius: 7px; background: white; color: #174b48; min-height: 44px; box-sizing: border-box; }
+button { cursor: pointer; padding: 8px 12px; font-size: 13px; }
+button:hover:not(:disabled) { border-color: #087f78; background: #edf6f3; }
+button:disabled { cursor: not-allowed; opacity: .6; }
+:is(button, input, select, a):focus-visible { outline: 3px solid #18afa0; outline-offset: 3px; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; padding: 20px; background: white; border: 1px solid #dce8e5; border-radius: 12px; }
+label { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
+input, select { width: 100%; min-width: 0; padding: 10px; font-size: 14px; }
+.notice { padding: 16px; border: 1px solid #dce8e5; background: #e5f3ef; border-radius: 10px; font-size: 14px; line-height: 1.6; }
+.notice button { margin-left: 12px; } .error, .row-error { color: #a03838; }
+.roster-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin: 24px 0 16px; font-size: 13px; }
+.roster-summary span { color: #526d66; }
+.roster { background: white; border: 1px solid #dce8e5; border-radius: 12px; overflow: hidden; }
+.roster-heading, .student-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(190px, 1.2fr) minmax(120px, .8fr); gap: 18px; align-items: center; padding: 14px 20px; }
+.roster-heading { background: #edf5f2; color: #526d66; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+ul { list-style: none; margin: 0; padding: 0; }
+.student-row + .student-row { border-top: 1px solid #e5eeeb; }
+.student-name { font-size: 14px; overflow-wrap: anywhere; }
+.mark-area, .student-summary { display: grid; gap: 5px; } .mark-controls { display: flex; gap: 8px; }
+.mark-controls .present { color: white; background: #087f78; border-color: #087f78; }
+.mark-controls .absent { color: #a03838; background: #fff0f0; border-color: #d8a5a5; }
+.student-summary strong { font-size: 14px; } .student-summary small { color: #526d66; font-size: 12px; }
+.save-note { color: #27634e; font-size: 12px; }
+.row-error { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; color: #526d66; font-size: 12px; }
+.pagination > div { display: flex; gap: 8px; } .pagination button { min-width: 44px; font-size: 18px; }
+.empty { padding: 24px; font-size: 14px; line-height: 1.7; } .calculation-note { margin: 20px 0; }
+@media (max-width: 900px) { .roster-heading { display: none; } .student-row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; } .mark-area { grid-column: 1; } .student-summary { grid-column: 2; grid-row: 1 / 3; } }
+@media (max-width: 600px) { .attendance-page { padding: 24px 16px; } .toolbar { grid-template-columns: 1fr; padding: 16px; gap: 16px; } input, select { font-size: 16px; } .student-row { grid-template-columns: minmax(0, 1fr); padding: 16px 12px; column-gap: 8px; } .student-summary { grid-column: 1; grid-row: auto; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; } .mark-controls { gap: 6px; } .mark-controls button { padding: 8px 10px; } h1 { font-size: 25px; } }

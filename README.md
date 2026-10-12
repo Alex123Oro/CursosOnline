@@ -1,61 +1,20 @@
-# Entornos Virtuales
+﻿# EVA â€” GestiÃ³n de FormaciÃ³n Continua
 
-Aplicacion web con un frontend Angular, un backend Express/TypeScript y Supabase como servicio de datos y autenticacion.
+EVA es una aplicaciÃ³n web para gestionar cursos de formaciÃ³n continua del Laboratorio de InformÃ¡tica: cursos, preinscripciones, inscripciones, asistencia, evaluaciones y certificados verificables.
 
-## Requisitos
+## TecnologÃ­as
 
-- Node.js compatible con las versiones actuales de Angular y TypeScript.
-- npm.
-- Una cuenta y un proyecto de Supabase.
+- Frontend: Angular + TypeScript
+- Backend: Node.js + Express + TypeScript
+- Datos y autenticaciÃ³n: Supabase
 
-Comprueba las herramientas instaladas:
+## Estado actual
 
-```bash
-node --version
-npm --version
-```
+El proyecto cuenta con la estructura inicial de Angular y Express, ademÃ¡s de la conexiÃ³n con Supabase. Las funcionalidades del sistema EVA se encuentran en desarrollo.
 
-## Estructura
+## Ejecutar el proyecto
 
-```text
-backend/    API Express y conexion con Supabase
-frontend/   Aplicacion Angular
-```
-
-## Configurar Supabase
-
-1. Entra en la carpeta del backend.
-2. Crea el archivo `.env` a partir de `.env.example`.
-
-En PowerShell:
-
-```powershell
-cd backend
-Copy-Item .env.example .env
-```
-
-En macOS/Linux:
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-3. Edita `backend/.env` y sustituye los valores de ejemplo:
-
-```env
-SUPABASE_URL=https://tu-proyecto.supabase.co
-SUPABASE_PUBLISHABLE_KEY=tu-clave-publicable
-SUPABASE_SECRET_KEY=tu-clave-secreta
-SUPABASE_JWKS_URL=https://tu-proyecto.supabase.co/auth/v1/.well-known/jwks.json
-PUERTO=3000
-```
-
-No publiques `.env` ni compartas `SUPABASE_SECRET_KEY`. Esta clave solo debe utilizarse en el backend.
-
-## Instalar dependencias
-
-Ejecuta la instalacion en cada aplicacion:
+Instala las dependencias:
 
 ```bash
 cd backend
@@ -65,89 +24,45 @@ cd ../frontend
 npm install
 ```
 
-## Ejecutar en desarrollo
+En `backend`, crea un archivo `.env` a partir de `.env.example` y configura las credenciales de Supabase.
 
-Abre dos terminales.
-
-### Backend
+Inicia el backend:
 
 ```bash
 cd backend
 npm run dev
 ```
 
-El backend quedara disponible en `http://localhost:3000`.
-
-### Frontend
-
-En la segunda terminal:
+Inicia el frontend en otra terminal:
 
 ```bash
 cd frontend
 npm start
 ```
 
-La aplicacion Angular quedara disponible en `http://localhost:4200`.
+El frontend estarÃ¡ disponible en `http://localhost:4200` y el backend en `http://localhost:3000`.
 
-## Comprobar la conexion con Supabase
+## Ejecutar en produccion
 
-Con el backend en ejecucion, visita o consulta:
-
-```text
-http://localhost:3000/api/health
-http://localhost:3000/api/supabase/health
-```
-
-La respuesta esperada para la comprobacion de Supabase es:
-
-```json
-{"ok":true,"servicio":"supabase"}
-```
-
-## Comandos del backend
-
-Desde `backend`:
-
-```bash
-npm run dev    # desarrollo con recarga automatica
-npm run build  # compilar TypeScript en dist/
-npm start      # ejecutar la compilacion de dist/
-```
-
-## Comandos del frontend
-
-Desde `frontend`:
-
-```bash
-npm start  # servidor de desarrollo
-npm run build
-npm test
-```
-
-## Problemas frecuentes
-
-### `npm run dev` no encuentra el script
-
-El comando debe ejecutarse dentro de `backend`, no en la raiz del proyecto:
-
-```bash
-cd backend
-npm run dev
-```
-
-### Faltan variables de entorno
-
-Comprueba que existe `backend/.env` y que contiene `SUPABASE_URL` y `SUPABASE_SECRET_KEY` con valores validos.
-
-### El puerto 3000 esta ocupado
-
-Cambia `PUERTO` en `backend/.env` y vuelve a iniciar el backend.
-
-### El puerto 4200 esta ocupado
-
-Puedes iniciar Angular en otro puerto:
+Compila el frontend y el backend, y luego inicia Express:
 
 ```bash
 cd frontend
-npm start -- --port 4201
+npm run build
+cd ../backend
+npm run build
+npm start
+```
+
+Abre `http://localhost:3000` (o el puerto configurado en `PUERTO`). Express sirve
+`frontend/dist/frontend/browser` y la API desde el mismo origen, por lo que
+la URL `/api` del frontend de produccion funciona sin un proxy adicional.
+Conserva ambas carpetas al desplegar. Las rutas de Angular tambien se sirven
+desde `index.html` al recargar la pagina.
+
+## Estructura
+
+```text
+backend/    API Express y conexiÃ³n con Supabase
+frontend/   AplicaciÃ³n Angular
 ```

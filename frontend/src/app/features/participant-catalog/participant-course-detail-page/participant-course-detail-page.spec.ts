@@ -1,0 +1,115 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
+import { Course } from '../../../core/course.service';
+import { ParticipantCourseDetailPage } from './participant-course-detail-page';
+import { SessionService } from '../../../core/session.service';
+import { environment } from '../../../../environments/environment';
+
+describe('ParticipantCourseDetailPage', () => {
+  let fixture: ComponentFixture<ParticipantCourseDetailPage>;
+  let httpTesting: HttpTestingController;
+  let paramMap: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+
+  const course: Course = {
+    id: '42',
+    code: 'INF-JS-101',
+    name: 'Programación con JavaScript',
+    content: 'Aprende los fundamentos de JavaScript para crear aplicaciones web.',
+    durationHours: 32,
+    instructor: 'Valeria Ríos',
+    schedule: 'Martes y jueves · 19:00 – 21:00',
+    approvalCriteria: 'Nota mínima de 70/100 y asistencia mínima de 80%.',
+    status: 'PUBLISHED',
+    startDate: '2026-10-06',
+    endDate: '2026-11-12',
+    capacity: 24,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-12-31',
+    occupiedSlots: 0,
+    remainingSlots: 24,
+    prices: [{ participantTypeId: '1', participantTypeName: 'Estudiante', basePrice: 400 }],
+    enrollment: null,
+    createdAt: '2026-09-24T00:00:00.000Z',
+    updatedAt: '2026-09-24T00:00:00.000Z'
+  };
+
+  beforeEach(async () => {
+    paramMap = new BehaviorSubject(convertToParamMap({ id: '42' }));
+
+    await TestBed.configureTestingModule({
+      imports: [ParticipantCourseDetailPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ActivatedRoute, useValue: { paramMap } }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ParticipantCourseDetailPage);
+    httpTesting = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+  });
+
+  it('shows all available public course information', async () => {
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
+    request.flush(course);
+    // HU4: Use a participant session to exercise the pre-registration state.
+    TestBed.inject(SessionService).login('participante@example.com', 'secret').subscribe();
+    httpTesting.expectOne(`${environment.apiBaseUrl}/auth/login`).flush({ accessToken: 'participant-token', refreshToken: 'refresh', expiresAt: null, user: {
+      id: '9', name: 'Participante de prueba', email: 'participante@example.com', role: 'PARTICIPANT', participantTypeId: '1', participantTypeName: 'Estudiante'
+    } });
+
+    await fixture.whenStable();
+
+    const content = fixture.nativeElement.textContent;
+    expect(content).toContain('Programación con JavaScript');
+    expect(content).toContain('Aprende los fundamentos de JavaScript');
+    expect(content).toContain('32 horas');
+    expect(content).toContain('Valeria Ríos');
+    expect(content).toContain('Martes y jueves');
+    expect(content).toContain('Nota mínima de 70/100');
+    expect(fixture.nativeElement.querySelector('app-participant-header')).not.toBeNull();
+    const backLink = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.back-link');
+    expect(backLink?.getAttribute('href')).toBe('/catalogo');
+    expect(content).toContain('Preinscribirme');
+  });
+
+  // HU4: A missing participant session must not expose the pre-registration action.
+  it('asks the visitor to sign in as a participant before pre-registering', async () => {
+    httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`).flush(course);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Inicia sesión como participante');
+    expect(fixture.nativeElement.querySelector('.enrol-btn')).toBeNull();
+  });
+
+  it('shows a not-available message when the course cannot be loaded', async () => {
+    const request = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
+    request.flush({ message: 'El curso no esta disponible.' }, { status: 404, statusText: 'Not Found' });
+
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.course-detail-error')).not.toBeNull();
+  });
+
+  it('loads the next course after a not-available result on the same route', async () => {
+    const unavailableRequest = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/42`);
+    unavailableRequest.flush({ message: 'El curso no esta disponible.' }, { status: 404, statusText: 'Not Found' });
+    await fixture.whenStable();
+
+    paramMap.next(convertToParamMap({ id: '7' }));
+    const nextRequest = httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog/7`);
+    nextRequest.flush({ ...course, id: '7', name: 'Administración Básica de Linux' });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.course-detail-error')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('Administración Básica de Linux');
+  });
+});

@@ -1,12 +1,35 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
+import { SessionNavigationService } from './core/session-navigation.service';
+import { SessionService } from './core/session.service';
 
 @Component({
-  imports: [RouterOutlet],
   selector: 'app-root',
-  styleUrl: './app.scss',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
+  styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('frontend');
+  private readonly router = inject(Router);
+  readonly session = inject(SessionService);
+  readonly navigation = inject(SessionNavigationService);
+  readonly sidebarOpen = signal(false);
+  readonly isPublicRoute = signal(this.router.url.startsWith('/catalogo') || this.router.url.startsWith('/iniciar-sesion'));
+  canReturnToCourses() { const role = this.session.currentUser()?.role; return role === 'ADMIN' || role === 'INSTRUCTOR'; }
+  isCoursesHome() { return this.router.url === '/cursos' || this.router.url === '/cursos/'; }
+
+  constructor() {
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.isPublicRoute.set(this.router.url.startsWith('/catalogo') || this.router.url.startsWith('/iniciar-sesion'));
+        this.sidebarOpen.set(false);
+      });
+  }
+
+  logout() {
+    this.session.logout().subscribe();
+  }
 }

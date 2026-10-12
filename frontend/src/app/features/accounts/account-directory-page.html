@@ -1,0 +1,41 @@
+<section class="account-directory">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">ADMINISTRACIÓN / CUENTAS</p>
+      <h1>{{ title() }}</h1>
+      <p class="subtitle">{{ description() }}</p>
+    </div>
+    <span class="account-count">{{ accounts().length }} {{ accounts().length === 1 ? 'cuenta' : 'cuentas' }}</span>
+  </header>
+
+  <section class="directory-content" aria-label="Listado de cuentas">
+    <label class="search-field">
+      <span>Buscar cuenta</span>
+      <input #search type="search" placeholder="Nombre, correo o rol" [value]="query()" (input)="onSearch(search.value)">
+    </label>
+
+    @if (!session.ready()) {
+      <p class="directory-state" role="status">Cargando cuentas...</p>
+    } @else if (accounts().length === 0) {
+      <p class="directory-state" role="status">No hay cuentas para mostrar. Comprueba que el backend pueda cargar los usuarios.</p>
+    } @else {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Tipo de participante</th></tr>
+          </thead>
+          <tbody>
+            @for (account of accounts(); track account.id) {
+              <tr>
+                <td>{{ account.name }}</td>
+                <td>{{ account.email }}</td>
+                <td>{{ roleLabel(account) }}</td>
+                <td>{{ account.participantTypeName ?? 'No aplica' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</section>

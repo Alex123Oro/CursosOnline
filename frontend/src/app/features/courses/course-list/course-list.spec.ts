@@ -1,0 +1,56 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Course } from '../../../core/course.service';
+import { CourseList } from './course-list';
+
+describe('CourseList', () => {
+  let fixture: ComponentFixture<CourseList>;
+  let component: CourseList;
+
+  const course: Course = {
+    id: '1',
+    code: 'CUR-001',
+    name: 'Curso de prueba',
+    content: 'Contenido de prueba para el curso.',
+    durationHours: 10,
+    instructor: 'Docente de prueba',
+    schedule: 'Lunes 10:00',
+    approvalCriteria: 'Proyecto final',
+    status: 'DRAFT',
+    startDate: '2026-10-01',
+    endDate: '2026-10-10',
+    capacity: 10,
+    preinscriptionStart: '2026-09-01',
+    preinscriptionEnd: '2026-09-30',
+    occupiedSlots: 0,
+    remainingSlots: 10,
+    prices: [],
+    enrollment: null,
+    createdAt: '2026-09-23T00:00:00.000Z',
+    updatedAt: '2026-09-23T00:00:00.000Z'
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({ imports: [CourseList] }).compileComponents();
+    fixture = TestBed.createComponent(CourseList);
+    component = fixture.componentInstance;
+  });
+
+  it('muestra los cursos recibidos después de iniciar con una lista vacía', () => {
+    expect(component.filteredCourses()).toEqual([]);
+
+    fixture.componentRef.setInput('courses', [course]);
+    fixture.detectChanges();
+
+    expect(component.filteredCourses()).toEqual([course]);
+  });
+
+  it('muestra el botón Publicar activo para cursos en borrador', () => {
+    fixture.componentRef.setInput('courses', [course]);
+    fixture.detectChanges();
+
+    const publishButton = fixture.nativeElement.querySelector('button.publish') as HTMLButtonElement | null;
+
+    expect(publishButton?.disabled).toBe(false);
+    expect(getComputedStyle(publishButton!).cursor).toBe('pointer');
+  });
+});

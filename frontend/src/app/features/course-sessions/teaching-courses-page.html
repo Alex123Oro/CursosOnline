@@ -1,0 +1,15 @@
+<section class="teaching-page">
+  <header><p class="eyebrow">INSTRUCTOR / CURSOS</p><h1>Mis cursos</h1><p class="subtitle">Consulta tus clases y lleva el control de asistencia de tus alumnos.</p></header>
+  @if (loading()) { <p role="status">Cargando tus cursos…</p> }
+  @if (error()) { <div class="feedback" role="alert"><p>{{ error() }}</p><button (click)="reload()">Reintentar</button></div> }
+  @if (!loading() && !error()) {
+    <div class="toolbar"><span>{{ courses().length }} cursos asignados</span><label>Buscar curso<input type="search" placeholder="Nombre o código" [value]="search()" (input)="searchCourses($any($event.target).value)"></label></div>
+    <ul class="course-list" aria-label="Cursos asignados">
+      @for (course of visibleCourses(); track course.id) {
+        <li><div class="course-info"><span class="code">{{ course.code || 'CURSO' }}</span><h2>{{ course.name }}</h2><p>{{ formatDate(course.startDate) }} — {{ formatDate(course.endDate) }}</p></div><div class="actions"><a [routerLink]="['/cursos', course.id, 'sesiones']">Ver clases</a><a class="primary" [routerLink]="['/cursos', course.id, 'asistencia']">Asistencia de alumnos</a></div></li>
+      }
+      @empty { <li class="empty">{{ courses().length ? 'No hay cursos que coincidan con tu búsqueda.' : 'No tienes cursos publicados asignados. Solicita la asignación al administrador.' }}</li> }
+    </ul>
+    @if (pageCount() > 1) { <nav class="pagination" aria-label="Páginas de cursos"><span role="status">{{ currentPage() * 8 + 1 }}–{{ currentPage() * 8 + visibleCourses().length }} de {{ filtered().length }}</span><div><button aria-label="Página anterior" [disabled]="currentPage() === 0" (click)="changePage(-1)">←</button><span>{{ currentPage() + 1 }} / {{ pageCount() }}</span><button aria-label="Página siguiente" [disabled]="currentPage() + 1 === pageCount()" (click)="changePage(1)">→</button></div></nav> }
+  }
+</section>

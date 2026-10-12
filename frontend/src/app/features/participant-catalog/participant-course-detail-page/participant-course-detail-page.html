@@ -1,0 +1,75 @@
+<a class="skip-link" href="#course-detail-content">Saltar al contenido</a>
+<app-participant-header />
+
+<section id="course-detail-content" class="course-detail" tabindex="-1">
+  <a class="back-link" routerLink="/catalogo">Volver a cursos</a>
+
+  @if (loading()) {
+    <div class="course-feedback" role="status" aria-live="polite"><p class="eyebrow">CARGANDO</p><h1>Estamos cargando el curso</h1></div>
+  } @else if (loadFailed()) {
+    <div class="course-feedback course-detail-error" role="alert"><p class="eyebrow">NO DISPONIBLE</p><h1>Este curso no está disponible</h1><p>Es posible que haya sido retirado o que el enlace ya no sea válido.</p><a class="return-link" routerLink="/catalogo">Volver al catálogo</a></div>
+  } @else if (course(); as course) {
+    <section class="course-hero" aria-labelledby="course-title">
+      <p class="eyebrow">{{ course.code }}</p>
+      <h1 id="course-title">{{ course.name }}</h1>
+      <p>{{ course.content }}</p>
+    </section>
+
+    <div class="course-detail-layout">
+      <section class="detail-card" aria-labelledby="course-information-title">
+        <h2 id="course-information-title" class="eyebrow">INFORMACIÓN DEL CURSO</h2>
+        <dl class="course-information">
+          <div><dt>Duración</dt><dd>{{ course.durationHours }} horas</dd></div>
+          <div><dt>Instructor</dt><dd>{{ course.instructor }}</dd></div>
+          <div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div>
+          <!-- HU4: Preserve the complete course detail alongside pre-registration. -->
+          <div><dt>Criterios de aprobación</dt><dd>{{ course.approvalCriteria || 'No especificados' }}</dd></div>
+          <div><dt>Inicio</dt><dd>{{ formatDate(course.startDate) }}</dd></div>
+          <div><dt>Finalización</dt><dd>{{ formatDate(course.endDate) }}</dd></div>
+          <div><dt>Preinscripción</dt><dd>{{ formatDate(course.preinscriptionStart) }} — {{ formatDate(course.preinscriptionEnd) }}</dd></div>
+          <div><dt>Cupos</dt><dd>{{ course.remainingSlots === null ? 'Por confirmar' : course.remainingSlots + ' disponibles' }}</dd></div>
+        </dl>
+      </section>
+
+      <aside class="criteria-card" aria-labelledby="enrollment-title">
+        <h2 id="enrollment-title">Preinscripción</h2>
+
+        @if (applicablePrice(); as price) {
+          <div class="economic">
+            <p>Precio base: {{ price.basePrice }} Bs</p>
+            @if (course.enrollment; as enrollment) {
+              <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
+              <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
+            } @else {
+              <strong>Monto final: {{ price.basePrice }} Bs</strong>
+            }
+          </div>
+        }
+
+        @if (feedback()) {
+          <p class="enrolment-note success">{{ feedback() }}</p>
+        }
+
+        <!-- HU4: Make session requirements explicit before offering pre-registration. -->
+        @if (!session.ready()) {
+          <p class="enrolment-note" role="status">Verificando la sesión...</p>
+        } @else if (!isParticipant()) {
+          <p class="enrolment-note" role="status">Inicia sesión como participante antes de continuar con la preinscripción.</p>
+        } @else if (course.enrollment) {
+          <p class="enrolment-note">Ya estás {{ course.enrollment.status === 'INSCRITO' ? 'inscrito' : 'preinscrito' }} en este curso.</p>
+          @if (course.enrollment.confirmedAt) { <p class="enrolment-note">Inscripción confirmada el {{ formatDate(course.enrollment.confirmedAt.slice(0, 10)) }}.</p> }
+        } @else if (noSlots(course)) {
+          <p class="enrolment-note">No existen cupos disponibles para este curso.</p>
+        } @else if (preinscriptionNotStarted(course)) {
+          <p class="enrolment-note">El periodo de preinscripción aún no ha comenzado.</p>
+        } @else if (periodClosed(course)) {
+          <p class="enrolment-note">El periodo de preinscripción ha finalizado.</p>
+        } @else {
+          <button class="return-link enrol-btn" type="button" [disabled]="saving()" (click)="preenroll()">
+            {{ saving() ? 'Guardando...' : 'Preinscribirme' }}
+          </button>
+        }
+      </aside>
+    </div>
+  }
+</section>

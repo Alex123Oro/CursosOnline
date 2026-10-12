@@ -1,1 +1,16 @@
-/* You can add global styles to this file, and also import other style files */
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  color: #174b48;
+  background: #f3f8f7;
+  font-family: 'Manrope', Arial, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}

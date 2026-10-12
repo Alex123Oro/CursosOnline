@@ -1,0 +1,160 @@
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 43px 42px 24px;
+  max-width: 1240px;
+  margin: auto;
+}
+
+.eyebrow {
+  margin: 0 0 7px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--teal, #087f78);
+  font-weight: 800;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #174b48;
+  font: 800 25px/1.2 'Manrope', sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: #77908c;
+  font-size: 11px;
+}
+
+.primary-btn {
+  border: 0;
+  border-radius: 7px;
+  padding: 10px 17px;
+  color: #fff;
+  background: #0a8e84;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 7px 14px rgba(9, 142, 132, 0.12);
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  max-width: 1240px;
+  margin: 0 auto 25px;
+  padding: 0 42px;
+}
+
+.metric {
+  padding: 16px 18px;
+  min-height: 70px;
+  background: #fff;
+  border: 1px solid #e0ece9;
+  border-radius: 8px;
+  box-shadow: 0 3px 8px rgba(19, 74, 68, 0.025);
+
+  small {
+    display: block;
+    color: #81938f;
+    font-size: 9px;
+    margin: 0 0 4px 0;
+  }
+
+  strong {
+    color: #17605a;
+    font: 800 20px 'Manrope';
+  }
+
+  &.muted strong {
+    color: #a9bab6;
+  }
+}
+
+.dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+
+  &.teal {
+    background: #14978d;
+  }
+
+  &.mint {
+    background: #36c5af;
+  }
+
+  &.orange {
+    background: #e2a039;
+  }
+
+  &.red {
+    background: #df5a52;
+  }
+}
+
+.notice {
+  margin-top: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fff1c9;
+  color: #b07c1b;
+  font-size: 9px;
+
+  span {
+    display: grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #e9b43c;
+    color: white;
+    font-weight: 800;
+  }
+}
+
+.app-feedback {
+  max-width: 1240px;
+  margin: 0 auto 12px;
+  padding: 0 42px;
+  color: #17645e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.table-card {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 42px 32px;
+}
+
+@media (max-width: 800px) {
+  .page-header {
+    padding: 30px 20px 20px;
+    align-items: flex-start;
+    gap: 15px;
+    flex-direction: column;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 20px;
+  }
+
+  .table-card {
+    padding: 0 20px 25px;
+  }
+}
