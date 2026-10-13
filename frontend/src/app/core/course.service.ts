@@ -20,6 +20,7 @@ export interface Course {
   content: string;
   durationHours: number;
   instructor: string;
+  instructorId?: string | null;
   schedule: string;
   approvalCriteria: string;
   status: CourseStatus;
@@ -28,6 +29,7 @@ export interface Course {
   createdAt: string;
   updatedAt: string;
   capacity?: number | null;
+  minimumEnrollment?: number;
   remainingSlots: number | null;
   occupiedSlots: number;
   preinscriptionStart: string | null;
@@ -48,11 +50,16 @@ export interface CoursePayload {
   content: string;
   durationHours: number;
   instructor: string;
+  instructorId?: string;
   schedule: string;
   approvalCriteria: string;
   status?: CourseStatus;
   startDate?: string | null;
   endDate?: string | null;
+  capacity?: number | null;
+  minimumEnrollment?: number;
+  preinscriptionStart?: string | null;
+  preinscriptionEnd?: string | null;
   prices?: { participantTypeId: string; basePrice: number }[];
 }
 
