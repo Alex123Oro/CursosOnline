@@ -15,9 +15,14 @@
 }
 
 .sidebar {
-  width: 205px;
-  flex: 0 0 205px;
-  padding: 25px 12px 16px;
+  position: sticky;
+  top: 0;
+  width: 280px;
+  flex: 0 0 280px;
+  height: 100dvh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 24px 16px 20px;
   color: #d7f0ed;
   background: var(--sidebar);
   display: flex;
@@ -31,12 +36,13 @@
   padding: 0 8px 31px;
   color: white;
   font-weight: 800;
-  font-size: 11px;
+  font-size: 15px;
   letter-spacing: 0.04em;
 
   &-mark {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
     display: grid;
     place-items: center;
     border-radius: 7px;
@@ -48,31 +54,50 @@
 
 .nav-label {
   margin: 0 8px 11px;
-  font-size: 8px;
+  font-size: 12px;
   color: #7ed2c8;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 
+.sidebar nav {
+  display: grid;
+  gap: 6px;
+}
+
+.nav-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .nav-item {
   width: 100%;
-  padding: 10px 10px;
+  min-height: 48px;
+  padding: 12px;
   border: 0;
   border-radius: 7px;
   background: transparent;
   color: #e1f5f2;
   text-align: left;
-  font-size: 11px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
   text-decoration: none;
   box-sizing: border-box;
 
   span {
-    width: 15px;
-    text-align: center;
-    opacity: 0.8;
+    min-width: 0;
   }
 
   &.active {
@@ -91,25 +116,57 @@
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 12px 10px;
-  border-radius: 6px;
+  padding: 14px 12px 12px;
+  border-radius: 12px;
   background: #12665f;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 14px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   strong {
-    font-size: 10px;
+    font-size: 14px;
+    line-height: 1.4;
     color: #fff;
   }
 
   small {
-    font-size: 9px;
-    color: #a9dbd5;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #d7f0ed;
   }
 }
 
-.logout-action { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; cursor: pointer; }
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #187d74;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.session-action {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.sidebar nav { margin-bottom: 24px; }
 
 .main-content {
   flex: 1;
@@ -242,6 +299,7 @@
     inset: 68px auto 0 0;
     z-index: 31;
     width: min(280px, 85vw);
+    height: calc(100dvh - 68px);
     box-sizing: border-box;
     padding: 24px 16px 20px;
     overflow-y: auto;
@@ -260,7 +318,7 @@
 
   .nav-item {
     padding: 11px 10px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .sidebar-footer {

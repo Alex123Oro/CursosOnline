@@ -9,7 +9,7 @@
 
 .eyebrow {
   margin: 0 0 7px;
-  font-size: 9px;
+  font-size: var(--eva-font-caption);
   letter-spacing: 0.06em;
   color: var(--teal, #087f78);
   font-weight: 800;
@@ -18,14 +18,14 @@
 .page-header h1 {
   margin: 0;
   color: #174b48;
-  font: 800 25px/1.2 'Manrope', sans-serif;
-  letter-spacing: -0.04em;
+  font: 700 var(--eva-font-title)/normal var(--eva-font-family);
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
   margin: 6px 0 0;
   color: #77908c;
-  font-size: 11px;
+  font-size: var(--eva-font-helper);
 }
 
 .primary-btn {
@@ -34,7 +34,7 @@
   padding: 10px 17px;
   color: #fff;
   background: #0a8e84;
-  font-size: 11px;
+  font-size: var(--eva-font-label);
   font-weight: 700;
   box-shadow: 0 7px 14px rgba(9, 142, 132, 0.12);
   cursor: pointer;
@@ -65,13 +65,13 @@
   small {
     display: block;
     color: #81938f;
-    font-size: 9px;
+    font-size: var(--eva-font-helper);
     margin: 0 0 4px 0;
   }
 
   strong {
     color: #17605a;
-    font: 800 20px 'Manrope';
+    font: 700 20px/normal var(--eva-font-family);
   }
 
   &.muted strong {
@@ -112,7 +112,7 @@
   border-radius: 6px;
   background: #fff1c9;
   color: #b07c1b;
-  font-size: 9px;
+  font-size: var(--eva-font-body);
 
   span {
     display: grid;
@@ -131,7 +131,7 @@
   margin: 0 auto 12px;
   padding: 0 42px;
   color: #17645e;
-  font-size: 11px;
+  font-size: var(--eva-font-body);
   font-weight: 700;
 }
 
@@ -158,3 +158,4 @@
     padding: 0 20px 25px;
   }
 }
+@media (max-width: 600px) { .page-header h1 { font-size: var(--eva-font-title-mobile); } }

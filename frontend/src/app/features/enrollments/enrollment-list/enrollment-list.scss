@@ -23,7 +23,7 @@
     width: 100%;
     border: 0;
     outline: 0;
-    font-size: 10px;
+    font-size: var(--eva-font-body);
     color: #174b48;
     background: transparent;
   }
@@ -33,7 +33,7 @@
   margin-left: auto;
   color: #81918e;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: var(--eva-font-body);
 }
 
 .table-wrap {
@@ -53,7 +53,7 @@ th {
   padding: 15px 14px 11px;
   text-align: left;
   color: #82918e;
-  font-size: 8px;
+  font-size: var(--eva-font-caption);
   font-weight: 700;
 }
 
@@ -61,7 +61,7 @@ td {
   padding: 14px;
   border-top: 1px solid #edf3f2;
   color: #476c68;
-  font-size: 10px;
+  font-size: var(--eva-font-body);
   vertical-align: middle;
 }
 
@@ -69,27 +69,27 @@ td {
   display: block;
   color: #1b5550;
   font-weight: 700;
-  font-size: 10px;
+  font-size: var(--eva-font-body);
 
   & + small {
     display: block;
     margin-top: 4px;
     color: #899a97;
-    font-size: 8px;
+    font-size: var(--eva-font-helper);
   }
 }
 
 .final {
   color: #17605a;
   font-weight: 800;
-  font-size: 12px;
+  font-size: var(--eva-font-body);
 }
 
 .payment-detail {
   display: block;
   margin-top: 4px;
   color: #72817d;
-  font-size: 8px;
+  font-size: var(--eva-font-helper);
 }
 
 .actions {
@@ -104,7 +104,7 @@ td {
   background: #fff;
   color: #168b80;
   padding: 6px 11px;
-  font-size: 9px;
+  font-size: var(--eva-font-label);
   cursor: pointer;
 
   &:disabled,
@@ -120,7 +120,7 @@ td {
   display: inline-block;
   padding: 5px 9px;
   border-radius: 20px;
-  font-size: 8px;
+  font-size: var(--eva-font-helper);
   font-weight: 700;
   white-space: nowrap;
 

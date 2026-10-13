@@ -7,7 +7,7 @@
 .account-count {
   align-self: center;
   color: #46524c;
-  font-size: 14px;
+  font-size: var(--eva-font-body);
   font-weight: 600;
 }
 
@@ -22,7 +22,7 @@
   max-width: 420px;
   margin-bottom: 20px;
   color: #34413a;
-  font-size: 13px;
+  font-size: var(--eva-font-label);
   font-weight: 600;
 }
 
@@ -34,6 +34,7 @@
   background: #fff;
   color: #18221d;
   font: inherit;
+  font-size: var(--eva-font-body);
   font-weight: 400;
 }
 
@@ -60,14 +61,14 @@ td {
 th {
   background: #f3f6f4;
   color: #435149;
-  font-size: 11px;
+  font-size: var(--eva-font-caption);
   font-weight: 700;
   text-transform: uppercase;
 }
 
 td {
   color: #222d27;
-  font-size: 14px;
+  font-size: var(--eva-font-body);
 }
 
 tbody tr:last-child td {
@@ -91,3 +92,5 @@ tbody tr:last-child td {
     gap: 12px;
   }
 }
+h1 { font-size: var(--eva-font-title); letter-spacing: -.03em; }
+@media (max-width: 600px) { h1 { font-size: var(--eva-font-title-mobile); } }
