@@ -1,4 +1,8 @@
 :host { display: block; color: #174b48; }
+.bulk-attendance { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.mark-all-present { color: white; background: #087f78; border-color: #087f78; font-weight: 600; }
+.mark-all-present:hover:not(:disabled) { color: white; background: #066a64; }
+
 .attendance-page { max-width: 1240px; margin: auto; padding: 36px 42px; }
 .back-link { color: #087f78; font-size: 13px; text-decoration: none; }
 header { margin: 24px 0; }
