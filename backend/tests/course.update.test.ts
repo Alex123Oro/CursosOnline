@@ -62,4 +62,11 @@ describe('course updates', () => {
     await expect(courseService.update(999, input)).rejects.toMatchObject({ statusCode: 404 });
     expect(update).not.toHaveBeenCalled();
   });
+  it('persists and returns the minimum enrollment', async () => {
+    findUnique.mockResolvedValue({ id: 7, status: 'DRAFT', instructorId: null });
+    update.mockResolvedValue({ ...input, id: 7, minimumEnrollment: 5, capacity: 20, status: 'DRAFT', code: null,
+      preinscriptionStart: null, preinscriptionEnd: null, prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() });
+    await expect(courseService.update(7, { ...input, minimumEnrollment: 5, capacity: 20 })).resolves.toMatchObject({ minimumEnrollment: 5 });
+    expect(update.mock.calls[0]![0].data.minimumEnrollment).toBe(5);
+  });
 });
