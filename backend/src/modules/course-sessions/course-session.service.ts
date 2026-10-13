@@ -1,4 +1,4 @@
-import { Prisma, type CourseSession } from '@prisma/client';
+import { Prisma, type CourseSession, type AttendanceStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import type { RequestUser } from '../../shared/auth.js';
 import { HttpError } from '../../shared/http-error.js';
@@ -12,17 +12,21 @@ const courseResponse = (course: SessionCourse) => ({
   instructorId: course.instructorId === null ? null : String(course.instructorId),
   startDate: dateOnly(course.startDate), endDate: dateOnly(course.endDate)
 });
-const sessionResponse = (session: CourseSession, course: SessionCourse) => ({
+const sessionInclude = { instructorAttendance: { select: { status: true } } } satisfies Prisma.CourseSessionInclude;
+type ManagedSession = CourseSession & { instructorAttendance?: { status: AttendanceStatus } | null };
+const sessionResponse = (session: ManagedSession, course: SessionCourse) => ({
   id: String(session.id), courseId: String(session.courseId), date: dateOnly(session.date)!,
   sessionNumber: session.sessionNumber,
+  locked: Boolean(session.instructorAttendance),
+  instructorAttendanceStatus: session.instructorAttendance?.status ?? null,
   startTime: session.startTime, durationMinutes: session.durationMinutes,
   endTime: endTime(session.startTime, session.durationMinutes),
   warning: periodWarning(dateOnly(session.date)!, dateOnly(course.startDate), dateOnly(course.endDate)),
   createdAt: session.createdAt.toISOString(), updatedAt: session.updatedAt.toISOString()
 });
-const authorizedCourse = async (courseId: number, user: RequestUser) => {
+const authorizedCourse = async (courseId: number, user: RequestUser, db: Pick<Prisma.TransactionClient, 'course'> = prisma) => {
   if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') throw new HttpError(403, 'No tienes permisos para gestionar sesiones.');
-  const course = await prisma.course.findUnique({ where: { id: courseId }, select: courseSelect });
+  const course = await db.course.findUnique({ where: { id: courseId }, select: courseSelect });
   if (!course) throw new HttpError(404, 'Curso no encontrado.');
   if (user.role === 'INSTRUCTOR' && course.instructorId !== user.id) throw new HttpError(403, 'No eres el instructor asignado a este curso.');
   if (course.status !== 'PUBLISHED') throw new HttpError(400, 'Solo se pueden gestionar sesiones de cursos publicados.');
@@ -35,13 +39,26 @@ const handleError = (error: unknown): never => {
   }
   throw error;
 };
-const authorizeWrite = (user: RequestUser) => { if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Solo el administrador o el instructor asignado puede gestionar sesiones.'); };
+const authorizeWrite = (user: RequestUser) => { if (user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Solo el instructor asignado puede editar o eliminar sesiones.'); };
+const authorizePlanning = (user: RequestUser) => { if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Solo el administrador o el instructor asignado puede programar sesiones.'); };
+const withUnlockedSession = async <T>(courseId: number, sessionId: number, user: RequestUser,
+  write: (tx: Prisma.TransactionClient, course: SessionCourse) => Promise<T>) => {
+  authorizeWrite(user);
+  return prisma.$transaction(async tx => {
+    // Same course → session lock order as administrator attendance recording.
+    await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR SHARE`;
+    const course = await authorizedCourse(courseId, user, tx);
+    await tx.$queryRaw`SELECT id FROM sesiones_curso WHERE id = ${sessionId} AND curso_id = ${courseId} FOR UPDATE`;
+    const session = await tx.courseSession.findUnique({ where: { id: sessionId }, include: sessionInclude });
+    if (!session || session.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');
+    if (session.instructorAttendance) throw new HttpError(409, 'La sesión está bloqueada porque el administrador ya registró la asistencia del instructor. No se puede editar ni eliminar.');
+    return write(tx, course);
+  });
+};
 export const courseSessionService = {
   async remove(courseId: number, sessionId: number, user: RequestUser) {
-    authorizeWrite(user);
-    await authorizedCourse(courseId, user);
     try {
-      await prisma.courseSession.delete({ where: { id: sessionId, courseId } });
+      await withUnlockedSession(courseId, sessionId, user, tx => tx.courseSession.delete({ where: { id: sessionId, courseId } }));
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new HttpError(409, 'No se puede eliminar una sesión con asistencia registrada de alumnos o del instructor.');
@@ -50,7 +67,7 @@ export const courseSessionService = {
     }
   },
   async schedule(courseId: number, input: RecurrenceInput, user: RequestUser) {
-    authorizeWrite(user);
+    authorizePlanning(user);
     const course = await authorizedCourse(courseId, user);
     const dates = recurrenceDates(input);
     const last = await prisma.courseSession.findFirst({ where: { courseId }, orderBy: { sessionNumber: 'desc' }, select: { sessionNumber: true } });
@@ -59,7 +76,7 @@ export const courseSessionService = {
       skipDuplicates: true,
       data: dates.map((date, index) => ({ courseId, sessionNumber: nextNumber + index, date: new Date(date), startTime: input.startTime, durationMinutes: input.durationMinutes }))
     });
-    const sessions = await prisma.courseSession.findMany({ where: { courseId }, orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }] });
+    const sessions = await prisma.courseSession.findMany({ where: { courseId }, include: sessionInclude, orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }] });
     return { createdCount: created.length, skippedCount: dates.length - created.length, sessions: sessions.map(session => sessionResponse(session, course)) };
   },
   async teachingCourses(user: RequestUser) {
@@ -69,11 +86,11 @@ export const courseSessionService = {
   },
   async list(courseId: number, user: RequestUser) {
     const course = await authorizedCourse(courseId, user);
-    const sessions = await prisma.courseSession.findMany({ where: { courseId }, orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }] });
+    const sessions = await prisma.courseSession.findMany({ where: { courseId }, include: sessionInclude, orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }] });
     return { course: courseResponse(course), sessions: sessions.map(session => sessionResponse(session, course)) };
   },
   async create(courseId: number, input: SessionInput, user: RequestUser) {
-    authorizeWrite(user);
+    authorizePlanning(user);
     const course = await authorizedCourse(courseId, user);
     try {
       const session = await prisma.courseSession.create({ data: { ...input, date: new Date(input.date), courseId } });
@@ -81,13 +98,11 @@ export const courseSessionService = {
     } catch (error) { handleError(error); }
   },
   async update(courseId: number, sessionId: number, input: SessionInput, user: RequestUser) {
-    authorizeWrite(user);
-    const course = await authorizedCourse(courseId, user);
-    const existing = await prisma.courseSession.findUnique({ where: { id: sessionId } });
-    if (!existing || existing.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');
     try {
-      const session = await prisma.courseSession.update({ where: { id: sessionId, courseId }, data: { ...input, date: new Date(input.date) } });
-      return sessionResponse(session, course);
+      return await withUnlockedSession(courseId, sessionId, user, async (tx, course) => {
+        const session = await tx.courseSession.update({ where: { id: sessionId, courseId }, data: { ...input, date: new Date(input.date) }, include: sessionInclude });
+        return sessionResponse(session, course);
+      });
     } catch (error) { handleError(error); }
   }
 };

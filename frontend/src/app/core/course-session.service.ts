@@ -9,6 +9,8 @@ export interface SessionCourse {
 export interface SessionPayload { sessionNumber: number; date: string; startTime: string; durationMinutes: number; }
 export interface CourseSession extends SessionPayload {
   id: string; courseId: string; endTime: string; warning: string | null; createdAt: string; updatedAt: string;
+  locked?: boolean;
+  instructorAttendanceStatus?: 'PRESENT' | 'ABSENT' | null;
 }
 export interface CourseSessions { course: SessionCourse; sessions: CourseSession[]; }
 export interface SchedulePayload { startDate: string; endDate: string; weekdays: number[]; startTime: string; durationMinutes: number; }
