@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { SessionService, SessionUser } from '../../core/session.service';
 import { AccountDirectoryPage } from './account-directory-page';
@@ -18,6 +18,7 @@ describe('AccountDirectoryPage', () => {
     await TestBed.configureTestingModule({
       imports: [AccountDirectoryPage],
       providers: [
+        provideRouter([]),
         { provide: ActivatedRoute, useValue: { data: routeData } },
         { provide: SessionService, useValue: { users: () => users, ready: () => true } }
       ]

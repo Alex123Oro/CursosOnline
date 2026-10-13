@@ -8,6 +8,7 @@ import { CourseSessionsPage } from './features/course-sessions/course-sessions-p
 import { AttendancePage } from './features/attendance/attendance-page';
 import { InstructorAttendancePage } from './features/instructor-attendance/instructor-attendance-page';
 import { AccountDirectoryPage } from './features/accounts/account-directory-page';
+import { InstructorCreatePage, instructorDraftGuard } from './features/accounts/instructor-create-page';
 import { LoginPage } from './features/auth/login-page';
 import { ProgressPage } from './features/progress/progress-page';
 
@@ -22,6 +23,7 @@ export const routes: Routes = [
   { path: 'inscripciones', component: EnrollmentsPage, canActivate: [roleGuard(['ADMIN'])], title: 'Inscripciones | EVA' },
   { path: 'usuarios', component: AccountDirectoryPage, canActivate: [roleGuard(['ADMIN'])], data: { directory: 'users' }, title: 'Usuarios | EVA' },
   { path: 'instructores', component: AccountDirectoryPage, canActivate: [roleGuard(['ADMIN'])], data: { directory: 'instructors' }, title: 'Instructores | EVA' },
+  { path: 'instructores/nuevo', component: InstructorCreatePage, canActivate: [roleGuard(['ADMIN'])], canDeactivate: [instructorDraftGuard], title: 'Nuevo instructor | EVA' },
   { path: 'asistencia-instructores', component: InstructorAttendancePage, canActivate: [roleGuard(['ADMIN'])], title: 'Asistencia de instructores | EVA' },
   { path: 'catalogo', component: ParticipantCatalogPage, title: 'Cursos disponibles | EVA' },
   { path: 'catalogo/:id', component: ParticipantCourseDetailPage, title: 'Detalle del curso | EVA' }

@@ -5,7 +5,12 @@
       <h1>{{ title() }}</h1>
       <p class="subtitle">{{ description() }}</p>
     </div>
-    <span class="account-count">{{ accounts().length }} {{ accounts().length === 1 ? 'cuenta' : 'cuentas' }}</span>
+    <div class="directory-actions">
+      <span class="account-count">{{ accounts().length }} {{ accounts().length === 1 ? 'cuenta' : 'cuentas' }}</span>
+      @if (view() === 'instructors') {
+        <a class="new-instructor" routerLink="/instructores/nuevo">Nuevo instructor</a>
+      }
+    </div>
   </header>
 
   <section class="directory-content" aria-label="Listado de cuentas">

@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SessionService, SessionUser } from '../../core/session.service';
 
 type DirectoryView = 'users' | 'instructors';
@@ -7,6 +7,7 @@ type DirectoryView = 'users' | 'instructors';
 @Component({
   selector: 'app-account-directory-page',
   standalone: true,
+  imports: [RouterLink],
   templateUrl: './account-directory-page.html',
   styleUrl: './account-directory-page.scss'
 })
