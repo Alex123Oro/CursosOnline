@@ -26,8 +26,14 @@ export class AccountDirectoryPage {
     const term = this.query().trim().toLocaleLowerCase();
     return this.session.users().filter(user => {
       if (this.view() === 'instructors' && user.role !== 'INSTRUCTOR') return false;
-      const searchable = `${user.name} ${user.email} ${user.role} ${user.participantTypeName ?? ''} ${user.sis ?? ''} ${user.degree ?? ''} ${user.phone ?? ''}`.toLocaleLowerCase();
-      return !term || searchable.includes(term);
+      const fields = this.view() === 'instructors'
+        ? [user.name, user.email, user.sis, user.phone]
+        : [user.name, user.email, user.role, user.participantTypeName];
+      const searchable = fields.filter(Boolean).join(' ').toLocaleLowerCase();
+      const phoneTerm = /^[+\d ().-]+$/.test(term) ? term.replace(/\D/g, '') : '';
+      const matchesPhone = this.view() === 'instructors' && !!phoneTerm
+        && (user.phone ?? '').replace(/\D/g, '').includes(phoneTerm);
+      return !term || searchable.includes(term) || matchesPhone;
     });
   });
 

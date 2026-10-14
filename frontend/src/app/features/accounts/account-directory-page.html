@@ -16,8 +16,8 @@
   @if (view() === 'instructors' && createdName()) { <p class="directory-state" role="status">Instructor {{ createdName() }} creado correctamente.</p> }
   <section class="directory-content" aria-label="Listado de cuentas">
     <label class="search-field">
-      <span>Buscar cuenta</span>
-      <input #search type="search" [placeholder]="view() === 'instructors' ? 'Nombre, correo, SIS, grado o teléfono' : 'Nombre, correo o rol'" [value]="query()" (input)="onSearch(search.value)">
+      <span>{{ view() === 'instructors' ? 'Buscar instructor' : 'Buscar cuenta' }}</span>
+      <input #search type="search" [placeholder]="view() === 'instructors' ? 'Nombre, correo, SIS o teléfono' : 'Nombre, correo o rol'" [value]="query()" (input)="onSearch(search.value)">
     </label>
 
     @if (!session.ready()) {
@@ -28,15 +28,22 @@
       <div class="table-scroll">
         <table>
           <thead>
-            <tr><th>Nombre</th><th>Correo</th><th>Rol</th>@if (view() === 'instructors') { <th>SIS</th><th>Grado</th><th>Teléfono</th> } @else { <th>Tipo de participante</th> }</tr>
+            <tr>
+              <th>Nombre</th><th>Correo</th>
+              @if (view() === 'instructors') { <th>Código SIS</th><th>Teléfono</th> }
+              @else { <th>Rol</th><th>Tipo de participante</th> }
+            </tr>
           </thead>
           <tbody>
             @for (account of accounts(); track account.id) {
               <tr>
                 <td>{{ account.name }}</td>
                 <td>{{ account.email }}</td>
-                <td>{{ roleLabel(account) }}</td>
-                @if (view() === 'instructors') { <td>{{ account.sis ?? 'Sin registrar' }}</td><td>{{ account.degree ?? 'Sin registrar' }}</td><td>{{ account.phone ?? 'Sin registrar' }}</td> } @else { <td>{{ account.participantTypeName ?? 'No aplica' }}</td> }
+                @if (view() === 'instructors') {
+                  <td>{{ account.sis ?? 'Sin registrar' }}</td><td>{{ account.phone ?? 'Sin registrar' }}</td>
+                } @else {
+                  <td>{{ roleLabel(account) }}</td><td>{{ account.participantTypeName ?? 'No aplica' }}</td>
+                }
               </tr>
             }
           </tbody>

@@ -51,8 +51,9 @@ describe('AccountDirectoryPage', () => {
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(1);
     expect(fixture.nativeElement.textContent).toContain('Carla Instructora');
     expect(fixture.nativeElement.textContent).toContain('001234567');
-    expect(fixture.nativeElement.textContent).toContain('Ingeniero');
     expect(fixture.nativeElement.textContent).toContain('+591 700');
+    expect(Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('th'), header => header.textContent?.trim()))
+      .toEqual(['Nombre', 'Correo', 'Código SIS', 'Teléfono']);
 
     const search = fixture.nativeElement.querySelector('input') as HTMLInputElement;
     search.value = '001234567'; search.dispatchEvent(new Event('input')); fixture.detectChanges();
@@ -63,5 +64,13 @@ describe('AccountDirectoryPage', () => {
 
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
     expect(fixture.nativeElement.textContent).toContain('No hay cuentas para mostrar');
+  });
+
+  it.each(['001234567', '+591 700', '591700', 'carla@example.test', 'Carla'])('finds instructors by %s', term => {
+    routeData.next({ directory: 'instructors' }); fixture.detectChanges();
+    const search = fixture.nativeElement.querySelector('input') as HTMLInputElement;
+    search.value = term; search.dispatchEvent(new Event('input')); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(search.placeholder).toBe('Nombre, correo, SIS o teléfono');
   });
 });
