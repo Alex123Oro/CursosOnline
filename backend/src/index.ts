@@ -12,6 +12,7 @@ import { evaluationRoutes } from './modules/progress/evaluation.routes.js';
 import { courseSessionRoutes, teachingRoutes } from './modules/course-sessions/course-session.routes.js';
 import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
 import { instructorAttendanceRoutes } from './modules/instructor-attendance/instructor-attendance.routes.js';
+import { instructorRoutes } from './modules/instructors/instructor.routes.js';
 import { errorMiddleware } from './shared/error.middleware.js';
 
 const app = express();
@@ -28,6 +29,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/courses', courseSessionRoutes);
 app.use('/api/courses', attendanceRoutes);
 app.use('/api/admin', instructorAttendanceRoutes);
+app.use('/api/admin', instructorRoutes);
 app.use('/api/teaching', teachingRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/participant-types', participantTypeRoutes);

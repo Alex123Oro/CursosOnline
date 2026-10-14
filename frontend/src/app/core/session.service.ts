@@ -12,6 +12,9 @@ export interface SessionUser {
   role: UserRole;
   participantTypeId: string | null;
   participantTypeName: string | null;
+  sis?: string | null;
+  degree?: 'Estudiante' | 'Ingeniero' | 'Técnico' | null;
+  phone?: string | null;
 }
 
 const STORAGE_KEY = 'eva-user-id';
@@ -112,6 +115,10 @@ export class SessionService {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(USER_DATA_KEY);
     }
+  }
+
+  addInstructor(user: SessionUser) {
+    this.usersState.update(users => [...users.filter(existing => existing.id !== user.id), user]);
   }
 
   private restoreSession(token: string) {

@@ -45,4 +45,15 @@ describe('SessionService authentication', () => {
     expect(session.ready()).toBe(true);
     expect(localStorage.getItem('eva-access-token')).toBeNull();
   });
+
+  it('adds an instructor to the local directory without persisting or changing the session', () => {
+    const session = TestBed.inject(SessionService);
+    const saved = localStorage.getItem('eva-user');
+    session.addInstructor(instructor);
+    expect(session.users()).toEqual([instructor]);
+    expect(session.currentUser()).toBeNull();
+    expect(localStorage.getItem('eva-user')).toBe(saved);
+    session.addInstructor({ ...instructor, name: 'Updated' });
+    expect(session.users()).toHaveLength(1);
+  });
 });

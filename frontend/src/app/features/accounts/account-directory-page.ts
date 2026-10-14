@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SessionService, SessionUser } from '../../core/session.service';
 
 type DirectoryView = 'users' | 'instructors';
@@ -14,6 +14,7 @@ type DirectoryView = 'users' | 'instructors';
 export class AccountDirectoryPage {
   private readonly route = inject(ActivatedRoute);
   readonly session = inject(SessionService);
+  readonly createdName = signal<string>(inject(Router).getCurrentNavigation()?.extras.state?.['instructorCreated'] ?? history.state?.instructorCreated ?? '');
   readonly view = signal<DirectoryView>('users');
   readonly query = signal('');
 
@@ -25,7 +26,7 @@ export class AccountDirectoryPage {
     const term = this.query().trim().toLocaleLowerCase();
     return this.session.users().filter(user => {
       if (this.view() === 'instructors' && user.role !== 'INSTRUCTOR') return false;
-      const searchable = `${user.name} ${user.email} ${user.role} ${user.participantTypeName ?? ''}`.toLocaleLowerCase();
+      const searchable = `${user.name} ${user.email} ${user.role} ${user.participantTypeName ?? ''} ${user.sis ?? ''} ${user.degree ?? ''} ${user.phone ?? ''}`.toLocaleLowerCase();
       return !term || searchable.includes(term);
     });
   });

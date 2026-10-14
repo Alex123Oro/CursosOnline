@@ -22,6 +22,14 @@ enum UserRole {
   @@map("rol_usuario")
 }
 
+enum InstructorDegree {
+  STUDENT    @map("estudiante")
+  ENGINEER   @map("ingeniero")
+  TECHNICIAN @map("tecnico")
+
+  @@map("grado_instructor")
+}
+
 enum EnrollmentStatus {
   PREINSCRITO @map("preinscrito")
   INSCRITO    @map("inscrito")
@@ -52,6 +60,9 @@ model User {
   name              String           @map("nombre_completo")
   email             String           @unique @map("correo")
   role              UserRole         @map("rol")
+  sis               String?          @unique @map("codigo_sis")
+  degree            InstructorDegree? @map("grado")
+  phone             String?          @map("telefono")
   participantTypeId Int?             @map("tipo_participante_id")
   participantType   ParticipantType? @relation(fields: [participantTypeId], references: [id])
   enrollments       Enrollment[]

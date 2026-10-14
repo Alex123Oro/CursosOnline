@@ -49,3 +49,5 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px s
   .form-actions div { display: grid; grid-template-columns: 1fr 1fr; }
   .error-summary, .validation-success { margin: 20px 18px; }
 }
+.password-toggle { align-self: flex-start; border: 0; padding: 5px 0; background: transparent; color: var(--accent); font: inherit; font-size: 13px; cursor: pointer; }
+button:disabled, input:disabled, select:disabled { opacity: .65; cursor: wait; }
