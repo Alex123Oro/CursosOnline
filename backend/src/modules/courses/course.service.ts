@@ -1,7 +1,9 @@
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../shared/http-error.js';
 import { canPublishCourse, type CourseInput } from './course.rules.js';
+import { summarizeSessions } from '../course-sessions/course-session.rules.js';
 
 const courseSelect = {
   id: true,
@@ -12,6 +14,7 @@ const courseSelect = {
   instructor: true,
   instructorId: true,
   schedule: true,
+  sessions: { select: { date: true, startTime: true, durationMinutes: true } },
   approvalCriteria: true,
   status: true,
   startDate: true,
@@ -36,7 +39,7 @@ const toCourseResponse = (course: CourseRecord) => ({
   durationHours: course.durationHours ?? 0,
   instructor: course.instructor ?? '',
   instructorId: course.instructorId == null ? null : String(course.instructorId),
-  schedule: course.schedule ?? '',
+  schedule: course.sessions?.length ? summarizeSessions(course.sessions) : course.schedule ?? '',
   approvalCriteria: course.approvalCriteria ?? '',
   status: course.status ?? 'DRAFT',
   startDate: course.startDate ? course.startDate.toISOString().slice(0, 10) : null,
@@ -54,15 +57,15 @@ const toCourseResponse = (course: CourseRecord) => ({
 });
 
 const toCourseData = (input: CourseInput): Prisma.CourseUncheckedCreateInput => {
-  const { instructorId, status, minimumEnrollment, ...fields } = input;
+  const { code, instructorId, status, minimumEnrollment, schedule, ...fields } = input;
   return {
   ...fields,
+  ...(schedule === undefined ? {} : { schedule }),
   ...(minimumEnrollment === undefined ? {} : { minimumEnrollment }),
   ...(instructorId === undefined ? {} : { instructorId }),
   approvalCriteria: input.approvalCriteria ?? null,
   preinscriptionStart: input.preinscriptionStart ? new Date(input.preinscriptionStart) : null,
   preinscriptionEnd: input.preinscriptionEnd ? new Date(input.preinscriptionEnd) : null,
-  code: input.code ?? null,
   ...(status === 'DRAFT' || status === 'PUBLISHED' ? { status } : {}),
   startDate: input.startDate ? new Date(input.startDate) : null,
   endDate: input.endDate ? new Date(input.endDate) : null
@@ -152,16 +155,26 @@ export const courseService = {
         throw new HttpError(400, 'El usuario seleccionado no es un instructor valido.');
       }
       const data = toCourseData(input);
+      const words = input.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().match(/[A-Z0-9]+/g) ?? [];
+      const initials = words.filter(word => !['DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'EN', 'PARA', 'A', 'AL'].includes(word))
+        .map(word => word[0]).join('').slice(0, 8) || 'CUR';
+      const date = input.startDate?.slice(0, 10) || new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/La_Paz' }).format(new Date());
+      const generatedCode = `${initials}-${date.replace(/-/g, '')}`;
       if (selectedInstructor) {
         data.instructorId = selectedInstructor.id;
         data.instructor = selectedInstructor.name;
       }
-      const course = await prisma.course.create({
-        data,
-        select: courseSelect
-      });
-
-      return toCourseResponse(course);
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const code = attempt === 0 ? generatedCode : `${generatedCode}-${randomUUID().slice(0, 8).toUpperCase()}`;
+        try {
+          const course = await prisma.course.create({ data: { ...data, code }, select: courseSelect });
+          return toCourseResponse(course);
+        } catch (error) {
+          if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002'
+            || !/code|codigo/i.test(String(error.meta?.['target'])) || attempt === 4) throw error;
+        }
+      }
+      throw new HttpError(409, 'No se pudo generar un código único. Inténtalo de nuevo.');
     } catch (error) {
       handlePrismaError(error);
     }
@@ -237,7 +250,7 @@ export const courseService = {
 
     canPublishCourse({
       instructor: existing.instructor,
-      schedule: existing.schedule,
+      schedule: toCourseResponse(existing).schedule,
       startDate: existing.startDate ? existing.startDate.toISOString().slice(0, 10) : null,
       endDate: existing.endDate ? existing.endDate.toISOString().slice(0, 10) : null,
       capacity: existing.capacity,

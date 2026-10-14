@@ -55,6 +55,19 @@ describe('course catalogue (HU-03)', () => {
     }));
   });
 
+  it('uses actual classes instead of a conflicting legacy schedule', async () => {
+    const record = { id: 7, schedule: 'Horario anterior', prices: [], _count: { enrollments: 0 },
+      createdAt: new Date(), updatedAt: new Date(), sessions: [
+        { date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 90 }
+      ] };
+    findFirst.mockResolvedValue(record);
+    expect((await courseService.catalogById(7))?.schedule).toBe('Lun 18:00–19:30');
+    findFirst.mockResolvedValue({ ...record, sessions: [{ date: new Date('2026-10-14'), startTime: '19:00', durationMinutes: 60 }] });
+    expect((await courseService.catalogById(7))?.schedule).toBe('Mié 19:00–20:00');
+    findFirst.mockResolvedValue({ ...record, schedule: null, sessions: [] });
+    expect((await courseService.catalogById(7))?.schedule).toBe('');
+  });
+
   it('responds as not found when the public detail is unavailable', async () => {
     findFirst.mockResolvedValue(null);
 

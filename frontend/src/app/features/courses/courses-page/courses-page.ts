@@ -1,6 +1,7 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, of, switchMap } from 'rxjs';
 import { Course, CoursePayload, CourseService, ParticipantTypeOption } from '../../../core/course.service';
 import { InstructorAttendanceService, InstructorOption } from '../../../core/instructor-attendance.service';
@@ -17,6 +18,9 @@ type FormMode = 'create' | 'edit';
   styleUrl: './courses-page.scss'
 })
 export class CoursesPage {
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  readonly isCreatePage = inject(ActivatedRoute).snapshot.data['createCourse'] === true;
   private readonly courseService = inject(CourseService);
   private readonly instructorService = inject(InstructorAttendanceService);
   private createdCourseId: string | null = null;
@@ -34,7 +38,12 @@ export class CoursesPage {
   readonly feedback = signal('');
 
   constructor() {
-    this.loadCourses();
+    if (this.isCreatePage) this.isFormOpen.set(true);
+    else {
+      const state = this.location.getState() as { feedback?: string };
+      this.feedback.set(this.router.currentNavigation()?.extras.state?.['feedback'] ?? state?.feedback ?? '');
+      this.loadCourses();
+    }
     this.loadInstructors();
     this.courseService.participantTypes().subscribe({ next: types => this.participantTypes.set(types), error: error => this.feedback.set(this.errorMessage(error)) });
   }
@@ -50,11 +59,7 @@ export class CoursesPage {
   }
 
   openCreateForm() {
-    this.createdCourseId = null;
-    this.formMode.set('create');
-    this.editingCourse.set(null);
-    this.feedback.set('');
-    this.isFormOpen.set(true);
+    void this.router.navigateByUrl('/cursos/nuevo');
   }
 
   openEditForm(course: Course) {
@@ -67,6 +72,10 @@ export class CoursesPage {
 
   closeForm() {
     if (this.isSaving()) return;
+    if (this.isCreatePage) {
+      void this.router.navigateByUrl('/cursos');
+      return;
+    }
     this.isFormOpen.set(false);
   }
 
@@ -85,11 +94,13 @@ export class CoursesPage {
       if (!editing) this.createdCourseId = course.id;
       return prices.length ? this.courseService.replacePrices(course.id, prices) : of(course);
     }), finalize(() => this.isSaving.set(false))).subscribe({
-      next: () => {
+      next: saved => {
         this.feedback.set(editing ? 'Curso actualizado correctamente.' : 'Curso registrado correctamente.');
         this.isFormOpen.set(false);
         this.createdCourseId = null;
-        this.loadCourses();
+        if (this.isCreatePage) {
+          void this.router.navigate(['/cursos', saved.id, 'sesiones'], { queryParams: { plan: 'weekly' }, state: { feedback: this.feedback() } });
+        } else this.loadCourses();
       },
       error: error => this.feedback.set(this.errorMessage(error))
     });

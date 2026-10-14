@@ -54,9 +54,9 @@ describe('CourseList', () => {
     expect(publishButton?.disabled).toBe(false);
     expect(getComputedStyle(publishButton!).cursor).toBe('pointer');
   });
-  it('offers a classes link only for published courses', () => {
+  it('offers a classes link for drafts and published courses', () => {
     fixture.componentRef.setInput('courses', [course]); fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/cursos/1/sesiones');
     fixture.componentRef.setInput('courses', [{ ...course, status: 'PUBLISHED' }]); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/cursos/1/sesiones');
   });

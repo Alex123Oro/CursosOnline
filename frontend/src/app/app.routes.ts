@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { CoursesWorkspace } from './features/courses/courses-workspace';
+import { CoursesPage } from './features/courses/courses-page/courses-page';
 import { roleGuard } from './core/role.guard';
 import { EnrollmentsPage } from './features/enrollments/enrollments-page/enrollments-page';
 import { ParticipantCatalogPage } from './features/participant-catalog/participant-catalog-page/participant-catalog-page';
@@ -16,6 +17,7 @@ export const routes: Routes = [
   { path: 'iniciar-sesion', component: LoginPage, title: 'Iniciar sesión | EVA' },
   { path: 'mi-progreso', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mi progreso | EVA' },
   { path: '', redirectTo: 'catalogo', pathMatch: 'full' },
+  { path: 'cursos/nuevo', component: CoursesPage, canActivate: [roleGuard(['ADMIN'])], data: { createCourse: true }, title: 'Nuevo curso | EVA' },
   { path: 'cursos', component: CoursesWorkspace, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Cursos | EVA' },
   { path: 'cursos/:courseId/sesiones', component: CourseSessionsPage, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Sesiones del curso | EVA' },
   { path: 'cursos/:courseId/asistencia', component: AttendancePage, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Asistencia del curso | EVA' },

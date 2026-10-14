@@ -19,7 +19,7 @@
               <small>{{ course.code }}</small>
             </td>
             <td>{{ course.durationHours }}</td>
-            <td>{{ course.schedule }}</td>
+            <td>{{ course.schedule || 'Sin clases programadas' }}</td>
             <td>{{ course.instructor }}</td>
             <td>
               <span class="badge" [class.draft]="course.status !== 'PUBLISHED'" [class.published]="course.status === 'PUBLISHED'">
@@ -27,9 +27,7 @@
               </span>
             </td>
             <td class="actions">
-              @if (course.status === 'PUBLISHED') {
                 <a class="more" [routerLink]="['/cursos', course.id, 'sesiones']">Clases</a>
-              }
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
               <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">
                 {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Publicar' }}

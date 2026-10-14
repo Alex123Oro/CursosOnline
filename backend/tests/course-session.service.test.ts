@@ -46,6 +46,13 @@ describe('course session service', () => {
   });
   it('denies participants', async () => { await expect(courseSessionService.list(2, { ...admin, role: 'PARTICIPANT' })).rejects.toMatchObject({ statusCode: 403 }); });
   it('rejects draft courses', async () => { mocks.course.findUnique.mockResolvedValue({ ...course, status: 'DRAFT' }); await expect(courseSessionService.create(2, input, instructor)).rejects.toMatchObject({ statusCode: 400 }); });
+  it('allows the administrator to plan draft classes before publication', async () => {
+    mocks.course.findUnique.mockResolvedValue({ ...course, status: 'DRAFT' });
+    await expect(courseSessionService.create(2, input, admin)).resolves.toMatchObject({ id: '3' });
+    await expect(courseSessionService.list(2, admin)).resolves.toMatchObject({ sessions: [{ id: '3' }] });
+    await expect(courseSessionService.update(2, 3, input, admin)).resolves.toMatchObject({ id: '3' });
+    await expect(courseSessionService.remove(2, 3, admin)).resolves.toBeUndefined();
+  });
   it('returns 404 for a missing course', async () => { mocks.course.findUnique.mockResolvedValue(null); await expect(courseSessionService.list(2, admin)).rejects.toMatchObject({ statusCode: 404 }); });
   it('rejects editing a session belonging to another course', async () => { mocks.courseSession.findUnique.mockResolvedValue({ ...record, courseId: 99 }); await expect(courseSessionService.update(2, 3, input, instructor)).rejects.toMatchObject({ statusCode: 404 }); });
   it('edits an existing session', async () => { expect((await courseSessionService.update(2, 3, input, instructor)).id).toBe('3'); });

@@ -7,6 +7,22 @@
   margin: auto;
 }
 
+.back-btn {
+  min-height: 44px;
+  padding: 10px 17px;
+  border: 1px solid #dbe9e6;
+  border-radius: 7px;
+  background: #fff;
+  color: #17645e;
+  font: inherit;
+  font-size: var(--eva-font-label);
+  cursor: pointer;
+  &:disabled { opacity: .62; cursor: not-allowed; }
+  &:focus-visible { outline: 3px solid #087f78; outline-offset: 3px; }
+}
+.create-header { max-width: 1040px; gap: 24px; }
+.create-header .subtitle { color: #526d68; line-height: 1.6; }
+
 .eyebrow {
   margin: 0 0 7px;
   font-size: var(--eva-font-caption);

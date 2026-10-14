@@ -51,7 +51,7 @@ export interface CoursePayload {
   durationHours: number;
   instructor: string;
   instructorId?: string;
-  schedule: string;
+  schedule?: string;
   approvalCriteria: string;
   status?: CourseStatus;
   startDate?: string | null;

@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Course, CoursePayload, ParticipantTypeOption } from '../../../core/course.service';
 import { InstructorOption } from '../../../core/instructor-attendance.service';
 
@@ -17,11 +19,12 @@ const integer = (control: AbstractControl) => Number.isInteger(control.value) ? 
 @Component({
   selector: 'app-course-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './course-form.html',
   styleUrl: './course-form.scss'
 })
 export class CourseForm implements OnChanges {
+  @Input() presentation: 'modal' | 'page' = 'modal';
   @Input() mode: 'create' | 'edit' = 'create';
   @Input() course: Course | null = null;
   @Input() participantTypes: ParticipantTypeOption[] = [];
@@ -35,6 +38,15 @@ export class CourseForm implements OnChanges {
   @Output() cancel = new EventEmitter<void>();
   readonly priceValues = signal<Record<string, number | null>>({});
   readonly priceError = signal('');
+  get generatedCode() {
+    if (this.mode === 'edit') return this.course?.code || 'Sin código';
+    const { name, startDate } = this.formValue();
+    if (!name?.trim() || !startDate) return '';
+    const words = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().match(/[A-Z0-9]+/g) ?? [];
+    const initials = words.filter(word => !['DE', 'DEL', 'LA', 'EL', 'LOS', 'LAS', 'Y', 'EN', 'PARA', 'A', 'AL'].includes(word))
+      .map(word => word[0]).join('').slice(0, 8) || 'CUR';
+    return `${initials}-${startDate.replace(/-/g, '')}`;
+  }
   get priceCategories() {
     return this.participantTypes.filter(type => {
       const name = type.name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -48,9 +60,9 @@ export class CourseForm implements OnChanges {
     code: [''],
     name: ['', [Validators.required, Validators.minLength(3)]],
     content: ['', [Validators.required, Validators.minLength(10)]],
-    durationHours: [1, [Validators.required, Validators.min(1)]],
+    durationHours: [1, [Validators.required, Validators.min(1), integer]],
     instructorId: ['', Validators.required],
-    schedule: ['', [Validators.required, Validators.minLength(3)]],
+    schedule: [''],
     approvalCriteria: ['', [Validators.required, Validators.minLength(3), Validators.pattern(/^(?=.*\S).+$/)]],
     startDate: ['', Validators.required],
     endDate: ['', Validators.required],
@@ -59,6 +71,7 @@ export class CourseForm implements OnChanges {
     preinscriptionStart: ['', Validators.required],
     preinscriptionEnd: ['', Validators.required]
   }, { validators: control => { const errors = courseDates(control); return Object.keys(errors).length ? errors : null; } });
+  private readonly formValue = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['course']) {
@@ -117,13 +130,11 @@ export class CourseForm implements OnChanges {
 
     const value = this.form.getRawValue();
     this.save.emit({
-      code: value.code.trim() || undefined,
       name: value.name.trim(),
       content: value.content.trim(),
       durationHours: Number(value.durationHours),
       instructor: instructor.name,
       instructorId: instructor.id,
-      schedule: value.schedule.trim(),
       approvalCriteria: value.approvalCriteria.trim(),
       startDate: value.startDate || null,
       endDate: value.endDate || null,
