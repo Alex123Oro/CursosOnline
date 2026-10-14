@@ -1,8 +1,9 @@
-<div class="modal-backdrop" (click)="cancel.emit()">
+<div class="modal-backdrop" (click)="!saving && cancel.emit()">
   <section class="modal form-modal" (click)="$event.stopPropagation()">
-    <button class="close" (click)="cancel.emit()">×</button>
+    <button class="close" type="button" aria-label="Cerrar formulario" [disabled]="saving" (click)="cancel.emit()">×</button>
     <p class="eyebrow">{{ mode === 'create' ? 'NUEVO CURSO' : 'EDITAR CURSO' }}</p>
     <h2>{{ mode === 'create' ? 'Registrar curso' : 'Actualizar curso' }}</h2>
+    @if (saveError) { <p class="validation" role="alert">{{ saveError }}</p> }
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="course-form">
       <label>
@@ -18,7 +19,7 @@
 
       <fieldset class="full prices-block" [disabled]="saving">
         <legend>Precios por categoría *</legend>
-        @for (type of participantTypes; track type.id) {
+        @for (type of priceCategories; track type.id) {
           <label><span>{{ type.name }} (Bs)</span><input type="number" min="0" step="0.01" [value]="priceValue(type.id)" (input)="setPrice(type.id, $any($event.target).value)"></label>
         } @empty { <p>No hay categorías de participantes configuradas.</p> }
         @if (priceError()) { <small role="alert">{{ priceError() }}</small> }
@@ -44,19 +45,55 @@
 
       <label>
         <span>Instructor *</span>
-        <input formControlName="instructor" placeholder="Nombre del instructor">
-        @if (fieldError('instructor')) { <small>El instructor es obligatorio.</small> }
+        <select formControlName="instructorId" [attr.aria-busy]="instructorsLoading" aria-describedby="instructor-feedback">
+          <option value="">{{ instructorsLoading ? 'Cargando instructores…' : 'Selecciona un instructor' }}</option>
+          @for (instructor of instructors; track instructor.id) {
+            <option [value]="instructor.id">{{ instructor.name }}</option>
+          }
+        </select>
+        <span id="instructor-feedback">
+          @if (instructorsError) { <small role="alert">{{ instructorsError }}</small><button type="button" class="secondary-btn" (click)="retryInstructors.emit()">Reintentar</button> }
+          @else if (!instructorsLoading && !instructors.length) { <small>No hay instructores registrados. Registra un instructor antes de guardar el curso.</small> }
+          @else if (fieldError('instructorId')) { <small>Selecciona un instructor registrado.</small> }
+        </span>
       </label>
 
       <label>
         <span>Fecha de inicio *</span>
         <input type="date" formControlName="startDate">
+        @if (fieldError('startDate')) { <small>La fecha de inicio es obligatoria.</small> }
       </label>
 
       <label>
         <span>Fecha de fin *</span>
-        <input type="date" formControlName="endDate">
+        <input type="date" formControlName="endDate" [min]="form.controls.startDate.value">
+        @if (fieldError('endDate')) { <small>La fecha de fin es obligatoria.</small> }
       </label>
+
+      @if (form.hasError('courseDateOrder')) { <small class="full" role="alert">La fecha de fin no puede ser anterior a la fecha de inicio.</small> }
+
+      <label>
+        <span>Capacidad de alumnos *</span>
+        <input type="number" min="1" step="1" formControlName="capacity">
+        @if (fieldError('capacity')) { <small>Ingresa un número entero de alumnos mayor a cero.</small> }
+      </label>
+      <label>
+        <span>Inicio de preinscripción *</span>
+        <input type="date" formControlName="preinscriptionStart">
+        @if (fieldError('preinscriptionStart')) { <small>La fecha de inicio de preinscripción es obligatoria.</small> }
+      </label>
+      <label>
+        <span>Mínimo de inscritos *</span>
+        <input type="number" min="1" step="1" [max]="form.controls.capacity.value" formControlName="minimumEnrollment">
+        @if (fieldError('minimumEnrollment')) { <small>Ingresa un número entero mayor a cero.</small> }
+        @if (form.hasError('minimumEnrollmentCapacity')) { <small>El mínimo de inscritos no puede superar la capacidad del curso.</small> }
+      </label>
+      <label>
+        <span>Fin de preinscripción *</span>
+        <input type="date" formControlName="preinscriptionEnd" [min]="form.controls.preinscriptionStart.value">
+        @if (fieldError('preinscriptionEnd')) { <small>La fecha de fin de preinscripción es obligatoria.</small> }
+      </label>
+      @if (form.hasError('preinscriptionDateOrder')) { <small class="full" role="alert">El fin de preinscripción no puede ser anterior a su inicio.</small> }
 
       <label class="full">
         <span>Criterios de aprobación *</span>
@@ -65,8 +102,8 @@
       </label>
 
       <div class="form-actions full">
-        <button type="button" class="secondary-btn" (click)="cancel.emit()">Cancelar</button>
-        <button type="submit" class="primary-btn" [disabled]="saving">{{ saving ? 'Guardando...' : (mode === 'create' ? 'Registrar curso' : 'Guardar cambios') }}</button>
+        <button type="button" class="secondary-btn" [disabled]="saving" (click)="cancel.emit()">Cancelar</button>
+        <button type="submit" class="primary-btn" [disabled]="saving || instructorsLoading || !!instructorsError || !instructors.length">{{ saving ? 'Guardando...' : (mode === 'create' ? 'Registrar curso' : 'Guardar cambios') }}</button>
       </div>
     </form>
   </section>

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { finalize, of, switchMap } from 'rxjs';
 import { Course, CoursePayload, CourseService, ParticipantTypeOption } from '../../../core/course.service';
+import { InstructorAttendanceService, InstructorOption } from '../../../core/instructor-attendance.service';
 import { CourseForm } from '../course-form/course-form';
 import { CourseList } from '../course-list/course-list';
 
@@ -17,6 +18,11 @@ type FormMode = 'create' | 'edit';
 })
 export class CoursesPage {
   private readonly courseService = inject(CourseService);
+  private readonly instructorService = inject(InstructorAttendanceService);
+  private createdCourseId: string | null = null;
+  readonly instructors = signal<InstructorOption[]>([]);
+  readonly instructorsLoading = signal(false);
+  readonly instructorsError = signal('');
 
   readonly courses = signal<Course[]>([]);
   readonly participantTypes = signal<ParticipantTypeOption[]>([]);
@@ -29,10 +35,22 @@ export class CoursesPage {
 
   constructor() {
     this.loadCourses();
+    this.loadInstructors();
     this.courseService.participantTypes().subscribe({ next: types => this.participantTypes.set(types), error: error => this.feedback.set(this.errorMessage(error)) });
   }
 
+  loadInstructors() {
+    if (this.instructorsLoading()) return;
+    this.instructorsLoading.set(true);
+    this.instructorsError.set('');
+    this.instructorService.instructors().pipe(finalize(() => this.instructorsLoading.set(false))).subscribe({
+      next: instructors => this.instructors.set(instructors),
+      error: error => this.instructorsError.set(this.errorMessage(error))
+    });
+  }
+
   openCreateForm() {
+    this.createdCourseId = null;
     this.formMode.set('create');
     this.editingCourse.set(null);
     this.feedback.set('');
@@ -40,6 +58,7 @@ export class CoursesPage {
   }
 
   openEditForm(course: Course) {
+    this.createdCourseId = null;
     this.formMode.set('edit');
     this.editingCourse.set(course);
     this.feedback.set('');
@@ -47,21 +66,29 @@ export class CoursesPage {
   }
 
   closeForm() {
+    if (this.isSaving()) return;
     this.isFormOpen.set(false);
   }
 
   handleSave(payload: CoursePayload) {
+    if (this.isSaving()) return;
+    this.feedback.set('');
     const editing = this.editingCourse();
     const prices = payload.prices ?? [];
-    const request = editing
-      ? this.courseService.update(editing.id, payload)
+    const existingId = editing?.id ?? this.createdCourseId;
+    const request = existingId
+      ? this.courseService.update(existingId, payload)
       : this.courseService.create(payload);
 
     this.isSaving.set(true);
-    request.pipe(switchMap(course => prices.length ? this.courseService.replacePrices(course.id, prices) : of(course)), finalize(() => this.isSaving.set(false))).subscribe({
+    request.pipe(switchMap(course => {
+      if (!editing) this.createdCourseId = course.id;
+      return prices.length ? this.courseService.replacePrices(course.id, prices) : of(course);
+    }), finalize(() => this.isSaving.set(false))).subscribe({
       next: () => {
         this.feedback.set(editing ? 'Curso actualizado correctamente.' : 'Curso registrado correctamente.');
-        this.closeForm();
+        this.isFormOpen.set(false);
+        this.createdCourseId = null;
         this.loadCourses();
       },
       error: error => this.feedback.set(this.errorMessage(error))
@@ -69,6 +96,7 @@ export class CoursesPage {
   }
 
   publishCourse(course: Course) {
+    if (this.isSaving()) return;
     this.isSaving.set(true);
     this.courseService.publish(course.id)
       .pipe(finalize(() => this.isSaving.set(false)))

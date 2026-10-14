@@ -48,7 +48,12 @@
     [mode]="formMode()"
     [course]="editingCourse()"
     [participantTypes]="participantTypes()"
+    [instructors]="instructors()"
+    [instructorsLoading]="instructorsLoading()"
+    [instructorsError]="instructorsError()"
+    (retryInstructors)="loadInstructors()"
     [saving]="isSaving()"
+    [saveError]="feedback()"
     (save)="handleSave($event)"
     (cancel)="closeForm()">
   </app-course-form>

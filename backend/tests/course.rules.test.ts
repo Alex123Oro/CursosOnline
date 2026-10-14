@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { canPublishCourse, courseInputSchema } from '../src/modules/courses/course.rules.js';
 
 describe('course rules (HU-01)', () => {
+  it('validates minimum enrollment against the course capacity', () => {
+    const data = { name: 'Curso de seguridad', content: 'Contenido del curso de seguridad', durationHours: 12,
+      instructor: 'Carla', schedule: 'Martes 18:00', approvalCriteria: 'Proyecto final', capacity: 20 };
+    expect(courseInputSchema.parse({ ...data, minimumEnrollment: 5 }).minimumEnrollment).toBe(5);
+    expect(courseInputSchema.safeParse({ ...data, minimumEnrollment: 20 }).success).toBe(true);
+    for (const minimumEnrollment of [0, -1, 1.5, 21]) {
+      expect(courseInputSchema.safeParse({ ...data, minimumEnrollment }).success).toBe(false);
+    }
+  });
   it('acepta un curso valido y rechaza duracion invalida', () => {
     expect(() => courseInputSchema.parse({
       name: 'Curso de seguridad',

@@ -11,8 +11,8 @@ const sessionInclude = { course: { select: courseSelect }, instructorAttendance:
 type Session = Prisma.CourseSessionGetPayload<{ include: typeof sessionInclude }>;
 const toRow = (session: Session, today: string) => ({
   id: String(session.id), date: session.date.toISOString().slice(0, 10), startTime: session.startTime,
-  endTime: endTime(session.startTime, session.durationMinutes), editable: session.date.toISOString().slice(0, 10) <= today && session.course.instructorId !== null,
-  blockedReason: session.date.toISOString().slice(0, 10) > today ? 'Futura · disponible el día de la clase' : session.course.instructorId === null ? 'Asigna un usuario instructor al curso para registrar o corregir asistencia.' : null,
+  endTime: endTime(session.startTime, session.durationMinutes), editable: session.course.instructorId !== null,
+  blockedReason: session.course.instructorId === null ? 'Asigna un usuario instructor al curso para registrar o corregir asistencia.' : null,
   course: { id: String(session.courseId), name: session.course.name, code: session.course.code ?? '' },
   status: session.instructorAttendance?.status ?? null, updatedAt: session.instructorAttendance?.updatedAt.toISOString() ?? null,
   recordedById: session.instructorAttendance ? String(session.instructorAttendance.recordedById) : null
@@ -59,7 +59,6 @@ export const instructorAttendanceService = {
       const session = await tx.courseSession.findUnique({ where: { id: sessionId }, include: sessionInclude });
       if (!session || session.courseId !== initial.courseId) throw new HttpError(404, 'Sesión no encontrada en el curso.');
       const today = boliviaToday();
-      if (session.date.toISOString().slice(0, 10) > today) throw new HttpError(400, 'No se puede registrar asistencia de una sesión futura.');
       if (session.instructorAttendance) {
         if (session.instructorAttendance.instructorId !== instructorId) throw new HttpError(409, 'La sesión ya tiene asistencia del instructor original. No se puede transferir el registro.');
       } else if (course.instructorId !== instructorId) throw new HttpError(400, 'El instructor no está asignado a este curso.');

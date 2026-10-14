@@ -10,7 +10,7 @@ import { authenticateAdminFixture, clearFixtureSession } from '../../../testing/
 const base = `${environment.apiBaseUrl}/admin`;
 const users = [{ id: '1', name: 'Admin', role: 'ADMIN' }, { id: '8', name: 'Carla', role: 'INSTRUCTOR' }];
 const row = { id: '3', date: '2026-10-06', startTime: '15:00', endTime: '16:00', editable: true, course: { id: '2', name: 'Curso', code: 'CUR' }, status: null, updatedAt: null, recordedById: null };
-const data = { instructor: { id: '8', name: 'Carla' }, today: '2026-10-06', courses: [row.course], sessions: [row, { ...row, id: '4', date: '2026-10-07', editable: false }], summary: { present: 0, absent: 0, pending: 1 } };
+const data = { instructor: { id: '8', name: 'Carla' }, today: '2026-10-06', courses: [row.course], sessions: [row, { ...row, id: '4', date: '2026-10-07', editable: true }], summary: { present: 0, absent: 0, pending: 1 } };
 describe('InstructorAttendancePage', () => {
   let fixture: ComponentFixture<InstructorAttendancePage>; let http: HttpTestingController;
   beforeEach(async () => {
@@ -62,11 +62,29 @@ describe('InstructorAttendancePage', () => {
     page.retry(page.sessions()[0]); http.expectOne(`${base}/instructors/8/sessions/3/attendance`).flush({...row,status:'ABSENT'});
     expect(page.sessions()[0].status).toBe('ABSENT');
   });
-  it('blocks future sessions and excludes them from pending', () => {
+  it('allows future sessions with a warning and excludes them from pending', () => {
     const page=fixture.componentInstance; page.mark(page.sessions()[1],'PRESENT');
-    http.expectNone(`${base}/instructors/8/sessions/4/attendance`); expect(page.summary().pending).toBe(1);
+    http.expectOne(`${base}/instructors/8/sessions/4/attendance`).flush({ ...row, id: '4', date: '2026-10-07', editable: true, status: 'PRESENT' }); expect(page.summary().pending).toBe(1);
+    expect(page.dateWarning(page.sessions()[1])).toContain('futura');
     page.setStateFilter('PENDING'); http.expectOne(`${base}/instructors/8/attendance?courseId=2`).flush(data);
     expect(page.filteredSessions()).toHaveLength(1);
+  });
+  it('sorts dates descending and allows past dates with a warning', () => {
+    const page = fixture.componentInstance; page.setStateFilter('ALL');
+    http.expectOne(`${base}/instructors/8/attendance?courseId=2`).flush({ ...data, sessions: [
+      { ...row, id: 'past', date: '2026-10-05' }, row,
+      { ...row, id: 'late', startTime: '18:00' },
+      { ...row, id: 'future', date: '2026-10-07', editable: false }
+    ] }); fixture.detectChanges();
+    expect(page.visibleSessions().map(session => session.id)).toEqual(['future', 'late', '3', 'past']);
+    const past = page.sessions().find(session => session.id === 'past')!;
+    expect(page.canMark(past)).toBe(true); expect(page.dateWarning(past)).toContain('ya pasó');
+    page.mark(past, 'PRESENT');
+    http.expectOne(`${base}/instructors/8/sessions/past/attendance`).flush({ ...past, status: 'PRESENT' });
+    const rows = fixture.nativeElement.querySelectorAll('.session-row');
+    expect(rows[3].querySelector('button').disabled).toBe(false);
+    expect(rows[3].querySelector('[role="note"]').textContent).toContain('Advertencia');
+    expect(rows[1].querySelector('button').disabled).toBe(false);
   });
   it('cancels pending saves and clears data when another instructor is selected', () => {
     const page=fixture.componentInstance; page.mark(page.sessions()[0],'PRESENT'); const request=http.expectOne(`${base}/instructors/8/sessions/3/attendance`);
@@ -87,7 +105,7 @@ describe('InstructorAttendancePage', () => {
   });
   it('paginates eight rows and filters saved absences', () => {
     const page=fixture.componentInstance; page.sessions.set(Array.from({length:17},(_,i)=>({...row,id:String(i),status:i===16?'ABSENT' as const:null})));
-    expect(page.visibleSessions()).toHaveLength(8); page.changePage(1); expect(page.visibleSessions()[0].id).toBe('8');
+    expect(page.visibleSessions()).toHaveLength(8); page.changePage(1); expect(page.visibleSessions()[0].id).toBe('7');
     const sessions=page.sessions(); page.setStateFilter('ABSENT'); http.expectOne(`${base}/instructors/8/attendance?courseId=2`).flush({...data,sessions});
     expect(page.visibleSessions()).toHaveLength(1); expect(page.visibleSessions()[0].id).toBe('16'); expect(page.summary().absent).toBe(1);
   });

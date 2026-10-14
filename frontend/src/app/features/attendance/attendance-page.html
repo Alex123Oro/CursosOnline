@@ -9,6 +9,21 @@
       @if (selectedSession(); as selected) {
         @if (!selected.editable) { <p class="notice" role="status">Esta es una sesión futura. Podrás marcar asistencia el día de la clase.</p> }
         <div class="roster-summary"><strong>{{ students().length }} alumnos inscritos</strong><span>{{ sessionCounts().present }} presentes · {{ sessionCounts().absent }} ausentes · {{ sessionCounts().unmarked }} sin marcar</span></div>
+        @if (identity.currentUser()?.role === 'INSTRUCTOR') {
+          <div class="bulk-attendance">
+            <button class="mark-all-present" type="button" (click)="markAllPresent()"
+              [disabled]="loading() || anySaving() || !selected.editable || !students().length || allPresent()">
+              {{ bulkResult().saving ? 'Guardando asistencia…' : 'Marcar todos presentes' }}
+            </button>
+            <span class="helper">Se aplica a todos los alumnos inscritos de esta sesión, incluso con una búsqueda o en otras páginas.</span>
+          </div>
+          @if (bulkResult().total) {
+            <p class="notice" role="status" aria-live="polite">
+              {{ bulkResult().saved }} de {{ bulkResult().total }} marcas guardadas.
+              @if (bulkResult().failed) { {{ bulkResult().failed }} no se pudieron guardar. Reintenta con el botón o desde las filas correspondientes. }
+            </p>
+          }
+        }
         <div class="roster"><div class="roster-heading" aria-hidden="true"><span>Alumno</span><span>Asistencia de esta clase</span><span>Resumen del curso</span></div><ul>
         @for (student of visibleStudents(); track student.enrollmentId) {
           <li class="student-row"><strong class="student-name">{{ student.name }}</strong>

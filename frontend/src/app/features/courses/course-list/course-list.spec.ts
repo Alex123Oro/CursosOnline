@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Course } from '../../../core/course.service';
 import { CourseList } from './course-list';
+import { provideRouter } from '@angular/router';
 
 describe('CourseList', () => {
   let fixture: ComponentFixture<CourseList>;
@@ -30,7 +31,7 @@ describe('CourseList', () => {
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [CourseList] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [CourseList], providers: [provideRouter([])] }).compileComponents();
     fixture = TestBed.createComponent(CourseList);
     component = fixture.componentInstance;
   });
@@ -52,5 +53,11 @@ describe('CourseList', () => {
 
     expect(publishButton?.disabled).toBe(false);
     expect(getComputedStyle(publishButton!).cursor).toBe('pointer');
+  });
+  it('offers a classes link only for published courses', () => {
+    fixture.componentRef.setInput('courses', [course]); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    fixture.componentRef.setInput('courses', [{ ...course, status: 'PUBLISHED' }]); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/cursos/1/sesiones');
   });
 });

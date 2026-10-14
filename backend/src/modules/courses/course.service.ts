@@ -17,6 +17,7 @@ const courseSelect = {
   startDate: true,
   endDate: true,
   capacity: true,
+  minimumEnrollment: true,
   preinscriptionStart: true,
   preinscriptionEnd: true,
   prices: { select: { participantTypeId: true, basePrice: true, participantType: { select: { name: true } } } },
@@ -41,6 +42,7 @@ const toCourseResponse = (course: CourseRecord) => ({
   startDate: course.startDate ? course.startDate.toISOString().slice(0, 10) : null,
   endDate: course.endDate ? course.endDate.toISOString().slice(0, 10) : null,
   capacity: course.capacity,
+  minimumEnrollment: course.minimumEnrollment,
   occupiedSlots: course._count.enrollments,
   remainingSlots: course.capacity === null ? null : Math.max(0, course.capacity - course._count.enrollments),
   preinscriptionStart: course.preinscriptionStart ? course.preinscriptionStart.toISOString().slice(0, 10) : null,
@@ -52,9 +54,10 @@ const toCourseResponse = (course: CourseRecord) => ({
 });
 
 const toCourseData = (input: CourseInput): Prisma.CourseUncheckedCreateInput => {
-  const { instructorId, status, ...fields } = input;
+  const { instructorId, status, minimumEnrollment, ...fields } = input;
   return {
   ...fields,
+  ...(minimumEnrollment === undefined ? {} : { minimumEnrollment }),
   ...(instructorId === undefined ? {} : { instructorId }),
   approvalCriteria: input.approvalCriteria ?? null,
   preinscriptionStart: input.preinscriptionStart ? new Date(input.preinscriptionStart) : null,
@@ -171,9 +174,12 @@ export const courseService = {
     try {
       const existing = await prisma.course.findUnique({
         where: { id },
-        select: { id: true, status: true, instructorId: true }
+        select: { id: true, status: true, instructorId: true, minimumEnrollment: true }
       });
       if (!existing) throw new HttpError(404, 'Curso no encontrado.');
+      if (input.capacity != null && (input.minimumEnrollment ?? existing.minimumEnrollment ?? 1) > input.capacity) {
+        throw new HttpError(400, 'El mínimo de inscritos no puede superar la capacidad del curso.');
+      }
       if (existing.status === 'PUBLISHED' && (!input.startDate || !input.endDate)) {
         throw new HttpError(400, 'Un curso publicado debe conservar sus fechas de inicio y fin.');
       }

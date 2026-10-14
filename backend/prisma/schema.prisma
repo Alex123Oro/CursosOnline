@@ -78,6 +78,7 @@ model Course {
   startDate            DateTime?      @map("fecha_inicio")
   endDate              DateTime?      @map("fecha_fin")
   capacity             Int?           @map("capacidad")
+  minimumEnrollment    Int            @default(1) @map("minimo_inscritos")
   preinscriptionStart  DateTime?      @map("fecha_inicio_preinscripcion")
   preinscriptionEnd    DateTime?      @map("fecha_fin_preinscripcion")
   createdAt            DateTime       @default(now()) @map("created_at")
