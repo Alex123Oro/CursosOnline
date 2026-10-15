@@ -201,6 +201,7 @@ describe('confirmacion de inscripcion', () => {
     enrollmentFindUnique.mockResolvedValue({
       ...includeRecord,
       scholarshipPercent: 100,
+      scholarshipActive: true,
       benefitAmount: 500,
       finalAmount: 0,
       payment: null
@@ -220,6 +221,12 @@ describe('confirmacion de inscripcion', () => {
     await expect(enrollmentService.confirm(10)).rejects.toMatchObject({
       message: 'No existen cupos disponibles.'
     });
+  });
+
+  it('confirma con beca desactivada y pago del precio base sin aplicar el porcentaje histórico', async () => {
+    enrollmentFindUnique.mockResolvedValue({ ...includeRecord, scholarshipActive: false, scholarshipPercent: 50,
+      payment: { id: 1, amount: 500, registeredAt: new Date() } });
+    await expect(enrollmentService.confirm(10)).resolves.toMatchObject({ status: 'INSCRITO' });
   });
 
   it('desactiva la beca, conserva su historial y restaura el importe base', async () => {

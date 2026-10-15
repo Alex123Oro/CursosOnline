@@ -2,10 +2,18 @@ import type { Request, Response } from 'express';
 import { currentUser } from '../../shared/auth.js';
 import { parsePositiveInt, paymentSchema, scholarshipSchema } from '../courses/course.rules.js';
 import { enrollmentService } from './enrollment.service.js';
+import { enrollmentQuerySchema } from './enrollment-query.js';
 
 export const enrollmentController = {
-  async list(_request: Request, response: Response) {
-    response.json(await enrollmentService.list());
+  async list(request: Request, response: Response) {
+    response.json(Object.keys(request.query).length
+      ? await enrollmentService.listPage(enrollmentQuerySchema.parse(request.query))
+      : await enrollmentService.list());
+  },
+  async courses(_request: Request, response: Response) { response.json(await enrollmentService.courseSummaries()); },
+  async detail(request: Request, response: Response) {
+    const id = parsePositiveInt(request.params.id, 'El identificador de la inscripción no es válido.');
+    response.json(await enrollmentService.detail(id));
   },
 
   async preenroll(request: Request, response: Response) {

@@ -1,113 +1,124 @@
-<section class="page-header">
-  <div>
+<section class="enrollments-workspace">
+  <header class="page-header">
     <p class="eyebrow">ADMINISTRACIÓN / INSCRIPCIONES</p>
-    <h1>Preinscritos e inscripciones</h1>
-    <p class="subtitle">Consulta participantes, asigna becas, verifica pagos y confirma la inscripción.</p>
-  </div>
-</section>
-
-@if (feedback()) {
-  <p class="app-feedback">{{ feedback() }}</p>
-}
-
-<section class="table-card">
-  <app-enrollment-list
-    [enrollments]="enrollments()"
-    [loading]="isLoading()"
-    (assignScholarship)="openScholarship($event)"
-    (deactivateScholarship)="deactivateScholarship($event)"
-    (registerPayment)="openPayment($event)"
-    (confirmEnrollment)="openConfirm($event)">
-  </app-enrollment-list>
-</section>
-
-@if (modal() === 'scholarship' && selected(); as enrollment) {
-  <div class="modal-backdrop" (click)="closeModal()">
-    <section class="modal form-modal" (click)="$event.stopPropagation()">
-      <button class="close" (click)="closeModal()">×</button>
-      <p class="eyebrow">ASIGNAR BECA</p>
-      <h2>{{ enrollment.participantName }}</h2>
-      <form [formGroup]="scholarshipForm" (ngSubmit)="saveScholarship()" class="course-form">
-        <label class="full">
-          <span>Porcentaje de beca *</span>
-          <input type="number" min="0" max="100" formControlName="scholarshipPercent">
-          @if (scholarshipForm.controls.scholarshipPercent.invalid && scholarshipForm.controls.scholarshipPercent.touched) {
-            <small>El porcentaje de beca debe estar entre 0 % y 100 %.</small>
-          }
-        </label>
-        <label class="full">
-          <span>Motivo *</span>
-          <textarea rows="3" formControlName="reason" placeholder="Motivo de autorización de la beca"></textarea>
-          @if (scholarshipForm.controls.reason.invalid && scholarshipForm.controls.reason.touched) { <small>Indica el motivo de la beca.</small> }
-        </label>
-        @if (previewAmounts(); as amounts) {
-          <div class="economic full">
-            <p>Precio base: {{ enrollment.basePrice }} Bs</p>
-            <p>Beneficio aplicado: {{ scholarshipForm.controls.scholarshipPercent.value }} % (-{{ amounts.benefitAmount }} Bs)</p>
-            <strong>Monto final: {{ amounts.finalAmount }} Bs</strong>
+    <h1>Inscripciones</h1>
+    <p>Selecciona un curso para consultar sus participantes y gestionar sus inscripciones.</p>
+  </header>
+  <nav class="enrollment-tabs" aria-label="Estado de las inscripciones">
+    <a
+      routerLink="/inscripciones"
+      [queryParams]="tabQuery('PREINSCRITO')"
+      [class.active]="state().status === 'PREINSCRITO'"
+      [attr.aria-current]="state().status === 'PREINSCRITO' ? 'page' : null"
+      >Preinscritos</a
+    >
+    <a
+      routerLink="/inscripciones"
+      [queryParams]="tabQuery('INSCRITO')"
+      [class.active]="state().status === 'INSCRITO'"
+      [attr.aria-current]="state().status === 'INSCRITO' ? 'page' : null"
+      >Inscritos</a
+    >
+  </nav>
+  <section class="course-selection" aria-label="Seleccionar curso">
+    @if (coursesLoading()) {
+      <p role="status">Cargando cursos…</p>
+    } @else if (coursesError()) {
+      <p class="error" role="alert">{{ coursesError() }}</p>
+      <button class="secondary-btn" (click)="retryCourses()">Reintentar</button>
+    } @else {
+      <app-enrollment-course-picker
+        [courses]="courses()"
+        [value]="state().courseId"
+        [status]="state().status"
+        (changeCourse)="selectCourse($event)"
+      />
+    }
+  </section>
+  @if (selectedCourse(); as course) {
+    <section class="course-summary" aria-label="Resumen del curso">
+      <div>
+        <p class="eyebrow">
+          {{ course.code || 'CURSO' }}{{ course.status === 'DRAFT' ? ' · BORRADOR' : '' }}
+        </p>
+        <h2>{{ course.name }}</h2>
+      </div>
+      <dl>
+        <div>
+          <dt>Capacidad</dt>
+          <dd>{{ course.capacity ?? 'Sin definir' }}</dd>
+        </div>
+        <div>
+          <dt>Preinscritos</dt>
+          <dd>{{ course.preenrolledCount }}</dd>
+        </div>
+        <div>
+          <dt>Inscritos</dt>
+          <dd>{{ course.enrolledCount }}</dd>
+        </div>
+      </dl>
+    </section>
+  }
+  @if (!state().courseId) {
+    <section class="empty-state">
+      <span class="empty-symbol" aria-hidden="true">↗</span>
+      <h2>Selecciona un curso para ver sus participantes</h2>
+      <p>
+        Elige un curso en el buscador. Aquí aparecerán únicamente sus
+        {{ state().status === 'INSCRITO' ? 'inscritos' : 'preinscritos' }}.
+      </p>
+    </section>
+  } @else {
+    <section class="participants-panel" aria-label="Participantes del curso">
+      <div class="list-toolbar">
+        <label for="participant-search"
+          >Buscar participante<input
+            id="participant-search"
+            type="search"
+            maxlength="100"
+            placeholder="Nombre o correo electrónico"
+            [value]="searchText()"
+            (input)="onSearch($any($event.target).value)" /></label
+        ><span class="result-count" role="status">{{
+          isLoading() ? 'Cargando…' : total() + ' resultados'
+        }}</span>
+      </div>
+      @if (error()) {
+        <div class="empty-state">
+          <p class="error" role="alert">{{ error() }}</p>
+          <button class="secondary-btn" (click)="retryList()">Reintentar</button>
+        </div>
+      } @else {
+        <app-enrollment-list
+          [enrollments]="enrollments()"
+          [loading]="isLoading()"
+          [status]="state().status"
+          [context]="context()"
+        />
+      }
+      @if (!error() && !isLoading()) {
+        <div class="pagination">
+          <span>{{ firstRow() }}–{{ lastRow() }} de {{ total() }}</span>
+          <div>
+            <button
+              class="secondary-btn"
+              aria-label="Página anterior"
+              [disabled]="state().page <= 1"
+              (click)="changePage(-1)"
+            >
+              Anterior</button
+            ><span>Página {{ state().page }} de {{ totalPages() }}</span
+            ><button
+              class="secondary-btn"
+              aria-label="Página siguiente"
+              [disabled]="state().page >= totalPages()"
+              (click)="changePage(1)"
+            >
+              Siguiente
+            </button>
           </div>
-        }
-        <div class="form-actions full">
-          <button type="button" class="secondary-btn" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="primary-btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando...' : 'Guardar beca' }}</button>
         </div>
-      </form>
+      }
     </section>
-  </div>
-}
-
-@if (modal() === 'deactivate' && selected(); as enrollment) {
-  <div class="modal-backdrop" (click)="closeModal()"><section class="modal form-modal" (click)="$event.stopPropagation()">
-    <p class="eyebrow">DESACTIVAR BECA</p><h2>¿Desactivar la beca de {{ enrollment.participantName }}?</h2>
-    <p>El monto a pagar volverá al precio base de {{ enrollment.basePrice }} Bs.</p>
-    <div class="form-actions"><button class="secondary-btn" (click)="closeModal()">Cancelar</button><button class="primary-btn" [disabled]="isSaving()" (click)="confirmDeactivateScholarship()">Desactivar beca</button></div>
-  </section></div>
-}
-
-@if (modal() === 'payment' && selected(); as enrollment) {
-  <div class="modal-backdrop" (click)="closeModal()">
-    <section class="modal form-modal" (click)="$event.stopPropagation()">
-      <button class="close" (click)="closeModal()">×</button>
-      <p class="eyebrow">REGISTRAR PAGO</p>
-      <h2>{{ enrollment.participantName }}</h2>
-      <form [formGroup]="paymentForm" (ngSubmit)="savePayment()" class="course-form">
-        <div class="economic full">
-          <p>Precio base: {{ enrollment.basePrice }} Bs</p>
-          <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
-          <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
-        </div>
-        <label class="full">
-          <span>Monto (Bs) *</span>
-          <input type="number" min="0" step="0.01" formControlName="amount">
-          @if (paymentForm.controls.amount.invalid && paymentForm.controls.amount.touched) {
-            <small>El monto no puede ser negativo.</small>
-          }
-        </label>
-        <div class="form-actions full">
-          <button type="button" class="secondary-btn" (click)="closeModal()">Cancelar</button>
-          <button type="submit" class="primary-btn" [disabled]="isSaving()">{{ isSaving() ? 'Guardando...' : 'Registrar pago' }}</button>
-        </div>
-      </form>
-    </section>
-  </div>
-}
-
-@if (modal() === 'confirm' && selected(); as enrollment) {
-  <div class="modal-backdrop" (click)="closeModal()">
-    <section class="modal form-modal" (click)="$event.stopPropagation()">
-      <button class="close" (click)="closeModal()">×</button>
-      <p class="eyebrow">CONFIRMAR INSCRIPCIÓN</p>
-      <h2>¿Confirmar la inscripción de este participante?</h2>
-      <div class="economic">
-        <p>{{ enrollment.participantName }} · {{ enrollment.courseName }}</p>
-        <p>Precio base: {{ enrollment.basePrice }} Bs</p>
-        <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
-        <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
-      </div>
-      <div class="form-actions">
-        <button type="button" class="secondary-btn" (click)="closeModal()">Cancelar</button>
-        <button type="button" class="primary-btn" [disabled]="isSaving()" (click)="confirmSelected()">{{ isSaving() ? 'Confirmando...' : 'Confirmar inscripción' }}</button>
-      </div>
-    </section>
-  </div>
-}
+  }
+</section>

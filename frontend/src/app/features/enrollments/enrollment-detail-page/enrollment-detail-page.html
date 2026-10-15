@@ -1,0 +1,271 @@
+<section class="enrollment-detail">
+  <a class="back-link" routerLink="/inscripciones" [queryParams]="backQuery()"
+    >← Volver a inscripciones</a
+  >
+  @if (loading()) {
+    <div class="state-card" role="status">Cargando inscripción…</div>
+  } @else if (loadError()) {
+    <div class="state-card">
+      <h1>No se pudo abrir la inscripción</h1>
+      <p class="error" role="alert">{{ loadError() }}</p>
+      <button class="secondary-btn" (click)="retry()">Reintentar</button>
+    </div>
+  } @else if (enrollment(); as row) {
+    <header class="detail-header">
+      <div>
+        <p class="eyebrow">{{ row.courseCode }} / {{ row.courseName }}</p>
+        <h1>{{ row.participantName }}</h1>
+        <p>{{ row.participantEmail }} · {{ row.participantTypeName }}</p>
+      </div>
+      <span class="status" [class.confirmed]="row.status === 'INSCRITO'">{{
+        row.status === 'INSCRITO' ? 'Inscrito' : 'Preinscrito'
+      }}</span>
+    </header>
+    @if (feedback()) {
+      <div class="feedback" role="status">
+        {{ feedback() }}
+        @if (confirmed()) {
+          <a routerLink="/inscripciones" [queryParams]="enrolledQuery()"
+            >Ver inscritos de este curso →</a
+          >
+        }
+      </div>
+    }
+    @if (error()) {
+      <p class="error error-card" role="alert">{{ error() }}</p>
+    }
+    <div class="detail-grid">
+      <section class="card">
+        <h2>Información de la inscripción</h2>
+        <dl class="details">
+          <div>
+            <dt>Curso</dt>
+            <dd>
+              {{ row.courseName }}<small>{{ row.courseCode }}</small>
+            </dd>
+          </div>
+          <div>
+            <dt>Categoría</dt>
+            <dd>{{ row.participantTypeName }}</dd>
+          </div>
+          <div>
+            <dt>Preinscripción</dt>
+            <dd>{{ date(row.createdAt) }}</dd>
+          </div>
+          @if (row.confirmedAt) {
+            <div>
+              <dt>Confirmación</dt>
+              <dd>{{ date(row.confirmedAt) }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+      <section class="card financial">
+        <p class="eyebrow">RESUMEN ECONÓMICO</p>
+        <h2>{{ row.finalAmount }} <span>Bs</span></h2>
+        <dl class="details">
+          <div>
+            <dt>Precio base</dt>
+            <dd>{{ row.basePrice }} Bs</dd>
+          </div>
+          <div>
+            <dt>Beneficio aplicado</dt>
+            <dd>
+              {{ row.benefitAmount }} Bs ·
+              {{ row.scholarshipActive ? row.scholarshipPercent : 0 }} %
+            </dd>
+          </div>
+          <div>
+            <dt>Pago</dt>
+            <dd>{{ paymentLabel(row.paymentStatus) }}</dd>
+          </div>
+          @if (row.paymentAmount !== null) {
+            <div>
+              <dt>Monto registrado</dt>
+              <dd>{{ row.paymentAmount }} Bs</dd>
+            </div>
+          }
+          @if (row.paymentRegisteredAt) {
+            <div>
+              <dt>Fecha del pago</dt>
+              <dd>{{ date(row.paymentRegisteredAt) }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+      <section class="card">
+        <h2>Beca</h2>
+        <p>
+          {{
+            row.scholarshipActive
+              ? 'Beca activa del ' + row.scholarshipPercent + ' %'
+              : 'Sin beca activa'
+          }}
+        </p>
+        @if (row.scholarshipReason) {
+          <p class="note">{{ row.scholarshipReason }}</p>
+        }
+        <button
+          class="secondary-btn"
+          [disabled]="isSaving()"
+          [attr.aria-expanded]="action() === (row.scholarshipActive ? 'deactivate' : 'scholarship')"
+          aria-controls="enrollment-action"
+          (click)="open(row.scholarshipActive ? 'deactivate' : 'scholarship')"
+        >
+          {{ row.scholarshipActive ? 'Desactivar beca' : 'Asignar beca' }}
+        </button>
+      </section>
+      <section class="card">
+        <h2>Pago y confirmación</h2>
+        <p>
+          {{
+            row.status === 'INSCRITO'
+              ? 'La inscripción ya está confirmada.'
+              : 'Para confirmar, se requiere el pago completo o un importe final de 0 Bs. También se verifican los cupos.'
+          }}
+        </p>
+        <div class="actions">
+          <button
+            class="secondary-btn"
+            [disabled]="isSaving() || row.finalAmount === 0"
+            [attr.aria-expanded]="action() === 'payment'"
+            aria-controls="enrollment-action"
+            (click)="open('payment')"
+          >
+            {{ row.paymentAmount !== null ? 'Actualizar pago' : 'Registrar pago' }}
+          </button>
+          @if (row.status === 'PREINSCRITO') {
+            <button
+              class="primary-btn"
+              [disabled]="isSaving() || !canConfirm()"
+              [attr.aria-expanded]="action() === 'confirm'"
+              aria-controls="enrollment-action"
+              (click)="open('confirm')"
+            >
+              Confirmar inscripción
+            </button>
+          }
+        </div>
+      </section>
+    </div>
+    @if (action()) {
+      <section
+        #actionPanel
+        id="enrollment-action"
+        class="card action-panel"
+        tabindex="-1"
+        aria-labelledby="action-title"
+      >
+        @switch (action()) {
+          @case ('scholarship') {
+            <h2 id="action-title">Asignar beca</h2>
+            <form [formGroup]="scholarshipForm" (ngSubmit)="saveScholarship()">
+              <fieldset [disabled]="isSaving()">
+                <label
+                  >Porcentaje de beca<input
+                    type="number"
+                    min="0"
+                    max="100"
+                    formControlName="scholarshipPercent"
+                /></label>
+                @if (
+                  scholarshipForm.controls.scholarshipPercent.invalid &&
+                  scholarshipForm.controls.scholarshipPercent.touched
+                ) {
+                  <small class="error">Ingresa un porcentaje entre 0 y 100.</small>
+                }
+                <label>Motivo<textarea rows="3" formControlName="reason"></textarea></label>
+                @if (
+                  scholarshipForm.controls.reason.invalid && scholarshipForm.controls.reason.touched
+                ) {
+                  <small class="error">Indica un motivo de al menos 3 caracteres.</small>
+                }
+                <p class="preview">
+                  Beneficio: {{ preview().benefitAmount }} Bs · Monto final:
+                  <strong>{{ preview().finalAmount }} Bs</strong>
+                </p>
+              </fieldset>
+              <div class="actions">
+                <button
+                  type="button"
+                  class="secondary-btn"
+                  [disabled]="isSaving()"
+                  (click)="cancel()"
+                >
+                  Cancelar</button
+                ><button class="primary-btn" type="submit" [disabled]="isSaving()">
+                  {{ isSaving() ? 'Guardando…' : 'Guardar beca' }}
+                </button>
+              </div>
+            </form>
+          }
+          @case ('payment') {
+            <h2 id="action-title">Registrar pago</h2>
+            <p>
+              Monto final del curso: {{ row.finalAmount }} Bs. El importe registrado sustituye el
+              pago anterior; no se suma.
+            </p>
+            <form [formGroup]="paymentForm" (ngSubmit)="savePayment()">
+              <fieldset [disabled]="isSaving()">
+                <label
+                  >Monto registrado (Bs)<input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    formControlName="amount"
+                /></label>
+                @if (paymentForm.controls.amount.invalid && paymentForm.controls.amount.touched) {
+                  <small class="error">Ingresa un monto válido y no negativo.</small>
+                }
+              </fieldset>
+              <div class="actions">
+                <button
+                  type="button"
+                  class="secondary-btn"
+                  [disabled]="isSaving()"
+                  (click)="cancel()"
+                >
+                  Cancelar</button
+                ><button class="primary-btn" type="submit" [disabled]="isSaving()">
+                  {{ isSaving() ? 'Guardando…' : 'Guardar pago' }}
+                </button>
+              </div>
+            </form>
+          }
+          @case ('deactivate') {
+            <h2 id="action-title">¿Desactivar la beca?</h2>
+            <p>
+              El importe final volverá al precio base de {{ row.basePrice }} Bs. El pago registrado
+              se conservará.
+            </p>
+            <div class="actions">
+              <button class="secondary-btn" [disabled]="isSaving()" (click)="cancel()">
+                Cancelar</button
+              ><button class="primary-btn" [disabled]="isSaving()" (click)="deactivate()">
+                {{ isSaving() ? 'Guardando…' : 'Desactivar beca' }}
+              </button>
+            </div>
+          }
+          @case ('confirm') {
+            <h2 id="action-title">Confirmar inscripción</h2>
+            <p>
+              Vas a confirmar la inscripción de <strong>{{ row.participantName }}</strong> en
+              {{ row.courseName }}. Importe final: {{ row.finalAmount }} Bs.
+            </p>
+            <div class="actions">
+              <button class="secondary-btn" [disabled]="isSaving()" (click)="cancel()">
+                Cancelar</button
+              ><button
+                class="primary-btn"
+                [disabled]="isSaving() || !canConfirm()"
+                (click)="confirm()"
+              >
+                {{ isSaving() ? 'Confirmando…' : 'Confirmar ahora' }}
+              </button>
+            </div>
+          }
+        }
+      </section>
+    }
+  }
+</section>
