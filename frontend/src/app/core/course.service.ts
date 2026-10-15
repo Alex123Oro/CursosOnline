@@ -32,6 +32,7 @@ export interface Course {
   minimumEnrollment?: number;
   remainingSlots: number | null;
   occupiedSlots: number;
+  enrolledCount?: number;
   preinscriptionStart: string | null;
   preinscriptionEnd: string | null;
   prices: CoursePrice[];
@@ -51,7 +52,7 @@ export interface CoursePayload {
   durationHours: number;
   instructor: string;
   instructorId?: string;
-  schedule: string;
+  schedule?: string;
   approvalCriteria: string;
   status?: CourseStatus;
   startDate?: string | null;
@@ -97,6 +98,10 @@ export class CourseService {
 
   publish(id: string): Observable<Course> {
     return this.http.patch<Course>(`${this.apiUrl}/${id}/publish`, {});
+  }
+
+  unpublish(id: string): Observable<Course> {
+    return this.http.patch<Course>(`${this.apiUrl}/${id}/unpublish`, {});
   }
 
   participantTypes(): Observable<ParticipantTypeOption[]> {

@@ -2,9 +2,10 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionRoutes, teachingRoutes } from '../src/modules/course-sessions/course-session.routes.js';
+import { courseRoutes } from '../src/modules/courses/course.routes.js';
 import { errorMiddleware } from '../src/shared/error.middleware.js';
 let server: Server; let base: string;
 const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-11-12') };
@@ -17,7 +18,7 @@ describe('session HTTP contract and authorization', () => {
     if (status !== 204) expect(mocks.courseSession.delete).not.toHaveBeenCalled();
   });
   beforeAll(async () => {
-    const app = express(); app.use(express.json()); app.use('/api/courses', courseSessionRoutes); app.use('/api/teaching', teachingRoutes); app.use(errorMiddleware);
+    const app = express(); app.use(express.json()); app.use('/api/courses', courseSessionRoutes); app.use('/api/courses', courseRoutes); app.use('/api/teaching', teachingRoutes); app.use(errorMiddleware);
     server = await new Promise<Server>(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); });
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
   });
@@ -83,8 +84,51 @@ describe('session HTTP contract and authorization', () => {
     const weekly = await fetch(`${base}/courses/2/sessions/schedule`, { method: 'POST', headers, body: JSON.stringify({ startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1, 3], startTime: '18:00', durationMinutes: 90 }) });
     expect(weekly.status).toBe(201);
   });
+  it.each(['single', 'weekly'])('breaks the draft/publication cycle through the API with %s classes', async mode => {
+    const headers = { 'X-User-Id': '1', 'Content-Type': 'application/json' };
+    const draft = { ...course, status: 'DRAFT', schedule: null, capacity: 20,
+      preinscriptionStart: new Date('2026-09-01'), preinscriptionEnd: new Date('2026-09-30'),
+      sessions: [] as typeof record[], prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() };
+    mocks.course.findUnique.mockImplementation(async () => draft);
+    mocks.course.update.mockImplementation(async ({ data }) => Object.assign(draft, data));
+    expect((await fetch(`${base}/courses/2/sessions`, { headers })).status).toBe(200);
+    expect((await fetch(`${base}/courses/2/publish`, { method: 'PATCH', headers })).status).toBe(400);
+    mocks.courseSession.create.mockImplementation(async () => { draft.sessions.push(record); return record; });
+    mocks.courseSession.createManyAndReturn.mockImplementation(async () => { draft.sessions.push(record); return [record]; });
+    const response = await fetch(`${base}/courses/2/sessions${mode === 'weekly' ? '/schedule' : ''}`, {
+      method: 'POST', headers, body: JSON.stringify(mode === 'single' ? payload : {
+        startDate: '2026-10-12', endDate: '2026-10-12', weekdays: [1], startTime: '19:00', durationMinutes: 120
+      })
+    });
+    expect(response.status).toBe(201);
+    const published = await fetch(`${base}/courses/2/publish`, { method: 'PATCH', headers });
+    expect(published.status).toBe(200);
+    expect(await published.json()).toMatchObject({ status: 'PUBLISHED', schedule: 'Dom 19:00–21:00' });
+  });
   it('rejects invalid batches without saving any sessions', async () => {
     const response = await fetch(`${base}/courses/2/sessions/schedule`, { method: 'POST', headers: { 'X-User-Id': '8', 'Content-Type': 'application/json' }, body: JSON.stringify({ startDate: '2026-10-12', endDate: '2026-02-30', weekdays: [1], startTime: '18:00', durationMinutes: 90 }) });
     expect(response.status).toBe(400); expect(mocks.courseSession.createManyAndReturn).not.toHaveBeenCalled();
+  });
+  it('returns a published course to draft without deleting its classes or enrollments, and allows publishing again', async () => {
+    const existing = { ...course, capacity: 20, schedule: null, sessions: [record],
+      preinscriptionStart: new Date('2026-09-01'), preinscriptionEnd: new Date('2026-09-30'),
+      prices: [{ participantTypeId: 1, participantType: { name: 'Estudiante' }, basePrice: 100 }],
+      enrollments: [{ status: 'INSCRITO' }], _count: { enrollments: 2 }, createdAt: new Date(), updatedAt: new Date() };
+    mocks.course.findUnique.mockResolvedValue(existing);
+    mocks.course.update.mockImplementation(async ({ data }) => Object.assign(existing, data));
+    const headers = { 'X-User-Id': '1' };
+    const draft = await fetch(`${base}/courses/2/unpublish`, { method: 'PATCH', headers });
+    expect(draft.status).toBe(200);
+    expect(await draft.json()).toMatchObject({ status: 'DRAFT', occupiedSlots: 2, enrolledCount: 1, prices: [{ basePrice: 100 }] });
+    expect(mocks.course.update.mock.calls[0][0].data).toEqual({ status: 'DRAFT' });
+    expect(mocks.courseSession.delete).not.toHaveBeenCalled();
+    const published = await fetch(`${base}/courses/2/publish`, { method: 'PATCH', headers });
+    expect(published.status).toBe(200);
+    expect(await published.json()).toMatchObject({ status: 'PUBLISHED', occupiedSlots: 2 });
+  });
+  it.each([['', 401], ['8', 403], ['10', 403]])('restricts unpublishing to administrators: %s', async (id, status) => {
+    const response = await fetch(`${base}/courses/2/unpublish`, { method: 'PATCH', headers: id ? { 'X-User-Id': id } : {} });
+    expect(response.status).toBe(status);
+    expect(mocks.course.update).not.toHaveBeenCalled();
   });
 });

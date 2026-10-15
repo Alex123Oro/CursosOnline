@@ -1,36 +1,41 @@
-<section class="page-header">
+<section class="page-header" [class.create-header]="isFormPage">
   <div>
-    <p class="eyebrow">ADMINISTRACIÓN / CURSOS</p>
-    <h1>Cursos y lanzamientos</h1>
-    <p class="subtitle">Registra y administra los cursos de formación continua.</p>
+    <p class="eyebrow">{{ isCreatePage ? 'ADMINISTRACIÓN / CURSOS / NUEVO' : isEditPage ? 'ADMINISTRACIÓN / CURSOS / EDITAR' : 'ADMINISTRACIÓN / CURSOS' }}</p>
+    <h1>{{ isCreatePage ? 'Nuevo curso' : isEditPage ? 'Editar curso' : 'Cursos y lanzamientos' }}</h1>
+    <p class="subtitle">{{ isCreatePage ? 'Define el curso y sus precios. Después programa las clases de su calendario.' : isEditPage ? 'Actualiza la información, los cupos y los precios del curso.' : 'Registra y administra los cursos de formación continua.' }}</p>
   </div>
-  <button class="primary-btn" (click)="openCreateForm()">+ Nuevo curso</button>
+  @if (isFormPage) {
+    <button type="button" class="back-btn" [disabled]="isSaving()" (click)="closeForm()">← Volver a cursos</button>
+  } @else {
+    <button class="primary-btn" (click)="openCreateForm()">+ Nuevo curso</button>
+  }
 </section>
 
-@if (feedback()) {
+@if (feedback() && !isFormOpen()) {
   <p class="app-feedback">{{ feedback() }}</p>
 }
 
-<section class="metrics">
+@if (isEditPage && isLoading()) { <p class="app-feedback" role="status">Cargando datos del curso…</p> }
+
+@if (!isFormPage) {
+<section class="metrics" aria-label="Resumen de cursos" [attr.aria-busy]="isLoading()">
   <article class="metric">
-    <span class="dot teal"></span>
-    <small>Cursos activos</small>
-    <strong>{{ courses().filter(course => course.status === 'PUBLISHED').length }}</strong>
+    <span class="dot teal" aria-hidden="true"></span>
+    <h2 class="metric-label">Cursos publicados</h2>
+    <strong>{{ isLoading() ? '…' : publishedCount() }}</strong>
+    <p>Visibles en el catálogo público.</p>
   </article>
-  <article class="metric muted">
-    <span class="dot mint"></span>
-    <small>Matrícula abierta</small>
-    <strong>—</strong>
+  <article class="metric">
+    <span class="dot mint" aria-hidden="true"></span>
+    <h2 class="metric-label">Preinscripción abierta</h2>
+    <strong>{{ isLoading() ? '…' : openPreinscriptionCount() }}</strong>
+    <p>Dentro del plazo y con cupos disponibles.</p>
   </article>
-  <article class="metric muted">
-    <span class="dot orange"></span>
-    <small>Periodo</small>
-    <strong>—</strong>
-  </article>
-  <article class="metric muted">
-    <span class="dot red"></span>
-    <small>Borradores</small>
-    <strong>{{ courses().filter(course => course.status !== 'PUBLISHED').length }}</strong>
+  <article class="metric">
+    <span class="dot orange" aria-hidden="true"></span>
+    <h2 class="metric-label">Borradores</h2>
+    <strong>{{ isLoading() ? '…' : draftCount() }}</strong>
+    <p>Pendientes de publicar o en corrección.</p>
   </article>
 </section>
 
@@ -38,13 +43,18 @@
   <app-course-list
     [courses]="courses()"
     [loading]="isLoading()"
+    [saving]="isSaving()"
     (editCourse)="openEditForm($event)"
-    (publishCourse)="publishCourse($event)">
+    (publishCourse)="publishCourse($event)"
+    (unpublishCourse)="unpublishCourse($event)">
   </app-course-list>
 </section>
 
+}
+
 @if (isFormOpen()) {
   <app-course-form
+    presentation="page"
     [mode]="formMode()"
     [course]="editingCourse()"
     [participantTypes]="participantTypes()"

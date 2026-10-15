@@ -1,166 +1,146 @@
-import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Component, effect, inject, signal, untracked } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { finalize } from 'rxjs';
-import { calculateEnrollmentAmount } from '../../../core/enrollment-amount';
-import { Enrollment, EnrollmentService } from '../../../core/enrollment.service';
-import { EnrollmentList } from '../enrollment-list/enrollment-list';
+import { Component, computed, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  Enrollment,
+  EnrollmentCourseSummary,
+  EnrollmentService,
+} from '../../../core/enrollment.service';
+import { EnrollmentStatus } from '../../../core/course.service';
 import { SessionService } from '../../../core/session.service';
-
-type ModalMode = 'scholarship' | 'payment' | 'confirm' | 'deactivate' | null;
+import { EnrollmentList } from '../enrollment-list/enrollment-list';
+import { EnrollmentCoursePicker } from '../course-picker';
+import { enrollmentParams, readEnrollmentQuery } from '../enrollment-navigation';
 
 @Component({
   selector: 'app-enrollments-page',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, EnrollmentList],
+  imports: [RouterLink, EnrollmentList, EnrollmentCoursePicker],
   templateUrl: './enrollments-page.html',
-  styleUrl: './enrollments-page.scss'
+  styleUrl: './enrollments-page.scss',
 })
 export class EnrollmentsPage {
-  private readonly enrollmentService = inject(EnrollmentService);
-  private readonly fb = inject(FormBuilder);
+  private readonly api = inject(EnrollmentService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly session = inject(SessionService);
-
+  private readonly params = toSignal(this.route.queryParamMap, {
+    initialValue: this.route.snapshot.queryParamMap,
+  });
+  readonly state = computed(() => readEnrollmentQuery(this.params()));
+  readonly context = computed(() => enrollmentParams(this.state()));
+  readonly courses = signal<EnrollmentCourseSummary[]>([]);
   readonly enrollments = signal<Enrollment[]>([]);
+  readonly coursesLoading = signal(false);
+  readonly coursesError = signal('');
   readonly isLoading = signal(false);
-  readonly isSaving = signal(false);
-  readonly feedback = signal('');
-  readonly modal = signal<ModalMode>(null);
-  readonly selected = signal<Enrollment | null>(null);
-
-  readonly scholarshipForm = this.fb.nonNullable.group({
-    scholarshipPercent: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
-    reason: ['', [Validators.required, Validators.minLength(3)]]
-  });
-
-  readonly paymentForm = this.fb.nonNullable.group({
-    amount: [0, [Validators.required, Validators.min(0)]]
-  });
-
+  readonly error = signal('');
+  readonly total = signal(0);
+  readonly totalPages = signal(1);
+  readonly searchText = signal('');
+  private readonly courseRetry = signal(0);
+  private readonly listRetry = signal(0);
+  private searchTimer: number | undefined;
+  readonly selectedCourse = computed(
+    () => this.courses().find((course) => course.id === this.state().courseId) ?? null
+  );
+  readonly firstRow = computed(() => (this.total() ? (this.state().page - 1) * 20 + 1 : 0));
+  readonly lastRow = computed(() => Math.min(this.state().page * 20, this.total()));
   constructor() {
-    effect(onCleanup => {
+    inject(DestroyRef).onDestroy(() => window.clearTimeout(this.searchTimer));
+    effect((onCleanup) => {
       const user = this.session.currentUser();
-      this.enrollments.set([]);
-      this.feedback.set('');
-      this.isLoading.set(false);
-      this.closeModal();
-      if (!user) return;
-      const subscription = untracked(() => this.loadEnrollments());
-      onCleanup(() => subscription.unsubscribe());
+      this.courseRetry();
+      untracked(() => {
+        this.courses.set([]);
+        this.coursesError.set('');
+        this.coursesLoading.set(false);
+        if (user?.role !== 'ADMIN') return;
+        this.coursesLoading.set(true);
+        const subscription = this.api.courses().subscribe({
+          next: (courses) => {
+            this.courses.set(courses);
+            this.coursesLoading.set(false);
+          },
+          error: () => {
+            this.coursesError.set('No se pudieron cargar los cursos.');
+            this.coursesLoading.set(false);
+          },
+        });
+        onCleanup(() => subscription.unsubscribe());
+      });
+    });
+    effect((onCleanup) => {
+      const state = this.state();
+      const user = this.session.currentUser();
+      this.listRetry();
+      untracked(() => {
+        window.clearTimeout(this.searchTimer);
+        this.searchText.set(state.search);
+        this.enrollments.set([]);
+        this.total.set(0);
+        this.totalPages.set(1);
+        this.error.set('');
+        this.isLoading.set(false);
+        if (user?.role !== 'ADMIN' || !state.courseId) return;
+        this.isLoading.set(true);
+        const subscription = this.api.listPage(state).subscribe({
+          next: (page) => {
+            this.enrollments.set(page.items);
+            this.total.set(page.total);
+            this.totalPages.set(page.totalPages);
+            this.isLoading.set(false);
+            if (page.page !== state.page)
+              void this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: enrollmentParams({ ...state, page: page.page }),
+                replaceUrl: true,
+              });
+          },
+          error: (error) => {
+            this.error.set(error.error?.message ?? 'No se pudieron cargar los participantes.');
+            this.isLoading.set(false);
+          },
+        });
+        onCleanup(() => subscription.unsubscribe());
+      });
     });
   }
-
-  previewAmounts() {
-    const enrollment = this.selected();
-    if (!enrollment) return null;
-    return calculateEnrollmentAmount(enrollment.basePrice, Number(this.scholarshipForm.controls.scholarshipPercent.value));
+  tabQuery(status: EnrollmentStatus) {
+    return enrollmentParams({ ...this.state(), status, page: 1 });
   }
-
-  openScholarship(enrollment: Enrollment) {
-    this.selected.set(enrollment);
-    this.scholarshipForm.reset({ scholarshipPercent: enrollment.scholarshipPercent, reason: enrollment.scholarshipReason ?? '' });
-    this.modal.set('scholarship');
-  }
-
-  openPayment(enrollment: Enrollment) {
-    this.selected.set(enrollment);
-    this.paymentForm.reset({ amount: enrollment.finalAmount });
-    this.modal.set('payment');
-  }
-
-  openConfirm(enrollment: Enrollment) {
-    this.selected.set(enrollment);
-    this.modal.set('confirm');
-  }
-
-  closeModal() {
-    this.modal.set(null);
-    this.selected.set(null);
-  }
-
-  saveScholarship() {
-    this.scholarshipForm.markAllAsTouched();
-    const enrollment = this.selected();
-    if (this.scholarshipForm.invalid || !enrollment) return;
-
-    this.isSaving.set(true);
-    this.enrollmentService.assignScholarship(enrollment.id, Number(this.scholarshipForm.controls.scholarshipPercent.value), this.scholarshipForm.controls.reason.value.trim())
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.feedback.set('Beca asignada correctamente.');
-          this.closeModal();
-          this.loadEnrollments();
-        },
-        error: error => this.feedback.set(this.errorMessage(error))
-      });
-  }
-
-  deactivateScholarship(enrollment: Enrollment) { this.selected.set(enrollment); this.modal.set('deactivate'); }
-
-  confirmDeactivateScholarship() {
-    const enrollment = this.selected();
-    if (!enrollment || this.isSaving()) return;
-    this.isSaving.set(true);
-    this.enrollmentService.deactivateScholarship(enrollment.id).pipe(finalize(() => this.isSaving.set(false))).subscribe({
-      next: () => { this.feedback.set('Beca desactivada. El importe se recalculó sin el beneficio.'); this.closeModal(); this.loadEnrollments(); },
-      error: error => this.feedback.set(this.errorMessage(error))
+  selectCourse(courseId: string) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: enrollmentParams({ ...this.state(), courseId, search: '', page: 1 }),
     });
   }
-
-  savePayment() {
-    this.paymentForm.markAllAsTouched();
-    const enrollment = this.selected();
-    if (this.paymentForm.invalid || !enrollment) return;
-
-    this.isSaving.set(true);
-    this.enrollmentService.registerPayment(enrollment.id, Number(this.paymentForm.controls.amount.value))
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.feedback.set('Pago registrado correctamente.');
-          this.closeModal();
-          this.loadEnrollments();
-        },
-        error: error => this.feedback.set(this.errorMessage(error))
+  onSearch(search: string) {
+    this.searchText.set(search);
+    window.clearTimeout(this.searchTimer);
+    this.searchTimer = window.setTimeout(() => {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: enrollmentParams({
+          ...this.state(),
+          search: search.trim().slice(0, 100),
+          page: 1,
+        }),
+        replaceUrl: true,
+      });
+    }, 250);
+  }
+  changePage(delta: number) {
+    const page = this.state().page + delta;
+    if (!this.isLoading() && page >= 1 && page <= this.totalPages())
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: enrollmentParams({ ...this.state(), page }),
       });
   }
-
-  confirmSelected() {
-    const enrollment = this.selected();
-    if (!enrollment) return;
-
-    this.isSaving.set(true);
-    this.enrollmentService.confirm(enrollment.id)
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.feedback.set('Inscripción confirmada correctamente.');
-          this.closeModal();
-          this.loadEnrollments();
-        },
-        error: error => this.feedback.set(this.errorMessage(error))
-      });
+  retryCourses() {
+    this.courseRetry.update((value) => value + 1);
   }
-
-  private loadEnrollments() {
-    this.isLoading.set(true);
-    return this.enrollmentService.list()
-      .pipe(finalize(() => this.isLoading.set(false)))
-      .subscribe({
-        next: enrollments => this.enrollments.set(enrollments),
-        error: error => this.feedback.set(this.errorMessage(error))
-      });
-  }
-
-  private errorMessage(error: unknown) {
-    if (error instanceof HttpErrorResponse) {
-      const fields = error.error?.fields as { message: string }[] | undefined;
-      if (fields?.length) return fields.map(field => field.message).join(' ');
-      return error.error?.message ?? 'No se pudo completar la operación.';
-    }
-
-    return 'No se pudo completar la operación.';
+  retryList() {
+    this.listRetry.update((value) => value + 1);
   }
 }

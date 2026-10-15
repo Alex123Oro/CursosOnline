@@ -1,6 +1,7 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, of, switchMap } from 'rxjs';
 import { Course, CoursePayload, CourseService, ParticipantTypeOption } from '../../../core/course.service';
 import { InstructorAttendanceService, InstructorOption } from '../../../core/instructor-attendance.service';
@@ -17,6 +18,12 @@ type FormMode = 'create' | 'edit';
   styleUrl: './courses-page.scss'
 })
 export class CoursesPage {
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly route = inject(ActivatedRoute);
+  readonly isCreatePage = this.route.snapshot.data['createCourse'] === true;
+  readonly isEditPage = this.route.snapshot.data['editCourse'] === true;
+  readonly isFormPage = this.isCreatePage || this.isEditPage;
   private readonly courseService = inject(CourseService);
   private readonly instructorService = inject(InstructorAttendanceService);
   private createdCourseId: string | null = null;
@@ -25,6 +32,16 @@ export class CoursesPage {
   readonly instructorsError = signal('');
 
   readonly courses = signal<Course[]>([]);
+  // Match the date-only rule used by the preinscription API.
+  private readonly today = signal(new Date().toISOString().slice(0, 10));
+  readonly publishedCount = computed(() => this.courses().filter(course => course.status === 'PUBLISHED').length);
+  readonly draftCount = computed(() => this.courses().filter(course => course.status === 'DRAFT').length);
+  readonly openPreinscriptionCount = computed(() => this.courses().filter(course =>
+    course.status === 'PUBLISHED'
+    && course.preinscriptionStart && course.preinscriptionEnd
+    && course.preinscriptionStart <= this.today() && this.today() <= course.preinscriptionEnd
+    && course.capacity != null && course.capacity > 0 && course.occupiedSlots < course.capacity
+  ).length);
   readonly participantTypes = signal<ParticipantTypeOption[]>([]);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
@@ -34,7 +51,16 @@ export class CoursesPage {
   readonly feedback = signal('');
 
   constructor() {
-    this.loadCourses();
+    if (!this.isFormPage) {
+      const clock = window.setInterval(() => this.today.set(new Date().toISOString().slice(0, 10)), 60_000);
+      inject(DestroyRef).onDestroy(() => window.clearInterval(clock));
+    }
+    if (this.isCreatePage) this.isFormOpen.set(true);
+    else {
+      const state = this.location.getState() as { feedback?: string };
+      this.feedback.set(this.router.currentNavigation()?.extras.state?.['feedback'] ?? state?.feedback ?? '');
+      this.loadCourses();
+    }
     this.loadInstructors();
     this.courseService.participantTypes().subscribe({ next: types => this.participantTypes.set(types), error: error => this.feedback.set(this.errorMessage(error)) });
   }
@@ -50,23 +76,19 @@ export class CoursesPage {
   }
 
   openCreateForm() {
-    this.createdCourseId = null;
-    this.formMode.set('create');
-    this.editingCourse.set(null);
-    this.feedback.set('');
-    this.isFormOpen.set(true);
+    void this.router.navigateByUrl('/cursos/nuevo');
   }
 
   openEditForm(course: Course) {
-    this.createdCourseId = null;
-    this.formMode.set('edit');
-    this.editingCourse.set(course);
-    this.feedback.set('');
-    this.isFormOpen.set(true);
+    void this.router.navigateByUrl(`/cursos/${course.id}/editar`);
   }
 
   closeForm() {
     if (this.isSaving()) return;
+    if (this.isFormPage) {
+      void this.router.navigateByUrl('/cursos');
+      return;
+    }
     this.isFormOpen.set(false);
   }
 
@@ -85,11 +107,15 @@ export class CoursesPage {
       if (!editing) this.createdCourseId = course.id;
       return prices.length ? this.courseService.replacePrices(course.id, prices) : of(course);
     }), finalize(() => this.isSaving.set(false))).subscribe({
-      next: () => {
+      next: saved => {
         this.feedback.set(editing ? 'Curso actualizado correctamente.' : 'Curso registrado correctamente.');
         this.isFormOpen.set(false);
         this.createdCourseId = null;
-        this.loadCourses();
+        if (this.isCreatePage) {
+          void this.router.navigate(['/cursos', saved.id, 'sesiones'], { queryParams: { plan: 'weekly' }, state: { feedback: this.feedback() } });
+        } else if (this.isEditPage) {
+          void this.router.navigateByUrl('/cursos', { state: { feedback: this.feedback() } });
+        } else this.loadCourses();
       },
       error: error => this.feedback.set(this.errorMessage(error))
     });
@@ -109,12 +135,34 @@ export class CoursesPage {
       });
   }
 
+  unpublishCourse(course: Course) {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+    this.feedback.set('');
+    this.courseService.unpublish(course.id)
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.feedback.set('Curso devuelto a borrador. Puedes corregirlo y publicarlo nuevamente.');
+          this.loadCourses();
+        },
+        error: error => this.feedback.set(this.errorMessage(error))
+      });
+  }
+
   private loadCourses() {
     this.isLoading.set(true);
     this.courseService.list()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: courses => this.courses.set(courses),
+        next: courses => {
+          this.courses.set(courses);
+          if (this.isEditPage) {
+            const course = courses.find(course => course.id === this.route.snapshot.paramMap.get('courseId'));
+            if (!course) { this.feedback.set('No se encontró el curso que quieres editar.'); return; }
+            this.formMode.set('edit'); this.editingCourse.set(course); this.isFormOpen.set(true);
+          }
+        },
         error: error => this.feedback.set(this.errorMessage(error))
       });
   }

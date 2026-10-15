@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Course, CourseService } from '../../../core/course.service';
 import { ParticipantHeader } from '../shared/participant-header/participant-header';
+import { shortCourseDate } from '../shared/course-presentation';
 
 @Component({
   selector: 'app-participant-catalog-page',
@@ -11,6 +12,10 @@ import { ParticipantHeader } from '../shared/participant-header/participant-head
   styleUrl: './participant-catalog-page.scss'
 })
 export class ParticipantCatalogPage {
+  readonly shortDate = shortCourseDate;
+  startingPrice(course: Course): number | null {
+    return course.prices.length ? Math.min(...course.prices.map(price => price.basePrice)) : null;
+  }
   private readonly courseService = inject(CourseService);
   readonly query = signal('');
   readonly courses = signal<Course[]>([]);

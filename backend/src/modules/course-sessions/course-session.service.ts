@@ -10,6 +10,7 @@ const dateOnly = (date: Date | null) => date?.toISOString().slice(0, 10) ?? null
 const courseResponse = (course: SessionCourse) => ({
   id: String(course.id), code: course.code ?? '', name: course.name, instructor: course.instructor ?? '',
   instructorId: course.instructorId === null ? null : String(course.instructorId),
+  status: course.status,
   startDate: dateOnly(course.startDate), endDate: dateOnly(course.endDate)
 });
 const sessionInclude = { instructorAttendance: { select: { status: true } } } satisfies Prisma.CourseSessionInclude;
@@ -29,7 +30,7 @@ const authorizedCourse = async (courseId: number, user: RequestUser, db: Pick<Pr
   const course = await db.course.findUnique({ where: { id: courseId }, select: courseSelect });
   if (!course) throw new HttpError(404, 'Curso no encontrado.');
   if (user.role === 'INSTRUCTOR' && course.instructorId !== user.id) throw new HttpError(403, 'No eres el instructor asignado a este curso.');
-  if (course.status !== 'PUBLISHED') throw new HttpError(400, 'Solo se pueden gestionar sesiones de cursos publicados.');
+  if (course.status !== 'PUBLISHED' && user.role !== 'ADMIN') throw new HttpError(400, 'Solo se pueden gestionar sesiones de cursos publicados.');
   return course;
 };
 const handleError = (error: unknown): never => {
@@ -39,7 +40,7 @@ const handleError = (error: unknown): never => {
   }
   throw error;
 };
-const authorizeWrite = (user: RequestUser) => { if (user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Solo el instructor asignado puede editar o eliminar sesiones.'); };
+const authorizeWrite = (user: RequestUser) => { if (user.role !== 'INSTRUCTOR' && user.role !== 'ADMIN') throw new HttpError(403, 'Solo el instructor asignado puede editar o eliminar sesiones.'); };
 const authorizePlanning = (user: RequestUser) => { if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Solo el administrador o el instructor asignado puede programar sesiones.'); };
 const withUnlockedSession = async <T>(courseId: number, sessionId: number, user: RequestUser,
   write: (tx: Prisma.TransactionClient, course: SessionCourse) => Promise<T>) => {
@@ -48,6 +49,7 @@ const withUnlockedSession = async <T>(courseId: number, sessionId: number, user:
     // Same course → session lock order as administrator attendance recording.
     await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR SHARE`;
     const course = await authorizedCourse(courseId, user, tx);
+    if (user.role === 'ADMIN' && course.status !== 'DRAFT') throw new HttpError(403, 'Solo el instructor asignado puede editar o eliminar sesiones de cursos publicados.');
     await tx.$queryRaw`SELECT id FROM sesiones_curso WHERE id = ${sessionId} AND curso_id = ${courseId} FOR UPDATE`;
     const session = await tx.courseSession.findUnique({ where: { id: sessionId }, include: sessionInclude });
     if (!session || session.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');

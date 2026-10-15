@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
 export interface SessionCourse {
+  status?: 'DRAFT' | 'PUBLISHED';
   id: string; code: string; name: string; instructor: string; instructorId: string | null;
   startDate: string | null; endDate: string | null;
 }

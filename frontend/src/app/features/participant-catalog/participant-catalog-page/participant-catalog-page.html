@@ -24,10 +24,11 @@
       <div class="catalog-grid">
         @for (course of filteredCourses(); track course.id) {
           <article class="course-card">
-            <div class="card-topline"><span class="course-code">{{ course.code }}</span></div>
+            <div class="card-topline"><span class="course-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v15M3 4c4-1 6 0 9 1 3-1 5-2 9-1v15c-4-1-6 0-9 1-3-1-5-2-9-1Z"/></svg></span><span class="duration-badge">{{ course.durationHours }} horas</span></div>
             <h3>{{ course.name }}</h3><p class="course-summary">{{ course.content }}</p>
-            <dl class="course-meta"><div><dt>Duración</dt><dd>{{ course.durationHours }} horas</dd></div><div><dt>Instructor</dt><dd>{{ course.instructor }}</dd></div><div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div></dl>
-            <a class="course-action" [routerLink]="['/catalogo', course.id]">Ver detalles</a>
+            <p class="course-instructor"><span>Con</span> {{ course.instructor || 'Instructor por confirmar' }}</p>
+            <div class="course-facts"><span>Inicio <strong>{{ shortDate(course.startDate) }}</strong></span><span>{{ course.remainingSlots === null ? 'Cupos por confirmar' : course.remainingSlots === 0 ? 'Sin cupos' : course.remainingSlots + ' cupos disponibles' }}</span></div>
+            <div class="card-footer"><div class="card-price">@if (startingPrice(course) !== null) { <span>Desde</span><strong>{{ startingPrice(course) }} <small>Bs</small></strong> } @else { <span>Precio</span><strong>Por confirmar</strong> }</div><a class="course-action" [routerLink]="['/catalogo', course.id]" [attr.aria-label]="'Ver detalles de ' + course.name">Ver detalles <span aria-hidden="true">→</span></a></div>
           </article>
         }
       </div>

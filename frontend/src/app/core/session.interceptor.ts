@@ -6,6 +6,7 @@ import { SessionService } from './session.service';
 
 export const sessionInterceptor: HttpInterceptorFn = (req, next) => {
   const session = inject(SessionService);
+  const router = inject(Router);
   const token = session.accessToken();
   const userId = session.userId();
 
@@ -21,7 +22,7 @@ export const sessionInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && token) {
         session.endSessionLocally();
-        void inject(Router).navigateByUrl('/iniciar-sesion');
+        void router.navigateByUrl('/iniciar-sesion');
       }
       return throwError(() => error);
     })

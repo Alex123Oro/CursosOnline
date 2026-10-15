@@ -38,7 +38,8 @@ const weeklyRange = (control: AbstractControl) => {
 export class CourseSessionsPage {
   private readonly api = inject(CourseSessionService);
   readonly identity = inject(SessionService);
-  readonly canManage = computed(() => this.identity.currentUser()?.role === 'INSTRUCTOR');
+  readonly canManage = computed(() => this.identity.currentUser()?.role === 'INSTRUCTOR'
+    || (this.identity.currentUser()?.role === 'ADMIN' && this.course()?.status === 'DRAFT'));
   readonly canPlan = computed(() => ['ADMIN', 'INSTRUCTOR'].includes(this.identity.currentUser()?.role ?? ''));
   private readonly route = inject(ActivatedRoute);
   private readonly id = toSignal(this.route.paramMap.pipe(map(params => params.get('courseId') ?? '')), { initialValue: '' });
@@ -120,7 +121,10 @@ export class CourseSessionsPage {
         if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') { this.feedback.set('No tienes permisos para gestionar sesiones.'); return; }
         this.loading.set(true);
         scope.add(this.api.list(id).subscribe({
-          next: data => { this.course.set(data.course); this.sessions.set(data.sessions); this.loading.set(false); },
+          next: data => {
+            this.course.set(data.course); this.sessions.set(data.sessions); this.loading.set(false);
+            if (this.route.snapshot?.queryParamMap.get('plan') === 'weekly') this.openSchedule();
+          },
           error: error => { this.feedback.set(this.errorMessage(error)); this.loading.set(false); }
         }));
       });

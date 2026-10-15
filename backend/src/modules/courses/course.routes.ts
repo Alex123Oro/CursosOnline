@@ -11,4 +11,5 @@ courseRoutes.get('/catalog/:id', optionalAuth, asyncHandler(courseController.cat
 courseRoutes.post('/', requireAdmin, asyncHandler(courseController.create));
 courseRoutes.put('/:id', requireAdmin, asyncHandler(courseController.update));
 courseRoutes.patch('/:id/publish', requireAdmin, asyncHandler(courseController.publish));
+courseRoutes.patch('/:id/unpublish', requireAdmin, asyncHandler(courseController.unpublish));
 courseRoutes.put('/:id/prices', requireAdmin, asyncHandler(courseController.replacePrices));

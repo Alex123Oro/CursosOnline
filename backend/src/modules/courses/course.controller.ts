@@ -83,5 +83,9 @@ export const courseController = {
     const id = parsePositiveInt(request.params.id, 'El identificador del curso no es válido.');
     const input = coursePricesSchema.parse(request.body);
     response.json(await courseService.replacePrices(id, input.items));
+  },
+  async unpublish(request: Request, response: Response) {
+    const id = parsePositiveInt(request.params.id, 'El identificador del curso no es válido.');
+    response.json(await courseService.unpublish(id));
   }
 };

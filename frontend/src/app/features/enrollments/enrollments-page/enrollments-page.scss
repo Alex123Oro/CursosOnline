@@ -1,189 +1,254 @@
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 43px 42px 24px;
+:host {
+  display: block;
+  --ink: #174b48;
+  --muted: #526d68;
+  --line: #d6e5e0;
+  --accent: #087f78;
+}
+.enrollments-workspace {
   max-width: 1240px;
   margin: auto;
+  padding: 36px 42px 48px;
+  color: var(--ink);
 }
-
-.eyebrow {
-  margin: 0 0 7px;
-  font-size: var(--eva-font-caption);
-  letter-spacing: 0.06em;
-  color: var(--teal, #087f78);
-  font-weight: 800;
+.page-header {
+  margin-bottom: 26px;
 }
-
-.page-header h1 {
-  margin: 0;
-  color: #174b48;
-  font: 700 var(--eva-font-title)/normal var(--eva-font-family);
+h1 {
+  margin: 0 0 10px;
+  font-size: 32px;
   letter-spacing: -0.03em;
 }
-
-.subtitle {
-  margin: 6px 0 0;
-  color: #77908c;
-  font-size: var(--eva-font-helper);
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
 }
-
-.app-feedback {
-  max-width: 1240px;
-  margin: 0 auto 12px;
-  padding: 0 42px;
-  color: #17645e;
-  font-size: var(--eva-font-body);
+.page-header > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.enrollment-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.enrollment-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-bottom: 3px solid transparent;
+  color: var(--muted);
+  font-size: 15px;
   font-weight: 700;
+  text-decoration: none;
 }
-
-.table-card {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 0 42px 32px;
+.enrollment-tabs a.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: #eaf5f2;
+  border-radius: 8px 8px 0 0;
 }
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(9, 43, 40, 0.38);
-  z-index: 10;
-}
-
-.modal {
-  position: relative;
-  width: min(560px, 100%);
-  padding: 30px;
+.course-selection {
+  padding: 24px;
+  border: 1px solid var(--line);
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  margin-bottom: 24px;
 }
-
-.close {
-  position: absolute;
-  top: 12px;
-  right: 15px;
-  border: 0;
-  background: none;
-  color: #7e9692;
-  font-size: 24px;
-  cursor: pointer;
-}
-
-.modal h2 {
-  margin: 5px 0 12px;
-  color: #174b48;
-  font: 700 var(--eva-font-section)/normal var(--eva-font-family);
-}
-
-.form-modal {
-  max-height: calc(100vh - 40px);
-  overflow: auto;
-}
-
-.course-form {
-  display: grid;
-  gap: 13px;
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    color: #55736f;
-    font-size: var(--eva-font-label);
-    font-weight: 700;
-  }
-
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #dbe9e6;
-    border-radius: 6px;
-    padding: 9px 10px;
-    color: #174b48;
-    background: #fff;
-    font: 400 var(--eva-font-body)/1.4 var(--eva-font-family);
-    outline: 0;
-  }
-
-  input:focus {
-    border-color: #0a8e84;
-    box-shadow: 0 0 0 3px rgba(10, 142, 132, 0.1);
-  }
-
-  small {
-    color: #cf5148;
-    font-size: var(--eva-font-helper);
-    font-weight: 700;
-  }
-}
-
-.economic {
-  padding: 12px 0;
-  color: #55736f;
-  font-size: var(--eva-font-label);
-
-  p {
-    margin: 0 0 6px;
-  }
-
-  strong {
-    display: block;
-    margin-top: 8px;
-    color: #17605a;
-    font: 700 20px/normal var(--eva-font-family);
-  }
-}
-
-.form-actions {
+.course-summary {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  margin-bottom: 24px;
+  background: #eaf5f2;
+  border: 1px solid #c7e2d9;
+  border-radius: 12px;
 }
-
-.primary-btn {
-  border: 0;
-  border-radius: 7px;
-  padding: 10px 17px;
-  color: #fff;
-  background: #0a8e84;
-  font-size: var(--eva-font-label);
+h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.4;
+}
+.course-summary dl {
+  display: flex;
+  gap: 30px;
+  margin: 0;
+}
+.course-summary dt {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.course-summary dd {
+  margin: 0;
+  font-size: 24px;
   font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.62;
-  }
 }
-
+.participants-panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.list-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px;
+}
+.list-toolbar label {
+  display: grid;
+  gap: 8px;
+  width: min(460px, 100%);
+  font-size: 13px;
+  font-weight: 700;
+}
+input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #a9c0b9;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: #fff;
+}
+.result-count {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 13px;
+  padding-bottom: 12px;
+}
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  border: 1px dashed #bdd4cc;
+  border-radius: 12px;
+  background: #fff;
+}
+.empty-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eaf5f2;
+  color: var(--accent);
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+.empty-state p {
+  max-width: 520px;
+  margin: 12px auto;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.empty-state .error,
+.error {
+  color: #a52828;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .secondary-btn {
-  border: 0;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #a9c0b9;
   border-radius: 7px;
-  padding: 10px 17px;
-  color: #17645e;
-  background: #dcefeb;
-  font-size: var(--eva-font-label);
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
-
-@media (max-width: 800px) {
-  .page-header {
-    padding: 30px 20px 20px;
+.secondary-btn:hover:not(:disabled) {
+  background: #eaf5f2;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 850px) {
+  .enrollments-workspace {
+    padding: 28px 20px;
   }
-
-  .table-card,
-  .app-feedback {
-    padding-left: 20px;
-    padding-right: 20px;
+  .course-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .course-summary dl {
+    width: 100%;
+    justify-content: space-between;
+    gap: 16px;
   }
 }
-
-@media (max-width: 600px) { .page-header h1 { font-size: var(--eva-font-title-mobile); } }
-
-@media (max-width: 600px) { .course-form input, .course-form select, .course-form textarea { font-size: 16px; } }
+@media (max-width: 550px) {
+  h1 {
+    font-size: 27px;
+  }
+  .course-selection {
+    padding: 18px;
+  }
+  .enrollment-tabs a {
+    flex: 1;
+    padding: 0 12px;
+  }
+  .course-summary {
+    padding: 20px;
+  }
+  .list-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 18px;
+    gap: 8px;
+  }
+  .result-count {
+    padding: 0;
+  }
+  .pagination {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .pagination > div {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .empty-state {
+    padding: 36px 20px;
+  }
+}

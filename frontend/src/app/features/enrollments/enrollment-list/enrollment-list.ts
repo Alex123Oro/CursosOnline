@@ -1,38 +1,30 @@
-import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, computed, input, signal } from '@angular/core';
+import { Component, input } from '@angular/core';
+import { Params, RouterLink } from '@angular/router';
 import { Enrollment } from '../../../core/enrollment.service';
-
+import { EnrollmentStatus } from '../../../core/course.service';
 @Component({
   selector: 'app-enrollment-list',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [RouterLink],
   templateUrl: './enrollment-list.html',
-  styleUrl: './enrollment-list.scss'
+  styleUrl: './enrollment-list.scss',
 })
 export class EnrollmentList {
   readonly enrollments = input<Enrollment[]>([]);
   readonly loading = input(false);
-  @Output() assignScholarship = new EventEmitter<Enrollment>();
-  @Output() deactivateScholarship = new EventEmitter<Enrollment>();
-  @Output() registerPayment = new EventEmitter<Enrollment>();
-  @Output() confirmEnrollment = new EventEmitter<Enrollment>();
-
-  readonly query = signal('');
-
-  readonly filteredEnrollments = computed(() =>
-    this.enrollments().filter(enrollment =>
-      `${enrollment.participantName} ${enrollment.courseName} ${enrollment.courseCode} ${enrollment.participantTypeName}`
-        .toLowerCase()
-        .includes(this.query().toLowerCase())
-    )
-  );
-
-  onSearch(value: string) {
-    this.query.set(value);
+  readonly status = input<EnrollmentStatus>('PREINSCRITO');
+  readonly context = input<Params>({});
+  paymentLabel(value: Enrollment['paymentStatus']) {
+    return {
+      NO_REQUIERE: 'No requiere',
+      PAGADO: 'Pagado',
+      PARCIAL: 'Parcial',
+      PENDIENTE: 'Pendiente',
+    }[value];
   }
-
-  formatPaymentDate(value: string) {
-    return new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  formatDate(date: string) {
+    return new Intl.DateTimeFormat('es-BO', {
+      dateStyle: 'medium',
+      timeZone: 'America/La_Paz',
+    }).format(new Date(date));
   }
-  formatDate(value: string) { return new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium' }).format(new Date(value)); }
 }

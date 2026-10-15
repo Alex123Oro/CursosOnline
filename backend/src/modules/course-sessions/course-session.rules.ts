@@ -43,6 +43,18 @@ export const endTime = (start: string, duration: number) => {
   const total = minutes(start) + duration;
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 };
+
+export const summarizeSessions = (sessions: { date: Date; startTime: string; durationMinutes: number }[]) => {
+  const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const slots = new Map<string, { day: number; start: string; end: string }>();
+  for (const session of sessions) {
+    const day = session.date.getUTCDay();
+    const end = endTime(session.startTime, session.durationMinutes);
+    slots.set(`${day}/${session.startTime}/${end}`, { day, start: session.startTime, end });
+  }
+  return [...slots.values()].sort((a, b) => ((a.day + 6) % 7) - ((b.day + 6) % 7) || a.start.localeCompare(b.start))
+    .map(slot => `${days[slot.day]} ${slot.start}–${slot.end}`).join(' · ');
+};
 export const periodWarning = (date: string, start: string | null, end: string | null) =>
   (start && date < start) || (end && date > end)
     ? 'La fecha de la sesión está fuera del periodo del curso. Puedes guardarla igualmente.' : null;

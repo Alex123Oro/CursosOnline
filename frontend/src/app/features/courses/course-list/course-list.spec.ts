@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Course } from '../../../core/course.service';
 import { CourseList } from './course-list';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 
 describe('CourseList', () => {
   let fixture: ComponentFixture<CourseList>;
@@ -54,9 +55,23 @@ describe('CourseList', () => {
     expect(publishButton?.disabled).toBe(false);
     expect(getComputedStyle(publishButton!).cursor).toBe('pointer');
   });
-  it('offers a classes link only for published courses', () => {
+  it('shows confirmed enrollment instead of the course schedule', () => {
+    fixture.componentRef.setInput('courses', [{ ...course, enrolledCount: 3, occupiedSlots: 7 }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.enrollment-count')?.textContent).toContain('3');
+    expect(fixture.nativeElement.textContent).not.toContain(course.schedule);
+  });
+  it('offers returning published courses to draft', () => {
+    fixture.componentRef.setInput('courses', [{ ...course, status: 'PUBLISHED' }]); fixture.detectChanges();
+    const emit = vi.spyOn(component.unpublishCourse, 'emit');
+    const button = fixture.nativeElement.querySelector('button.unpublish') as HTMLButtonElement;
+    expect(button?.textContent?.trim()).toBe('Volver a borrador');
+    button.click(); expect(emit).toHaveBeenCalledWith(expect.objectContaining({ id: course.id }));
+    fixture.componentRef.setInput('saving', true); fixture.detectChanges(); expect(button.disabled).toBe(true);
+  });
+  it('offers a classes link for drafts and published courses', () => {
     fixture.componentRef.setInput('courses', [course]); fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/cursos/1/sesiones');
     fixture.componentRef.setInput('courses', [{ ...course, status: 'PUBLISHED' }]); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/cursos/1/sesiones');
   });

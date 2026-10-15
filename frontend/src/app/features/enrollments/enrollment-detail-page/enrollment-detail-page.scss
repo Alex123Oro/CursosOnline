@@ -1,0 +1,255 @@
+:host {
+  display: block;
+  --ink: #174b48;
+  --muted: #526d68;
+  --line: #d6e5e0;
+  --accent: #087f78;
+}
+.enrollment-detail {
+  max-width: 1080px;
+  margin: auto;
+  padding: 28px 42px 48px;
+  color: var(--ink);
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 22px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+}
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+h1 {
+  margin: 0;
+  font-size: 32px;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+.detail-header p:last-child {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.status {
+  padding: 8px 13px;
+  border-radius: 20px;
+  color: #7b5016;
+  background: #fff3dc;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.status.confirmed {
+  color: #176448;
+  background: #e5f3ed;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+.card,
+.state-card {
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  min-width: 0;
+}
+h2 {
+  margin: 0 0 18px;
+  font-size: 20px;
+  line-height: 1.4;
+}
+.card > p,
+.state-card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+dt {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.financial {
+  border-top: 3px solid var(--accent);
+}
+.financial h2 {
+  font-size: 32px;
+}
+.financial h2 span {
+  font-size: 18px;
+  font-weight: 400;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.primary-btn,
+.secondary-btn {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.primary-btn {
+  color: #fff;
+  background: var(--accent);
+}
+.primary-btn:hover:not(:disabled) {
+  background: #06645e;
+}
+.secondary-btn {
+  border-color: #a9c0b9;
+  background: #fff;
+  color: var(--ink);
+}
+.secondary-btn:hover:not(:disabled) {
+  background: #eaf5f2;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.action-panel {
+  margin-top: 24px;
+  border-color: #90beb2;
+  scroll-margin-top: 24px;
+}
+.action-panel:focus {
+  outline: 2px solid #b4dcd3;
+  outline-offset: 3px;
+}
+fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  max-width: 620px;
+  min-width: 0;
+}
+label {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: 600;
+}
+input,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #a9c0b9;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: #fff;
+}
+textarea {
+  resize: vertical;
+}
+.preview,
+.feedback {
+  padding: 16px;
+  border-radius: 8px;
+  background: #eaf5f2;
+  color: #176448;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.feedback {
+  margin-bottom: 22px;
+}
+.feedback a {
+  display: block;
+  margin-top: 8px;
+  color: #087f78;
+  font-weight: 700;
+}
+.error {
+  color: #a52828 !important;
+  line-height: 1.6;
+}
+.error-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: #fff0f0;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 750px) {
+  .enrollment-detail {
+    padding: 24px 20px;
+  }
+  .detail-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  h1 {
+    font-size: 27px;
+  }
+  .card {
+    padding: 22px;
+  }
+}
+@media (max-width: 400px) {
+  .details {
+    grid-template-columns: 1fr;
+  }
+  .actions button {
+    flex: 1 1 auto;
+  }
+}

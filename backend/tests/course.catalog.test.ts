@@ -33,16 +33,18 @@ describe('course catalogue (HU-03)', () => {
       preinscriptionStart: new Date('2026-09-01'),
       preinscriptionEnd: new Date('2026-12-31'),
       prices: [],
-      _count: { enrollments: 0 },
+      _count: { enrollments: 5 },
+      enrollments: [{ status: 'INSCRITO' }, { status: 'INSCRITO' }],
       createdAt: new Date('2026-09-20T12:00:00.000Z'),
       updatedAt: new Date('2026-09-20T12:00:00.000Z')
     });
 
     const course = await courseService.catalogById(7);
 
-    expect(course).toMatchObject({ id: '7', code: 'INF-JS-101', status: 'PUBLISHED' });
+    expect(course).toMatchObject({ id: '7', code: 'INF-JS-101', status: 'PUBLISHED', occupiedSlots: 5, enrolledCount: 2 });
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 7, status: 'PUBLISHED' }
+      where: { id: 7, status: 'PUBLISHED' },
+      select: expect.objectContaining({ enrollments: { where: { status: 'INSCRITO' }, select: { status: true } } })
     }));
   });
 
@@ -53,6 +55,19 @@ describe('course catalogue (HU-03)', () => {
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 999, status: 'PUBLISHED' }
     }));
+  });
+
+  it('uses actual classes instead of a conflicting legacy schedule', async () => {
+    const record = { id: 7, schedule: 'Horario anterior', prices: [], _count: { enrollments: 0 },
+      createdAt: new Date(), updatedAt: new Date(), sessions: [
+        { date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 90 }
+      ] };
+    findFirst.mockResolvedValue(record);
+    expect((await courseService.catalogById(7))?.schedule).toBe('Lun 18:00–19:30');
+    findFirst.mockResolvedValue({ ...record, sessions: [{ date: new Date('2026-10-14'), startTime: '19:00', durationMinutes: 60 }] });
+    expect((await courseService.catalogById(7))?.schedule).toBe('Mié 19:00–20:00');
+    findFirst.mockResolvedValue({ ...record, schedule: null, sessions: [] });
+    expect((await courseService.catalogById(7))?.schedule).toBe('');
   });
 
   it('responds as not found when the public detail is unavailable', async () => {

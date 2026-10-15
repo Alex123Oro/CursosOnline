@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { CourseForm } from './course-form';
+import { provideRouter } from '@angular/router';
 
 describe('CourseForm', () => {
   let fixture: ComponentFixture<CourseForm>;
   let component: CourseForm;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [CourseForm] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [CourseForm], providers: [provideRouter([])] }).compileComponents();
     fixture = TestBed.createComponent(CourseForm);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('participantTypes', [{ id: '1', name: 'Estudiante' }]);
@@ -63,11 +64,21 @@ describe('CourseForm', () => {
     fixture.detectChanges(); validForm(); component.setPrice('4', '200');
     const emit = vi.spyOn(component.save, 'emit'); component.submit();
     const labels = [...fixture.nativeElement.querySelectorAll('.prices-block label')].map((label: any) => label.textContent);
-    expect(labels).toEqual(['Estudiante (Bs)', 'Externo (Bs)']);
+    expect(labels).toEqual(['Estudiante (Bs) *', 'Externo (Bs) *']);
     expect(emit).toHaveBeenCalledWith(expect.objectContaining({
       instructor: 'Carla Rios', instructorId: '9',
       prices: [{ participantTypeId: '1', basePrice: 0 }, { participantTypeId: '4', basePrice: 200 }]
     }));
+  });
+  it('saves without a text schedule and requires an external price', () => {
+    fixture.componentRef.setInput('participantTypes', [{ id: '1', name: 'Estudiante' }, { id: '4', name: 'Externo' }]);
+    fixture.detectChanges(); validForm(); component.form.controls.schedule.setValue('');
+    const emit = vi.spyOn(component.save, 'emit');
+    component.submit(); expect(emit).not.toHaveBeenCalled();
+    component.setPrice('4', '150'); component.submit();
+    expect(emit).toHaveBeenCalledWith(expect.objectContaining({ prices: [{ participantTypeId: '1', basePrice: 0 }, { participantTypeId: '4', basePrice: 150 }] }));
+    expect(emit.mock.calls[0][0]).not.toHaveProperty('schedule');
+    expect(fixture.nativeElement.querySelector('input[formControlName="schedule"]')).toBeNull();
   });
   it('offers registered instructors and rejects unregistered selections', () => {
     validForm(); fixture.detectChanges();

@@ -99,7 +99,7 @@ export const courseInputSchema = z
     instructor: requiredText('El instructor', 2),
     instructorId: z.preprocess(value => value === '' ? null : value, z.coerce.number().int().positive().nullable().optional()),
     minimumEnrollment: z.coerce.number().int('El mínimo de inscritos debe ser un número entero.').positive('El mínimo de inscritos debe ser mayor a cero.').optional(),
-    schedule: requiredText('El horario', 3),
+    schedule: z.string().trim().optional(),
     approvalCriteria: requiredText('Los criterios de aprobación', 3),
     status: courseStatusSchema.optional(),
     startDate: dateStringSchema,
