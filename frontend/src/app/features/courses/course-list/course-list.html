@@ -29,9 +29,11 @@
             <td class="actions-column"><div class="actions">
                 <a class="more" [routerLink]="['/cursos', course.id, 'sesiones']">Clases</a>
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
-              <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">
-                {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Publicar' }}
-              </button>
+              @if (course.status === 'PUBLISHED') {
+                <button type="button" class="more unpublish" [disabled]="saving" (click)="unpublishCourse.emit(course)">Volver a borrador</button>
+              } @else {
+                <button type="button" class="more publish" [disabled]="saving" (click)="publishCourse.emit(course)">Publicar</button>
+              }
             </div></td>
           </tr>
         } @empty {

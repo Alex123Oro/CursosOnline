@@ -96,7 +96,7 @@ td {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .actions-column { min-width: 290px; padding-left: 24px; padding-right: 24px; }
 .enrollment-count { display: block; color: #174b48; font-size: 18px; font-weight: 700; white-space: nowrap; }
@@ -119,6 +119,7 @@ td {
   cursor: pointer;
   &:hover:not(:disabled) { background: #eaf5f2; border-color: #087f78; }
   &:focus-visible { outline: 3px solid #087f78; outline-offset: 3px; }
+  &:disabled { opacity: .62; cursor: not-allowed; }
 
   &.publish:disabled {
     color: #a9bab6;

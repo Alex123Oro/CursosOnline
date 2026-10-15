@@ -1,6 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize, of, switchMap } from 'rxjs';
 import { Course, CoursePayload, CourseService, ParticipantTypeOption } from '../../../core/course.service';
@@ -32,6 +32,16 @@ export class CoursesPage {
   readonly instructorsError = signal('');
 
   readonly courses = signal<Course[]>([]);
+  // Match the date-only rule used by the preinscription API.
+  private readonly today = signal(new Date().toISOString().slice(0, 10));
+  readonly publishedCount = computed(() => this.courses().filter(course => course.status === 'PUBLISHED').length);
+  readonly draftCount = computed(() => this.courses().filter(course => course.status === 'DRAFT').length);
+  readonly openPreinscriptionCount = computed(() => this.courses().filter(course =>
+    course.status === 'PUBLISHED'
+    && course.preinscriptionStart && course.preinscriptionEnd
+    && course.preinscriptionStart <= this.today() && this.today() <= course.preinscriptionEnd
+    && course.capacity != null && course.capacity > 0 && course.occupiedSlots < course.capacity
+  ).length);
   readonly participantTypes = signal<ParticipantTypeOption[]>([]);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
@@ -41,6 +51,10 @@ export class CoursesPage {
   readonly feedback = signal('');
 
   constructor() {
+    if (!this.isFormPage) {
+      const clock = window.setInterval(() => this.today.set(new Date().toISOString().slice(0, 10)), 60_000);
+      inject(DestroyRef).onDestroy(() => window.clearInterval(clock));
+    }
     if (this.isCreatePage) this.isFormOpen.set(true);
     else {
       const state = this.location.getState() as { feedback?: string };
@@ -115,6 +129,21 @@ export class CoursesPage {
       .subscribe({
         next: () => {
           this.feedback.set('Curso publicado correctamente.');
+          this.loadCourses();
+        },
+        error: error => this.feedback.set(this.errorMessage(error))
+      });
+  }
+
+  unpublishCourse(course: Course) {
+    if (this.isSaving()) return;
+    this.isSaving.set(true);
+    this.feedback.set('');
+    this.courseService.unpublish(course.id)
+      .pipe(finalize(() => this.isSaving.set(false)))
+      .subscribe({
+        next: () => {
+          this.feedback.set('Curso devuelto a borrador. Puedes corregirlo y publicarlo nuevamente.');
           this.loadCourses();
         },
         error: error => this.feedback.set(this.errorMessage(error))

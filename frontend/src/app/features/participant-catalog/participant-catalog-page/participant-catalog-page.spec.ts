@@ -62,6 +62,7 @@ describe('ParticipantCatalogPage', () => {
     expect(fixture.nativeElement.querySelector('app-participant-header')).not.toBeNull();
     const action = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>('.course-action');
     expect(action?.getAttribute('href')).toBe('/catalogo/42');
+    expect(fixture.nativeElement.querySelector('.course-card')?.textContent).not.toContain(catalogCourse.schedule);
   });
 
   it('filters courses from the API by a case-insensitive query across name, code and instructor', async () => {

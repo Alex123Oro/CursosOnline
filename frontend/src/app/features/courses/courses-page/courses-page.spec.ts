@@ -72,6 +72,55 @@ describe('New course navigation', () => {
     http.expectOne(`${base}/participant-types`).flush([{ id: '1', name: 'Estudiante' }]);
     http.expectOne(`${base}/admin/instructors`).flush([{ id: '8', name: 'Carla' }]);
   }
+  it('summarizes published courses, open preinscriptions with available places, and drafts', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-14T12:00:00Z'));
+    try {
+      const harness = await RouterTestingHarness.create();
+      await harness.navigateByUrl('/cursos');
+      const published = { ...saved, status: 'PUBLISHED', capacity: 20, occupiedSlots: 5,
+        preinscriptionStart: '2026-10-01', preinscriptionEnd: '2026-10-31' };
+      http.expectOne(`${base}/courses`).flush([
+        { ...published, id: '1' },
+        { ...published, id: '2', preinscriptionStart: '2026-10-14' },
+        { ...published, id: '3', preinscriptionEnd: '2026-10-14' },
+        { ...published, id: '4', occupiedSlots: 20, enrolledCount: 1 },
+        { ...published, id: '5', preinscriptionEnd: '2026-10-13' },
+        { ...published, id: '6', preinscriptionStart: '2026-10-15' },
+        { ...published, id: '7', preinscriptionStart: null },
+        { ...published, id: '8', capacity: null },
+        { ...published, id: '9', status: 'DRAFT' }
+      ]);
+      loadOptions(); harness.detectChanges();
+      const cards = [...harness.routeNativeElement!.querySelectorAll('.metric')];
+      expect(cards.map(card => card.querySelector('strong')?.textContent?.trim())).toEqual(['8', '3', '1']);
+      expect(cards.map(card => card.querySelector('.metric-label')?.textContent?.trim())).toEqual(['Cursos publicados', 'Preinscripción abierta', 'Borradores']);
+      expect(harness.routeNativeElement?.querySelector('.metrics')?.textContent).not.toContain('Periodo');
+    } finally { vi.useRealTimers(); }
+  });
+  it('returns a published course to draft once and enables publishing again', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/cursos');
+    http.expectOne(`${base}/courses`).flush([{ ...saved, status: 'PUBLISHED' }]); loadOptions(); harness.detectChanges();
+    const button = harness.routeNativeElement!.querySelector<HTMLButtonElement>('button.unpublish')!;
+    button.click(); button.click();
+    const request = http.expectOne(`${base}/courses/42/unpublish`);
+    expect(request.request.method).toBe('PATCH'); request.flush(saved);
+    http.expectOne(`${base}/courses`).flush([saved]); harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('button.unpublish')).toBeNull();
+    expect(harness.routeNativeElement?.querySelector('button.publish')?.textContent?.trim()).toBe('Publicar');
+    expect(harness.routeNativeElement?.querySelector('.app-feedback')?.textContent).toContain('Curso devuelto a borrador');
+  });
+  it('keeps the published course unchanged when returning to draft fails', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/cursos');
+    http.expectOne(`${base}/courses`).flush([{ ...saved, status: 'PUBLISHED' }]); loadOptions(); harness.detectChanges();
+    harness.routeNativeElement!.querySelector<HTMLButtonElement>('button.unpublish')!.click();
+    http.expectOne(`${base}/courses/42/unpublish`).flush({ message: 'Inténtalo otra vez' }, { status: 500, statusText: 'Error' });
+    harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector<HTMLButtonElement>('button.unpublish')?.disabled).toBe(false);
+    expect(harness.routeNativeElement?.querySelector('.app-feedback')?.textContent).toContain('Inténtalo otra vez');
+  });
   it('opens Editar in a dedicated page with existing fields and no modal', async () => {
     const harness = await RouterTestingHarness.create();
     await harness.navigateByUrl('/cursos');

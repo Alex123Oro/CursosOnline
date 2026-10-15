@@ -63,7 +63,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   max-width: 1240px;
   margin: 0 auto 25px;
@@ -71,27 +71,32 @@
 }
 
 .metric {
-  padding: 16px 18px;
-  min-height: 70px;
+  padding: 20px;
+  min-width: 0;
   background: #fff;
   border: 1px solid #e0ece9;
   border-radius: 8px;
   box-shadow: 0 3px 8px rgba(19, 74, 68, 0.025);
 
-  small {
-    display: block;
-    color: #81938f;
-    font-size: var(--eva-font-helper);
-    margin: 0 0 4px 0;
+  .metric-label {
+    color: #526d68;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 0 0 8px;
   }
 
   strong {
     color: #17605a;
-    font: 700 20px/normal var(--eva-font-family);
+    font: 700 28px/1.2 var(--eva-font-family);
+    font-variant-numeric: tabular-nums;
   }
 
-  &.muted strong {
-    color: #a9bab6;
+  p {
+    margin: 8px 0 0;
+    color: #526d68;
+    font-size: 12px;
+    line-height: 1.5;
   }
 }
 
@@ -166,7 +171,7 @@
   }
 
   .metrics {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     padding: 0 20px;
   }
 

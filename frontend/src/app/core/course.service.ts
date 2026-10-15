@@ -100,6 +100,10 @@ export class CourseService {
     return this.http.patch<Course>(`${this.apiUrl}/${id}/publish`, {});
   }
 
+  unpublish(id: string): Observable<Course> {
+    return this.http.patch<Course>(`${this.apiUrl}/${id}/unpublish`, {});
+  }
+
   participantTypes(): Observable<ParticipantTypeOption[]> {
     return this.http.get<ParticipantTypeOption[]>(`${environment.apiBaseUrl}/participant-types`);
   }

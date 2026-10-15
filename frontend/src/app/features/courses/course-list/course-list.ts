@@ -13,8 +13,10 @@ import { RouterLink } from '@angular/router';
 export class CourseList {
   readonly courses = input<Course[]>([]);
   @Input() loading = false;
+  @Input() saving = false;
   @Output() editCourse = new EventEmitter<Course>();
   @Output() publishCourse = new EventEmitter<Course>();
+  @Output() unpublishCourse = new EventEmitter<Course>();
 
   readonly query = signal('');
 

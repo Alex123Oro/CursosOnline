@@ -10,51 +10,50 @@
     <div class="course-feedback course-detail-error" role="alert"><p class="eyebrow">NO DISPONIBLE</p><h1>Este curso no está disponible</h1><p>Es posible que haya sido retirado o que el enlace ya no sea válido.</p><a class="return-link" routerLink="/catalogo">Volver al catálogo</a></div>
   } @else if (course(); as course) {
     <section class="course-hero" aria-labelledby="course-title">
-      <p class="eyebrow">{{ course.code }}</p>
+      <div class="hero-topline"><span class="course-category">FORMACIÓN CONTINUA</span><span class="course-code">{{ course.code }}</span></div>
       <h1 id="course-title">{{ course.name }}</h1>
-      <p>{{ course.content }}</p>
+      <p class="hero-instructor">Aprende con <strong>{{ course.instructor || 'Instructor por confirmar' }}</strong></p>
+      <div class="hero-facts"><div><span>Duración</span><strong>{{ course.durationHours }} horas</strong></div><div><span>Inicio</span><strong>{{ shortDate(course.startDate) }}</strong></div><div><span>Finalización</span><strong>{{ shortDate(course.endDate) }}</strong></div></div>
     </section>
-
     <div class="course-detail-layout">
-      <section class="detail-card" aria-labelledby="course-information-title">
-        <h2 id="course-information-title" class="eyebrow">INFORMACIÓN DEL CURSO</h2>
-        <dl class="course-information">
-          <div><dt>Duración</dt><dd>{{ course.durationHours }} horas</dd></div>
-          <div><dt>Instructor</dt><dd>{{ course.instructor }}</dd></div>
-          <div><dt>Horario</dt><dd>{{ course.schedule }}</dd></div>
-          <!-- HU4: Preserve the complete course detail alongside pre-registration. -->
-          <div><dt>Criterios de aprobación</dt><dd>{{ course.approvalCriteria || 'No especificados' }}</dd></div>
-          <div><dt>Inicio</dt><dd>{{ formatDate(course.startDate) }}</dd></div>
-          <div><dt>Finalización</dt><dd>{{ formatDate(course.endDate) }}</dd></div>
-          <div><dt>Preinscripción</dt><dd>{{ formatDate(course.preinscriptionStart) }} — {{ formatDate(course.preinscriptionEnd) }}</dd></div>
-          <div><dt>Cupos</dt><dd>{{ course.remainingSlots === null ? 'Por confirmar' : course.remainingSlots + ' disponibles' }}</dd></div>
-        </dl>
-      </section>
-
+      <div class="detail-sections">
+        <section class="detail-card" aria-labelledby="course-content-title"><div class="section-heading"><span class="section-number" aria-hidden="true">01</span><h2 id="course-content-title">Sobre este curso</h2></div><p class="course-content">{{ course.content }}</p></section>
+        <section class="detail-card" aria-labelledby="course-schedule-title"><div class="section-heading"><span class="section-number" aria-hidden="true">02</span><h2 id="course-schedule-title">Días y horario</h2></div><p class="section-helper">Organiza tu tiempo para las clases. Hora local de Bolivia.</p>
+          <div class="schedule-list">@for (group of scheduleGroups(); track $index) {
+            @if (group.label) { <p class="legacy-schedule">{{ group.label }}</p> } @else {
+              <div class="schedule-row"><strong class="time-slot">{{ group.time }}</strong><div class="weekday-list" aria-label="Días de clase">@for (day of group.days; track day) { <span class="weekday">{{ day }}</span> }</div></div>
+            }
+          } @empty { <p class="section-helper">El horario de las clases está por confirmar.</p> }</div>
+          <p class="course-period">Del {{ formatDate(course.startDate) }} al {{ formatDate(course.endDate) }}.</p>
+        </section>
+        <section class="detail-card approval-card" aria-labelledby="approval-title"><div class="section-heading"><span class="section-number" aria-hidden="true">03</span><h2 id="approval-title">¿Cómo aprobar el curso?</h2></div><p class="course-content">{{ course.approvalCriteria || 'Los criterios de aprobación están por confirmar.' }}</p></section>
+      </div>
       <aside class="criteria-card" aria-labelledby="enrollment-title">
-        <h2 id="enrollment-title">Preinscripción</h2>
+        <p class="eyebrow">DA EL SIGUIENTE PASO</p><h2 id="enrollment-title">Preinscríbete al curso</h2>
 
         @if (applicablePrice(); as price) {
           <div class="economic">
-            <p>Precio base: {{ price.basePrice }} Bs</p>
+            <p class="price-category">Inversión · {{ price.participantTypeName }}</p>
             @if (course.enrollment; as enrollment) {
+              <p>Precio base: {{ price.basePrice }} Bs</p>
               <p>Beneficio aplicado: {{ enrollment.scholarshipPercent }} % (-{{ enrollment.benefitAmount }} Bs)</p>
-              <strong>Monto final: {{ enrollment.finalAmount }} Bs</strong>
+              <strong class="price-amount">{{ enrollment.finalAmount }} <span>Bs</span></strong>
             } @else {
-              <strong>Monto final: {{ price.basePrice }} Bs</strong>
+              <strong class="price-amount">{{ price.basePrice }} <span>Bs</span></strong>
             }
           </div>
         }
 
+        <div class="enrollment-window"><span>Periodo de preinscripción</span><strong>{{ shortDate(course.preinscriptionStart) }} — {{ shortDate(course.preinscriptionEnd) }}</strong></div>
+        @if (course.remainingSlots !== null) { <p class="availability" [class.full]="noSlots(course)">{{ noSlots(course) ? 'Sin cupos disponibles' : course.remainingSlots + ' cupos disponibles' }}</p> }
         @if (feedback()) {
-          <p class="enrolment-note success">{{ feedback() }}</p>
+          <p class="enrolment-note success" role="status">{{ feedback() }}</p>
         }
 
-        <!-- HU4: Make session requirements explicit before offering pre-registration. -->
         @if (!session.ready()) {
           <p class="enrolment-note" role="status">Verificando la sesión...</p>
         } @else if (!isParticipant()) {
-          <p class="enrolment-note" role="status">Inicia sesión como participante antes de continuar con la preinscripción.</p>
+          <p class="enrolment-note" role="status">Inicia sesión como participante antes de continuar con la preinscripción.</p>@if (!session.currentUser()) { <a class="return-link sign-in-action" routerLink="/iniciar-sesion">Iniciar sesión</a> }
         } @else if (course.enrollment) {
           <p class="enrolment-note">Ya estás {{ course.enrollment.status === 'INSCRITO' ? 'inscrito' : 'preinscrito' }} en este curso.</p>
           @if (course.enrollment.confirmedAt) { <p class="enrolment-note">Inscripción confirmada el {{ formatDate(course.enrollment.confirmedAt.slice(0, 10)) }}.</p> }
@@ -69,6 +68,7 @@
             {{ saving() ? 'Guardando...' : 'Preinscribirme' }}
           </button>
         }
+        <p class="enrollment-help">La preinscripción es el primer paso. La confirmación de tu inscripción se realiza posteriormente.</p>
       </aside>
     </div>
   }

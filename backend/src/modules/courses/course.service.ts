@@ -238,8 +238,21 @@ export const courseService = {
   },
 
   /**
-   * Publica un curso solo si cumple con la información mínima requerida.
+   * Devuelve el curso a borrador conservando sus datos y relaciones.
    */
+  async unpublish(id: number) {
+    try {
+      const course = await prisma.course.update({ where: { id }, data: { status: 'DRAFT' }, select: courseSelect });
+      return toCourseResponse(course);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new HttpError(404, 'Curso no encontrado.');
+      }
+      throw error;
+    }
+  },
+
+  /** Publica un curso solo si cumple con la información mínima requerida. */
   async publish(id: number) {
     const existing = await prisma.course.findUnique({
       where: { id },

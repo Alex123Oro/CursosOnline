@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Course, CourseService } from '../../../core/course.service';
 import { SessionService } from '../../../core/session.service';
 import { ParticipantHeader } from '../shared/participant-header/participant-header';
+import { groupCourseSchedule, shortCourseDate } from '../shared/course-presentation';
 
 @Component({
   selector: 'app-participant-course-detail-page',
@@ -18,6 +19,8 @@ export class ParticipantCourseDetailPage {
   readonly session = inject(SessionService);
 
   readonly course = signal<Course | null>(null);
+  readonly scheduleGroups = computed(() => groupCourseSchedule(this.course()?.schedule ?? ''));
+  readonly shortDate = shortCourseDate;
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly saving = signal(false);
