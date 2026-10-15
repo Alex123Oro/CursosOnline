@@ -56,14 +56,6 @@ describe('CourseForm', () => {
     component.form.patchValue({ name: 'Curso de seguridad', content: 'Contenido del curso de seguridad',
       approvalCriteria: 'Proyecto final aprobado', durationHours: 12, instructorId: '9', schedule: 'Martes 18:00-20:00' });
   }
-  it('previews a read-only code from the course name and date', () => {
-    component.form.patchValue({ name: 'Introducción a la Programación', startDate: '2026-11-01' });
-    fixture.detectChanges();
-    const code = fixture.nativeElement.querySelector('input[aria-label="Código generado automáticamente"]');
-    expect(code?.value).toBe('IP-20261101'); expect(code?.readOnly).toBe(true);
-    component.form.controls.startDate.setValue('2026-12-05'); fixture.detectChanges();
-    expect(code.value).toBe('IP-20261205');
-  });
   it('omits docente and administrativo prices from the form and requirements', () => {
     fixture.componentRef.setInput('participantTypes', [
       { id: '1', name: 'Estudiante' }, { id: '2', name: 'Docente' },

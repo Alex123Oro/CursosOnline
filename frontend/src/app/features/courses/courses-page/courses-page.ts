@@ -20,7 +20,10 @@ type FormMode = 'create' | 'edit';
 export class CoursesPage {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
-  readonly isCreatePage = inject(ActivatedRoute).snapshot.data['createCourse'] === true;
+  private readonly route = inject(ActivatedRoute);
+  readonly isCreatePage = this.route.snapshot.data['createCourse'] === true;
+  readonly isEditPage = this.route.snapshot.data['editCourse'] === true;
+  readonly isFormPage = this.isCreatePage || this.isEditPage;
   private readonly courseService = inject(CourseService);
   private readonly instructorService = inject(InstructorAttendanceService);
   private createdCourseId: string | null = null;
@@ -63,16 +66,12 @@ export class CoursesPage {
   }
 
   openEditForm(course: Course) {
-    this.createdCourseId = null;
-    this.formMode.set('edit');
-    this.editingCourse.set(course);
-    this.feedback.set('');
-    this.isFormOpen.set(true);
+    void this.router.navigateByUrl(`/cursos/${course.id}/editar`);
   }
 
   closeForm() {
     if (this.isSaving()) return;
-    if (this.isCreatePage) {
+    if (this.isFormPage) {
       void this.router.navigateByUrl('/cursos');
       return;
     }
@@ -100,6 +99,8 @@ export class CoursesPage {
         this.createdCourseId = null;
         if (this.isCreatePage) {
           void this.router.navigate(['/cursos', saved.id, 'sesiones'], { queryParams: { plan: 'weekly' }, state: { feedback: this.feedback() } });
+        } else if (this.isEditPage) {
+          void this.router.navigateByUrl('/cursos', { state: { feedback: this.feedback() } });
         } else this.loadCourses();
       },
       error: error => this.feedback.set(this.errorMessage(error))
@@ -125,7 +126,14 @@ export class CoursesPage {
     this.courseService.list()
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: courses => this.courses.set(courses),
+        next: courses => {
+          this.courses.set(courses);
+          if (this.isEditPage) {
+            const course = courses.find(course => course.id === this.route.snapshot.paramMap.get('courseId'));
+            if (!course) { this.feedback.set('No se encontró el curso que quieres editar.'); return; }
+            this.formMode.set('edit'); this.editingCourse.set(course); this.isFormOpen.set(true);
+          }
+        },
         error: error => this.feedback.set(this.errorMessage(error))
       });
   }

@@ -25,6 +25,7 @@ const courseSelect = {
   preinscriptionEnd: true,
   prices: { select: { participantTypeId: true, basePrice: true, participantType: { select: { name: true } } } },
   _count: { select: { enrollments: true } },
+  enrollments: { where: { status: 'INSCRITO' }, select: { status: true } },
   createdAt: true,
   updatedAt: true
 } satisfies Prisma.CourseSelect;
@@ -47,6 +48,7 @@ const toCourseResponse = (course: CourseRecord) => ({
   capacity: course.capacity,
   minimumEnrollment: course.minimumEnrollment,
   occupiedSlots: course._count.enrollments,
+  enrolledCount: course.enrollments?.length ?? 0,
   remainingSlots: course.capacity === null ? null : Math.max(0, course.capacity - course._count.enrollments),
   preinscriptionStart: course.preinscriptionStart ? course.preinscriptionStart.toISOString().slice(0, 10) : null,
   preinscriptionEnd: course.preinscriptionEnd ? course.preinscriptionEnd.toISOString().slice(0, 10) : null,

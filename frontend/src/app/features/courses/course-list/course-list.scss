@@ -46,7 +46,7 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 700px;
+  min-width: 900px;
 }
 
 th {
@@ -65,7 +65,7 @@ td {
   vertical-align: middle;
 
   &:first-child {
-    width: 31%;
+    width: 26%;
   }
 }
 
@@ -94,9 +94,13 @@ td {
 
 .actions {
   display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
+.actions-column { min-width: 290px; padding-left: 24px; padding-right: 24px; }
+.enrollment-count { display: block; color: #174b48; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.capacity { color: #526d68; font-size: 14px; font-weight: 400; }
 
 .more {
   text-decoration: none;
@@ -104,9 +108,17 @@ td {
   border-radius: 5px;
   background: #fff;
   color: #168b80;
-  padding: 6px 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 16px;
+  white-space: nowrap;
   font-size: var(--eva-font-label);
   cursor: pointer;
+  &:hover:not(:disabled) { background: #eaf5f2; border-color: #087f78; }
+  &:focus-visible { outline: 3px solid #087f78; outline-offset: 3px; }
 
   &.publish:disabled {
     color: #a9bab6;

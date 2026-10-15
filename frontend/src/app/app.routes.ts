@@ -18,6 +18,7 @@ export const routes: Routes = [
   { path: 'mi-progreso', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mi progreso | EVA' },
   { path: '', redirectTo: 'catalogo', pathMatch: 'full' },
   { path: 'cursos/nuevo', component: CoursesPage, canActivate: [roleGuard(['ADMIN'])], data: { createCourse: true }, title: 'Nuevo curso | EVA' },
+  { path: 'cursos/:courseId/editar', component: CoursesPage, canActivate: [roleGuard(['ADMIN'])], data: { editCourse: true }, title: 'Editar curso | EVA' },
   { path: 'cursos', component: CoursesWorkspace, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Cursos | EVA' },
   { path: 'cursos/:courseId/sesiones', component: CourseSessionsPage, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Sesiones del curso | EVA' },
   { path: 'cursos/:courseId/asistencia', component: AttendancePage, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Asistencia del curso | EVA' },

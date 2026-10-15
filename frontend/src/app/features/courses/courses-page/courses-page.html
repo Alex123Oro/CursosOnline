@@ -1,21 +1,23 @@
-<section class="page-header" [class.create-header]="isCreatePage">
+<section class="page-header" [class.create-header]="isFormPage">
   <div>
-    <p class="eyebrow">{{ isCreatePage ? 'ADMINISTRACIÓN / CURSOS / NUEVO' : 'ADMINISTRACIÓN / CURSOS' }}</p>
-    <h1>{{ isCreatePage ? 'Nuevo curso' : 'Cursos y lanzamientos' }}</h1>
-    <p class="subtitle">{{ isCreatePage ? 'Define el curso y sus precios. Después programa las clases de su calendario.' : 'Registra y administra los cursos de formación continua.' }}</p>
+    <p class="eyebrow">{{ isCreatePage ? 'ADMINISTRACIÓN / CURSOS / NUEVO' : isEditPage ? 'ADMINISTRACIÓN / CURSOS / EDITAR' : 'ADMINISTRACIÓN / CURSOS' }}</p>
+    <h1>{{ isCreatePage ? 'Nuevo curso' : isEditPage ? 'Editar curso' : 'Cursos y lanzamientos' }}</h1>
+    <p class="subtitle">{{ isCreatePage ? 'Define el curso y sus precios. Después programa las clases de su calendario.' : isEditPage ? 'Actualiza la información, los cupos y los precios del curso.' : 'Registra y administra los cursos de formación continua.' }}</p>
   </div>
-  @if (isCreatePage) {
+  @if (isFormPage) {
     <button type="button" class="back-btn" [disabled]="isSaving()" (click)="closeForm()">← Volver a cursos</button>
   } @else {
     <button class="primary-btn" (click)="openCreateForm()">+ Nuevo curso</button>
   }
 </section>
 
-@if (feedback() && !isCreatePage) {
+@if (feedback() && !isFormOpen()) {
   <p class="app-feedback">{{ feedback() }}</p>
 }
 
-@if (!isCreatePage) {
+@if (isEditPage && isLoading()) { <p class="app-feedback" role="status">Cargando datos del curso…</p> }
+
+@if (!isFormPage) {
 <section class="metrics">
   <article class="metric">
     <span class="dot teal"></span>
@@ -52,7 +54,7 @@
 
 @if (isFormOpen()) {
   <app-course-form
-    [presentation]="isCreatePage ? 'page' : 'modal'"
+    presentation="page"
     [mode]="formMode()"
     [course]="editingCourse()"
     [participantTypes]="participantTypes()"

@@ -4,7 +4,7 @@
       <button class="close" type="button" aria-label="Cerrar formulario" [disabled]="saving" (click)="cancel.emit()">×</button>
       <p class="eyebrow">EDITAR CURSO</p><h2>Actualizar curso</h2>
     } @else {
-      <div class="form-intro"><div><p class="eyebrow">PASO 1 DE 2</p><h2>Información del curso</h2><p>Los campos marcados con * son obligatorios.</p></div><span class="draft-badge">Se guardará como borrador</span></div>
+      <div class="form-intro"><div><p class="eyebrow">{{ mode === 'create' ? 'PASO 1 DE 2' : 'DATOS DEL CURSO' }}</p><h2>Información del curso</h2><p>Los campos marcados con * son obligatorios.</p></div><span class="draft-badge">{{ mode === 'create' ? 'Se guardará como borrador' : course?.status === 'PUBLISHED' ? 'Curso publicado' : 'Curso en borrador' }}</span></div>
     }
     @if (saveError) { <p class="validation error-summary" role="alert">{{ saveError }}</p> }
     <form [formGroup]="form" (ngSubmit)="submit()" class="course-form" [attr.aria-busy]="saving">
@@ -12,8 +12,7 @@
         <legend><span class="section-number">01</span> Información general</legend>
         <p class="section-description">Identifica el curso y define lo que aprenderán los participantes.</p>
         <div class="field-grid">
-          <label><span>Código automático</span><input aria-label="Código generado automáticamente" [value]="generatedCode" readonly placeholder="Completa el nombre y la fecha de inicio"><span class="field-help">{{ mode === 'create' ? 'Iniciales del nombre + fecha de inicio. Si coincide con otro curso, se añadirá un sufijo al guardar.' : 'El código se conserva para identificar este curso.' }}</span></label>
-          <label><span>Nombre del curso *</span><input formControlName="name" placeholder="Ej. Introducción a la programación">@if (fieldError('name')) { <small>Ingresa al menos 3 caracteres.</small> }</label>
+          <label class="full"><span>Nombre del curso *</span><input formControlName="name" placeholder="Ej. Introducción a la programación">@if (fieldError('name')) { <small>Ingresa al menos 3 caracteres.</small> }</label>
           <label class="full"><span>Contenido *</span><textarea formControlName="content" rows="4" placeholder="Describe los temas y objetivos del curso"></textarea>@if (fieldError('content')) { <small>Describe el contenido con al menos 10 caracteres.</small> }</label>
           <label><span>Instructor *</span><select formControlName="instructorId" [attr.aria-busy]="instructorsLoading" aria-describedby="instructor-feedback"><option value="">{{ instructorsLoading ? 'Cargando instructores…' : 'Selecciona un instructor' }}</option>@for (instructor of instructors; track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }</select></label>
           <label><span>Duración total (horas) *</span><input type="number" min="1" step="1" formControlName="durationHours">@if (fieldError('durationHours')) { <small>Ingresa un número entero de horas mayor a cero.</small> }<span class="field-help">Carga horaria prevista del curso.</span></label>

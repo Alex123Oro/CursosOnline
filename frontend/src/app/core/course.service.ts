@@ -32,6 +32,7 @@ export interface Course {
   minimumEnrollment?: number;
   remainingSlots: number | null;
   occupiedSlots: number;
+  enrolledCount?: number;
   preinscriptionStart: string | null;
   preinscriptionEnd: string | null;
   prices: CoursePrice[];

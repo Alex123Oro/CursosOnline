@@ -33,16 +33,18 @@ describe('course catalogue (HU-03)', () => {
       preinscriptionStart: new Date('2026-09-01'),
       preinscriptionEnd: new Date('2026-12-31'),
       prices: [],
-      _count: { enrollments: 0 },
+      _count: { enrollments: 5 },
+      enrollments: [{ status: 'INSCRITO' }, { status: 'INSCRITO' }],
       createdAt: new Date('2026-09-20T12:00:00.000Z'),
       updatedAt: new Date('2026-09-20T12:00:00.000Z')
     });
 
     const course = await courseService.catalogById(7);
 
-    expect(course).toMatchObject({ id: '7', code: 'INF-JS-101', status: 'PUBLISHED' });
+    expect(course).toMatchObject({ id: '7', code: 'INF-JS-101', status: 'PUBLISHED', occupiedSlots: 5, enrolledCount: 2 });
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 7, status: 'PUBLISHED' }
+      where: { id: 7, status: 'PUBLISHED' },
+      select: expect.objectContaining({ enrollments: { where: { status: 'INSCRITO' }, select: { status: true } } })
     }));
   });
 

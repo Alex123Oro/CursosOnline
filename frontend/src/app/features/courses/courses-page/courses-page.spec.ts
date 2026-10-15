@@ -4,10 +4,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { CoursesPage } from './courses-page';
 import { Course, CoursePayload } from '../../../core/course.service';
 import { environment } from '../../../../environments/environment';
-import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../../app.routes';
 import { SessionService } from '../../../core/session.service';
+import { vi } from 'vitest';
 
 const base = environment.apiBaseUrl;
 const payload: CoursePayload = { name: 'Curso de seguridad', content: 'Contenido del curso de seguridad', durationHours: 12,
@@ -18,27 +19,31 @@ const saved = { ...payload, id: '42', status: 'DRAFT' } as unknown as Course;
 describe('CoursesPage saving workflow', () => {
   let fixture: ComponentFixture<CoursesPage>; let http: HttpTestingController;
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [CoursesPage], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [CoursesPage], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
+      { provide: ActivatedRoute, useValue: { snapshot: { data: { editCourse: true }, paramMap: convertToParamMap({ courseId: '42' }) } } }
+    ] }).compileComponents();
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     http = TestBed.inject(HttpTestingController); fixture = TestBed.createComponent(CoursesPage);
-    http.expectOne(`${base}/courses`).flush([]);
+    http.expectOne(`${base}/courses`).flush([saved]);
     http.expectOne(`${base}/participant-types`).flush([{ id: '1', name: 'Estudiante' }]);
     http.expectOne(`${base}/admin/instructors`).flush([{ id: '8', name: 'Carla' }]);
-    fixture.componentInstance.openEditForm(saved); fixture.detectChanges();
+    fixture.detectChanges();
   });
   afterEach(() => { fixture.destroy(); http.verify(); });
-  it('sends all publication fields and closes the modal only after course and prices are saved', () => {
+  it('saves editing fields and returns only after course and prices are saved', () => {
     const page = fixture.componentInstance;
     page.handleSave(payload); page.handleSave(payload);
     const create = http.expectOne(`${base}/courses/42`);
     expect(create.request.body).toMatchObject({ capacity: 20, preinscriptionStart: '2026-10-01', preinscriptionEnd: '2026-10-31', instructorId: '8' });
     create.flush(saved); page.closeForm(); expect(page.isFormOpen()).toBe(true);
     http.expectOne(`${base}/courses/42/prices`).flush(saved);
-    http.expectOne(`${base}/courses`).flush([saved]); fixture.detectChanges();
+    fixture.detectChanges();
     expect(page.isFormOpen()).toBe(false); expect(page.isSaving()).toBe(false);
     expect(fixture.nativeElement.querySelector('app-course-form')).toBeNull();
     expect(page.feedback()).toBe('Curso actualizado correctamente.');
+    expect(TestBed.inject(Router).navigateByUrl).toHaveBeenCalledWith('/cursos', { state: { feedback: 'Curso actualizado correctamente.' } });
   });
-  it('keeps the editing modal open on failure and retries the save', () => {
+  it('keeps the editing screen open on failure and retries the save', () => {
     const page = fixture.componentInstance; page.handleSave(payload);
     http.expectOne(`${base}/courses/42`).flush(saved);
     http.expectOne(`${base}/courses/42/prices`).flush({ message: 'No se pudieron guardar los precios' }, { status: 500, statusText: 'Error' });
@@ -47,7 +52,7 @@ describe('CoursesPage saving workflow', () => {
     page.handleSave(payload);
     const update = http.expectOne(`${base}/courses/42`); expect(update.request.method).toBe('PUT'); update.flush(saved);
     http.expectOne(`${base}/courses/42/prices`).flush(saved);
-    http.expectOne(`${base}/courses`).flush([saved]); expect(page.isFormOpen()).toBe(false);
+    expect(page.isFormOpen()).toBe(false);
   });
 });
 
@@ -67,6 +72,22 @@ describe('New course navigation', () => {
     http.expectOne(`${base}/participant-types`).flush([{ id: '1', name: 'Estudiante' }]);
     http.expectOne(`${base}/admin/instructors`).flush([{ id: '8', name: 'Carla' }]);
   }
+  it('opens Editar in a dedicated page with existing fields and no modal', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/cursos');
+    http.expectOne(`${base}/courses`).flush([saved]); loadOptions(); harness.detectChanges();
+    const edit = [...harness.routeNativeElement!.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent?.trim() === 'Editar');
+    edit!.click(); await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/cursos/42/editar');
+    http.expectOne(`${base}/courses`).flush([saved]); loadOptions(); harness.detectChanges();
+    expect(harness.routeNativeElement?.querySelector('h1')?.textContent).toBe('Editar curso');
+    expect(harness.routeNativeElement?.querySelector('.modal-backdrop')).toBeNull();
+    expect(harness.routeNativeElement?.querySelector<HTMLInputElement>('input[formControlName="name"]')?.value).toBe(saved.name);
+    harness.routeNativeElement?.querySelector<HTMLButtonElement>('.form-actions .secondary-btn')?.click();
+    await harness.fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/cursos');
+    http.expectOne(`${base}/courses`).flush([saved]); loadOptions();
+  });
 
   it('opens a dedicated screen from Nuevo curso and returns on cancellation', async () => {
     const harness = await RouterTestingHarness.create();

@@ -54,6 +54,12 @@ describe('CourseList', () => {
     expect(publishButton?.disabled).toBe(false);
     expect(getComputedStyle(publishButton!).cursor).toBe('pointer');
   });
+  it('shows confirmed enrollment instead of the course schedule', () => {
+    fixture.componentRef.setInput('courses', [{ ...course, enrolledCount: 3, occupiedSlots: 7 }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.enrollment-count')?.textContent).toContain('3');
+    expect(fixture.nativeElement.textContent).not.toContain(course.schedule);
+  });
   it('offers a classes link for drafts and published courses', () => {
     fixture.componentRef.setInput('courses', [course]); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('a')?.getAttribute('href')).toBe('/cursos/1/sesiones');
