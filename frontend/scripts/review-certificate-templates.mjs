@@ -1,0 +1,60 @@
+import { readFile,readdir,writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { pathToFileURL,fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
+const links=join(process.env.LOCALAPPDATA,'ms-playwright','.links');
+const location=(await readFile(join(links,(await readdir(links))[0]),'utf8')).trim();
+const {chromium}=await import(pathToFileURL(join(location,'index.mjs')).href);
+const accounts=JSON.parse(await readFile(new URL('../../backend/.local/restored-test-credentials.json',import.meta.url),'utf8'));
+const manifest=JSON.parse(await readFile(new URL('../../backend/.local/ten-course-catalog.json',import.meta.url),'utf8'));
+const account=accounts.users.find(user=>user.email==='admin@eva.local');
+const output=new URL('../../docs/output/',import.meta.url);const errors=[];
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:1100},locale:'es-BO'});page.on('pageerror',error=>errors.push(error.message));
+try{
+  await page.goto('http://127.0.0.1:4200/iniciar-sesion');
+  await page.locator('input[type=email]').fill(account.email);await page.locator('input[type=password]').fill(account.password);
+  await page.locator('button[type=submit]').click();await page.waitForURL('**/cursos');
+  const initial=page.waitForResponse(response=>response.url().endsWith('/certificate-templates')&&response.status()===200);
+  await page.goto('http://127.0.0.1:4200/plantillas-certificados');
+  console.log('Editor opened');
+  const templates=await(await initial).json();const modern=templates.find(t=>t.name==='Aprobación moderna');assert(modern);
+  await page.locator('.template-list button').filter({hasText:'Aprobación moderna'}).click();
+  await page.locator('input[formcontrolname=primaryColor]').fill('#155E56');
+  const image=await page.evaluate(()=>{
+    const canvas=document.createElement('canvas');canvas.width=320;canvas.height=110;const context=canvas.getContext('2d');
+    context.fillStyle='#087f78';context.beginPath();context.roundRect(0,5,100,100,18);context.fill();
+    context.fillStyle='#fff';context.font='bold 68px Arial';context.fillText('E',27,80);
+    context.fillStyle='#174b48';context.font='bold 72px Arial';context.fillText('EVA',118,82);return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.locator('input[type=file]').first().setInputFiles({name:'eva-logo.png',mimeType:'image/png',buffer:Buffer.from(image,'base64')});
+  await page.locator('.image-field img').first().waitFor();
+  const savedPromise=page.waitForResponse(response=>response.url().endsWith(`/certificate-templates/${modern.id}`)&&response.request().method()==='PUT');
+  const previewPromise=page.waitForResponse(response=>response.url().endsWith('/certificate-templates/preview-image')&&response.status()===200&&response.request().postDataJSON()?.config?.logo?.startsWith('data:image/png'));
+  previewPromise.catch(()=>{});
+  await page.getByRole('button',{name:'Guardar plantilla',exact:true}).click();const saved=await savedPromise;assert.equal(saved.status(),200);const updated=await saved.json();
+  assert(updated.config.logo.startsWith('data:image/png;base64,'));assert.equal(updated.config.primaryColor.toLowerCase(),'#155e56');
+  console.log('Logo and template version saved');
+  await page.getByRole('status').filter({hasText:'Plantilla guardada'}).waitFor();
+  await page.locator('.pdf-stage img').waitFor();
+  // The PDF viewer paints asynchronously after the blob URL changes.
+  await previewPromise;
+  await page.waitForFunction(()=>document.querySelector('.pdf-stage img')?.naturalWidth>0);
+  await page.evaluate(()=>scrollTo(0,0));
+  await page.screenshot({path:fileURLToPath(new URL('plantillas-certificados.png',output))});
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>scrollTo(0,0));
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Mobile editor overflow');
+  await page.screenshot({path:fileURLToPath(new URL('plantillas-certificados-movil.png',output))});
+  await page.setViewportSize({width:1440,height:1100});
+  await page.getByRole('link',{name:'Ir a emisión ↗',exact:true}).click();await page.waitForURL('**/certificados');
+  await page.locator('.toolbar select').first().selectOption(modern.id);
+  await page.locator('.toolbar select').nth(2).selectOption(String(manifest.courses.find(c=>c.key==='redes').id));
+  await page.locator('.roster li').first().waitFor();
+  assert((await page.locator('.notice').allTextContents()).some(text=>text.includes('Aprobación moderna')));
+  await page.screenshot({path:fileURLToPath(new URL('emision-con-plantilla.png',output))});
+  assert.equal(errors.length,0,errors.join('\n'));
+  const report={passed:true,realAdminLogin:true,editor:true,logoUpload:true,saveVersion:updated.version,pdfPreview:true,mobile:true,emissionTemplateSelection:true,browserErrors:errors};
+  await writeFile(new URL('plantillas-verificacion.json',output),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+}catch(error){console.error('Template browser review failed:',error.message);await page.screenshot({path:fileURLToPath(new URL('plantillas-error.png',output))}).catch(()=>{});process.exitCode=1;}
+finally{await browser.close();}

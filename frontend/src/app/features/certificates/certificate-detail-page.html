@@ -1,0 +1,13 @@
+<section class="detail-page">
+  <a routerLink="/mis-certificados">← Mis certificados</a><h1>Detalle del certificado</h1>
+  @if (loading()) { <p role="status">Cargando certificado…</p> }
+  @else if (error()) { <div role="alert" class="error"><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }
+  @else if (item(); as certificate) {
+    <article>
+      <span class="badge" [class.revoked]="certificate.status === 'REVOKED'">{{ certificate.status === 'VALID' ? 'Vigente' : 'Anulado' }}</span>
+      <h2>{{ certificate.courseName }}</h2>
+      <dl><dt>Participante</dt><dd>{{ certificate.participantName }}</dd><dt>Duración</dt><dd>{{ certificate.durationHours }} horas</dd><dt>Tipo</dt><dd>{{ type(certificate.type) }}</dd><dt>Fecha de emisión</dt><dd>{{ date(certificate.issuedAt) }}</dd><dt>Código</dt><dd>{{ certificate.code }}</dd></dl>
+      <app-certificate-actions [certificate]="certificate" />
+    </article>
+  }
+</section>

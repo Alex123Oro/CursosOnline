@@ -1,0 +1,18 @@
+@if (certificate().status === 'VALID') {
+  <div class="actions">
+    <button type="button" (click)="download()" [disabled]="downloading()">{{ downloading() ? 'Descargando…' : 'Descargar PDF' }}</button>
+    <button type="button" (click)="share()" [attr.aria-expanded]="sharing()">Compartir</button>
+  </div>
+  @if (sharing()) {
+    <div class="share-panel">
+      <label>Enlace público de verificación
+        <input readonly [value]="certificate().publicUrl" (focus)="$any($event.target).select()" />
+      </label>
+      <button type="button" (click)="copy()" [disabled]="copying()">{{ copying() ? 'Copiando…' : 'Copiar enlace' }}</button>
+    </div>
+  }
+} @else {
+  <p>Este certificado está anulado. No está disponible para descargar.</p>
+}
+@if (message()) { <p role="status">{{ message() }}</p> }
+@if (error()) { <p class="error" role="alert">{{ error() }}</p> }

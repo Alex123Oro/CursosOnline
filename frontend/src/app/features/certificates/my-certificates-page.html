@@ -1,0 +1,17 @@
+<section class="certificates-page">
+  <header><p class="eyebrow">PARTICIPANTE / FORMACIÓN</p><h1>Mis certificados</h1><p>Consulta, descarga y comparte tu formación acreditada.</p></header>
+  @if (loading()) { <p role="status">Cargando certificados…</p> }
+  @else if (error()) { <div role="alert" class="error"><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }
+  @else if (!items().length) { <p class="notice" role="status">Aún no tienes certificados</p> }
+  @else {
+    <ul class="certificate-list">
+      @for (item of items(); track item.id) {
+        <li>
+          <div class="heading"><h2><a [routerLink]="['/mis-certificados', item.id]">{{ item.courseName }}</a></h2><span class="badge" [class.revoked]="item.status === 'REVOKED'">{{ item.status === 'VALID' ? 'Vigente' : 'Anulado' }}</span></div>
+          <p>Emitido el {{ date(item.issuedAt) }}</p><p>Código: <strong>{{ item.code }}</strong></p>
+          <app-certificate-actions [certificate]="item" />
+        </li>
+      }
+    </ul>
+  }
+</section>
