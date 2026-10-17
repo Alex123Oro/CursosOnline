@@ -10,6 +10,8 @@ const database = new URL(process.env.DATABASE_URL ?? '');
 const local = host => ['localhost', '127.0.0.1', '[::1]'].includes(host);
 if (!local(base.hostname) || !local(database.hostname)) throw new Error('This check requires a local API and database.');
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) throw new Error('Supabase Auth configuration is required.');
+const adminToken = process.env.INSTRUCTOR_TEST_ADMIN_TOKEN;
+if (!adminToken) throw new Error('A real administrator access token is required in INSTRUCTOR_TEST_ADMIN_TOKEN.');
 const prisma = new PrismaClient();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
@@ -26,7 +28,7 @@ try {
   if (!admin) throw new Error('A local administrator is required.');
   const payload = { name: 'Instructor de prueba temporal', email: email.toUpperCase(), degree: 'Ingeniero', sis,
     phone: '+591 (700) 123-45', password };
-  const options = { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': String(admin.id) }, body: JSON.stringify(payload) };
+  const options = { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` }, body: JSON.stringify(payload) };
   const created = await request('admin/instructors', options);
   assert.equal(created.status, 201, 'Instructor creation must return 201.');
   const result = await created.json();
@@ -35,7 +37,7 @@ try {
   const record = await prisma.user.findUnique({ where: { email }, select: { authId: true, sis: true, degree: true, phone: true } });
   assert.ok(record); authId = record.authId;
   assert.equal(record.sis, sis); assert.equal(record.degree, 'ENGINEER'); assert.equal(record.phone, payload.phone);
-  const directory = await request('session/users', { headers: { 'X-User-Id': String(admin.id) } });
+  const directory = await request('session/users', { headers: { Authorization: `Bearer ${adminToken}` } });
   assert.equal(directory.status, 200);
   assert.ok((await directory.json()).some(user => user.email === email && user.sis === sis && user.degree === 'Ingeniero'));
   const login = await request('auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
