@@ -18,6 +18,7 @@ export interface Course {
   code: string;
   name: string;
   content: string;
+  coverUrl?: string | null;
   durationHours: number;
   instructor: string;
   instructorId?: string | null;
@@ -49,6 +50,7 @@ export interface CoursePayload {
   code?: string;
   name: string;
   content: string;
+  coverUrl?: string | null;
   durationHours: number;
   instructor: string;
   instructorId?: string;
@@ -76,6 +78,10 @@ export class CourseService {
 
   catalog(): Observable<Course[]> {
     return this.http.get<Course[]>(`${this.apiUrl}/catalog`);
+  }
+
+  uploadCover(file: File): Observable<{ coverUrl: string }> {
+    return this.http.post<{ coverUrl: string }>(`${this.apiUrl}/covers`, file, { headers: { 'Content-Type': file.type } });
   }
 
   catalogById(id: string): Observable<Course> {

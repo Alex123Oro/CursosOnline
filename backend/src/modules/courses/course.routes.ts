@@ -1,9 +1,15 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import { asyncHandler } from '../../shared/async-handler.js';
 import { optionalAuth, requireAdmin } from '../../shared/auth.js';
 import { courseController } from './course.controller.js';
+import { courseCoverService } from './course-cover.service.js';
 
 export const courseRoutes = Router();
+
+courseRoutes.post('/covers', requireAdmin, raw({ type: ['image/png','image/jpeg','image/webp'], limit: '5mb' }), asyncHandler(async (request, response) => {
+  const actor = (request as typeof request & { user: { id: number } }).user;
+  response.status(201).json(await courseCoverService.upload(request.body, request.header('content-type') ?? '', actor.id));
+}));
 
 courseRoutes.get('/', requireAdmin, asyncHandler(courseController.list));
 courseRoutes.get('/catalog', asyncHandler(courseController.catalog));

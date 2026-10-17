@@ -10,6 +10,7 @@ const courseSelect = {
   code: true,
   name: true,
   content: true,
+  coverUrl: true,
   durationHours: true,
   instructor: true,
   instructorId: true,
@@ -32,11 +33,37 @@ const courseSelect = {
 
 type CourseRecord = Prisma.CourseGetPayload<{ select: typeof courseSelect }>;
 
+// The connected Supabase schema stores sessions in `sesiones`; older Prisma
+// installations use `sesiones_curso`. Read either without duplicating data.
+async function readCatalogCourses(where: Prisma.CourseWhereInput) {
+  const { sessions: _sessions, ...select } = courseSelect;
+  const courses = await prisma.course.findMany({ where, select, orderBy: { createdAt: 'desc' } });
+  if (!courses.length) return [];
+  const [tables] = await prisma.$queryRaw<{ modern: string | null; legacy: string | null }[]>`
+    SELECT to_regclass('public.sesiones_curso')::text AS modern,
+           to_regclass('public.sesiones')::text AS legacy`;
+  if (!tables?.modern && !tables?.legacy) {
+    throw new HttpError(503, 'No se encuentra la tabla de sesiones del catálogo.');
+  }
+  const table = tables.modern ? Prisma.sql`public.sesiones_curso` : Prisma.sql`public.sesiones`;
+  const sessions = await prisma.$queryRaw<{
+    courseId: number; date: Date; startTime: string; durationMinutes: number;
+  }[]>(Prisma.sql`
+    SELECT curso_id::integer AS "courseId", fecha AS date,
+           left(hora_inicio::text, 5) AS "startTime", duracion_minutos AS "durationMinutes"
+    FROM ${table} WHERE curso_id IN (${Prisma.join(courses.map(course => course.id))})
+    ORDER BY fecha, hora_inicio`);
+  return courses.map(course => toCourseResponse({
+    ...course, sessions: sessions.filter(session => session.courseId === course.id)
+  }));
+}
+
 const toCourseResponse = (course: CourseRecord) => ({
   id: String(course.id),
   code: course.code ?? '',
   name: course.name,
   content: course.content ?? '',
+  coverUrl: course.coverUrl ?? null,
   durationHours: course.durationHours ?? 0,
   instructor: course.instructor ?? '',
   instructorId: course.instructorId == null ? null : String(course.instructorId),
@@ -59,9 +86,10 @@ const toCourseResponse = (course: CourseRecord) => ({
 });
 
 const toCourseData = (input: CourseInput): Prisma.CourseUncheckedCreateInput => {
-  const { code, instructorId, status, minimumEnrollment, schedule, ...fields } = input;
+  const { code, instructorId, status, minimumEnrollment, schedule, coverUrl, ...fields } = input;
   return {
   ...fields,
+  ...(coverUrl === undefined ? {} : { coverUrl: coverUrl || null }),
   ...(schedule === undefined ? {} : { schedule }),
   ...(minimumEnrollment === undefined ? {} : { minimumEnrollment }),
   ...(instructorId === undefined ? {} : { instructorId }),
@@ -115,22 +143,12 @@ export const courseService = {
    * Devuelve solo los cursos publicados para el catálogo público.
    */
   async catalog() {
-    const courses = await prisma.course.findMany({
-      where: { status: 'PUBLISHED' },
-      select: courseSelect,
-      orderBy: { createdAt: 'desc' }
-    });
-
-    return courses.map(toCourseResponse);
+    return readCatalogCourses({ status: 'PUBLISHED' });
   },
 
   async catalogById(id: number, participantId?: number) {
-    const course = await prisma.course.findFirst({
-      where: { id, status: 'PUBLISHED' },
-      select: courseSelect
-    });
-    if (!course) return null;
-    const response = toCourseResponse(course);
+    const [response] = await readCatalogCourses({ id, status: 'PUBLISHED' });
+    if (!response) return null;
     if (!participantId) return response;
     const enrollment = await prisma.enrollment.findUnique({
       where: { courseId_participantId: { courseId: id, participantId } },

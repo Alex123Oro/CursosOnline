@@ -56,3 +56,4 @@ a:focus-visible, button:focus-visible { outline: 3px solid #cf7b23; outline-offs
 @media (max-width: 900px) { .course-detail-layout { grid-template-columns: minmax(0,1fr) 300px; gap: 20px; } .detail-card, .criteria-card { padding: 22px; } }
 @media (max-width: 780px) { .course-detail-layout { grid-template-columns: minmax(0,1fr); } .criteria-card { position: static; grid-row: 1; } }
 @media (max-width: 520px) { .course-detail { padding: 20px 18px 40px; } .course-hero { padding: 24px; } .hero-facts { gap: 16px 24px; } .detail-card, .criteria-card { padding: 20px; } .schedule-row { align-items: flex-start; flex-direction: column; } }
+.course-cover-banner { display:block; width:100%; max-height:320px; object-fit:cover; border-radius:14px; margin-bottom:20px; }

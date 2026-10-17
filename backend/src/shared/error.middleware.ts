@@ -3,6 +3,10 @@ import { ZodError } from 'zod';
 import { HttpError } from './http-error.js';
 
 export const errorMiddleware: ErrorRequestHandler = (error, _request, response, _next) => {
+  if (error?.type === 'entity.too.large') {
+    response.status(413).json({ message: 'El archivo supera el tamaño permitido (5 MB para portadas).' });
+    return;
+  }
   if (error instanceof HttpError) {
     response.status(error.statusCode).json({
       message: error.message,
