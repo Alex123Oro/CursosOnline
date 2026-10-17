@@ -2,6 +2,7 @@ import { computed, effect, inject, Injectable, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { SessionService } from './session.service';
 import { profileHome } from './role.guard';
+import { isCertificateVerificationRoute } from './public-request';
 
 @Injectable({ providedIn: 'root' })
 export class SessionNavigationService {
@@ -14,7 +15,7 @@ export class SessionNavigationService {
       if (!this.session.ready()) return;
       const user = this.session.currentUser();
       const id = user?.id ?? '';
-      if (previousId !== null && previousId !== id) {
+      if (previousId !== null && previousId !== id && !isCertificateVerificationRoute(this.router.url)) {
         untracked(() => { void this.router.navigateByUrl(user ? profileHome(user.role) : '/iniciar-sesion'); });
       }
       previousId = id;

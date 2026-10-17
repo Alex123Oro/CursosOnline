@@ -33,9 +33,8 @@ describe('SessionService authentication', () => {
     http.expectOne(`${environment.apiBaseUrl}/auth/login`).flush({ accessToken: 'new-token', refreshToken: 'refresh', expiresAt: null, user: admin });
     expect(session.currentUser()).toEqual(admin);
     http.expectOne(request => request.url.endsWith('/session/users')).flush([admin, instructor]);
-    session.selectUser(instructor.id);
-    expect(session.currentUser()).toEqual(instructor);
-    expect(session.accessToken()).toBe('');
+    expect(session.currentUser()).toEqual(admin);
+    expect(session.accessToken()).toBe('new-token');
   });
 
   it('clears local credentials on logout when there is no active token', () => {

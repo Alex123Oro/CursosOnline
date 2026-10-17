@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../../testing/session-fixture';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -99,7 +100,7 @@ describe('InstructorAttendancePage', () => {
     page.setFilter('to','2026-09-30'); expect(page.sessions()).toEqual([]); expect(page.error()).toContain('Hasta');
   });
   it('denies instructor identities without requesting admin data', () => {
-    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '8'); fixture.detectChanges();
     expect(fixture.componentInstance.sessions()).toEqual([]); expect(fixture.nativeElement.textContent).toContain('Solo el administrador');
     http.expectNone(`${base}/instructors`);
   });

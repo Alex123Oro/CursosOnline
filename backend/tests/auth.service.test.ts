@@ -57,22 +57,40 @@ describe('Supabase authentication', () => {
     await expect(authService.login('orphan@example.test', 'valid-password')).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('allows demo credentials when Supabase is unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
-    findUnique.mockImplementation(async ({ where }: { where: { email?: string; authId?: string } }) => ({
-      id: 1,
-      authId: 'auth-admin-id',
-      name: 'Ana Admin',
-      email: where.email ?? 'admin@eva.local',
-      role: 'ADMIN',
-      participantTypeId: null,
-      participantType: null
-    }));
+  it('uses real Supabase credentials for demo accounts and selects only login profile fields', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      access_token: 'real-luis-token', refresh_token: 'refresh-token',
+      user: { id: 'luis-auth-id', email: 'luis@eva.local' }
+    }), { status: 200 })));
+    findUnique.mockResolvedValue({ id: 5, name: 'Luis', email: 'luis@eva.local',
+      role: 'PARTICIPANT', participantTypeId: 2, participantType: { name: 'Estudiante' } });
 
-    await expect(authService.login('admin@eva.local', 'admin1234@')).resolves.toMatchObject({
-      accessToken: expect.stringMatching(/^demo-/),
-      user: { email: 'admin@eva.local', role: 'ADMIN' }
+    await expect(authService.login('luis@eva.local', 'participante123@')).resolves.toMatchObject({
+      accessToken: 'real-luis-token', user: { role: 'PARTICIPANT' }
     });
+    expect(findUnique).toHaveBeenCalledWith({ where: { authId: 'luis-auth-id' }, select: {
+      id: true, name: true, email: true, role: true, participantTypeId: true,
+      participantType: { select: { name: true } }
+    } });
+  });
+
+  it('rejects legacy demo credentials when Supabase is unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await expect(authService.login('admin@eva.local', 'admin1234@')).rejects.toMatchObject({ statusCode: 503 });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('rejects legacy demo credentials when Supabase rejects them', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 400 })));
+    await expect(authService.login('admin@eva.local', 'admin1234@')).rejects.toMatchObject({ statusCode: 401 });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('does not adopt a profile by matching email', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ access_token: 'token', user: { id: 'unlinked', email: 'admin@eva.local' } }))));
+    findUnique.mockResolvedValue(null);
+    await expect(authService.login('admin@eva.local', 'password')).rejects.toMatchObject({ statusCode: 403 });
+    expect(findUnique).toHaveBeenCalledTimes(1);
   });
 
   it('revokes the Supabase session on logout', async () => {

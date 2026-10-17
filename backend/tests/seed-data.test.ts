@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { courseInputSchema } from '../src/modules/courses/course.rules.js';
-import { SEED_COURSES } from '../prisma/seed-data.js';
+import { SEED_COURSES } from './fixtures/seed-data.js';
 
 describe('course seed data', () => {
   it('provides nine unique published courses for Informática y Sistemas', () => {

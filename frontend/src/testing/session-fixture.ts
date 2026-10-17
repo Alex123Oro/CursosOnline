@@ -30,3 +30,13 @@ export const clearFixtureSession = () => {
   localStorage.removeItem('eva-access-token');
   localStorage.removeItem('eva-logged-out');
 };
+
+export const selectFixtureUser = (session: SessionService, id: string) => {
+  const user = session.users().find(item => item.id === id) ?? fixtureUsers.find(item => item.id === id);
+  if (!user) throw new Error('Unknown fixture user');
+  session.login(user.email, 'test-only-password').subscribe();
+  const http = TestBed.inject(HttpTestingController);
+  http.expectOne(`${environment.apiBaseUrl}/auth/login`).flush({ user, accessToken: 'fixture-access-token', refreshToken: '', expiresAt: null });
+  if (user.role === 'ADMIN') http.expectOne(`${environment.apiBaseUrl}/session/users`).flush(fixtureUsers);
+  else for (const other of fixtureUsers.filter(item => item.id !== id)) session.addInstructor(other);
+};

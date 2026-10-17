@@ -3,7 +3,6 @@ import { prisma } from '../config/prisma.js';
 import { asyncHandler } from './async-handler.js';
 import { HttpError } from './http-error.js';
 import { verifyAccessToken } from '../modules/auth/auth.service.js';
-import { env } from '../config/env.js';
 
 export type RequestUser = {
   id: number;
@@ -27,9 +26,6 @@ const loadUser = async (request: AuthedRequest) => {
   const authorization = request.header('authorization');
   const match = authorization?.match(/^Bearer\s+(.+)$/i);
   if (!match) {
-    if (env.nodeEnv === 'development' || env.nodeEnv === 'test') {
-      return loadTestUser(request);
-    }
     return null;
   }
 
@@ -49,35 +45,13 @@ const loadUser = async (request: AuthedRequest) => {
     }
   });
 
-  const account = user ?? (identity.email ? await prisma.user.findUnique({
-    where: { email: identity.email },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      participantTypeId: true
-    }
-  }) : null);
+  const account = user;
 
   if (!account) {
     throw new HttpError(401, 'La sesion no es valida.');
   }
 
   request.user = toRequestUser(account);
-  return request.user;
-};
-
-const loadTestUser = async (request: AuthedRequest) => {
-  const header = request.header('x-user-id');
-  if (!header) return null;
-  const userId = Number(header);
-  if (!Number.isInteger(userId) || userId <= 0) throw new HttpError(401, 'La sesion no es valida.');
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: {
-    id: true, name: true, email: true, role: true, participantTypeId: true
-  } });
-  if (!user) throw new HttpError(401, 'La sesion no es valida.');
-  request.user = toRequestUser(user);
   return request.user;
 };
 

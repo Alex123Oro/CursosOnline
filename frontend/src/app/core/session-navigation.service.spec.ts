@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../testing/session-fixture';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -6,6 +7,14 @@ import { SessionNavigationService } from './session-navigation.service';
 import { authenticateAdminFixture, clearFixtureSession } from '../../testing/session-fixture';
 
 describe('Profile navigation', () => {
+  it('does not leave public verification when a session expires', () => {
+    clearFixtureSession();
+    const navigateByUrl = vi.fn().mockResolvedValue(true);
+    TestBed.configureTestingModule({ providers: [provideHttpClient(),provideHttpClientTesting(),{ provide: Router,useValue: { url: '/verificar/8F72A91C',navigateByUrl } }] });
+    const http = TestBed.inject(HttpTestingController); const session = authenticateAdminFixture(http);
+    TestBed.inject(SessionNavigationService); TestBed.tick(); session.endSessionLocally(); TestBed.tick();
+    expect(navigateByUrl).not.toHaveBeenCalled(); http.verify(); clearFixtureSession();
+  });
   it('navigates to the home page for each authenticated role change', () => {
     clearFixtureSession();
     const navigateByUrl = vi.fn().mockResolvedValue(true);
@@ -14,9 +23,9 @@ describe('Profile navigation', () => {
     const session = authenticateAdminFixture(http);
     TestBed.inject(SessionNavigationService); TestBed.tick();
     expect(navigateByUrl).not.toHaveBeenCalled();
-    session.selectUser('8'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
-    session.selectUser('9'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/catalogo');
-    session.selectUser('1'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
+    selectFixtureUser(session, '8'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
+    selectFixtureUser(session, '9'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/catalogo');
+    selectFixtureUser(session, '1'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
     session.endSessionLocally(); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/iniciar-sesion');
     http.verify(); clearFixtureSession();
   });
