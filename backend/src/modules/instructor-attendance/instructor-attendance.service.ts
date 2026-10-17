@@ -55,7 +55,7 @@ export const instructorAttendanceService = {
       const course = await tx.course.findUnique({ where: { id: initial.courseId }, select: courseSelect });
       if (!course) throw new HttpError(404, 'Curso no encontrado.');
       if (course.status !== 'PUBLISHED' || course.instructorId === null) throw new HttpError(400, 'El curso debe estar publicado y tener un usuario instructor asignado.');
-      await tx.$queryRaw`SELECT id FROM sesiones_curso WHERE id = ${sessionId} AND curso_id = ${course.id} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM sesiones WHERE id = ${sessionId} AND curso_id = ${course.id} FOR UPDATE`;
       const session = await tx.courseSession.findUnique({ where: { id: sessionId }, include: sessionInclude });
       if (!session || session.courseId !== initial.courseId) throw new HttpError(404, 'Sesión no encontrada en el curso.');
       const today = boliviaToday();

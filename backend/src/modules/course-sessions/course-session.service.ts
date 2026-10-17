@@ -50,7 +50,7 @@ const withUnlockedSession = async <T>(courseId: number, sessionId: number, user:
     await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR SHARE`;
     const course = await authorizedCourse(courseId, user, tx);
     if (user.role === 'ADMIN' && course.status !== 'DRAFT') throw new HttpError(403, 'Solo el instructor asignado puede editar o eliminar sesiones de cursos publicados.');
-    await tx.$queryRaw`SELECT id FROM sesiones_curso WHERE id = ${sessionId} AND curso_id = ${courseId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM sesiones WHERE id = ${sessionId} AND curso_id = ${courseId} FOR UPDATE`;
     const session = await tx.courseSession.findUnique({ where: { id: sessionId }, include: sessionInclude });
     if (!session || session.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');
     if (session.instructorAttendance) throw new HttpError(409, 'La sesión está bloqueada porque el administrador ya registró la asistencia del instructor. No se puede editar ni eliminar.');

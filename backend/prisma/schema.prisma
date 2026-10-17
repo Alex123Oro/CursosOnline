@@ -79,6 +79,7 @@ model Course {
   code                 String?        @unique @map("codigo")
   name                 String         @map("nombre")
   content              String?        @map("contenido")
+  coverUrl             String?        @map("portada_url")
   durationHours        Int?           @map("duracion_horas")
   instructor           String?        @map("instructor")
   instructorId         Int?           @map("instructor_id")
@@ -90,6 +91,8 @@ model Course {
   endDate              DateTime?      @map("fecha_fin")
   capacity             Int?           @map("capacidad")
   minimumEnrollment    Int            @default(1) @map("minimo_inscritos")
+  minimumPassingScore  Decimal        @default(70) @map("nota_minima") @db.Decimal(5, 2)
+  minimumAttendancePercent Decimal    @default(80) @map("asistencia_minima") @db.Decimal(5, 2)
   preinscriptionStart  DateTime?      @map("fecha_inicio_preinscripcion")
   preinscriptionEnd    DateTime?      @map("fecha_fin_preinscripcion")
   createdAt            DateTime       @default(now()) @map("created_at")
@@ -107,9 +110,9 @@ model CourseSession {
   courseId        Int      @map("curso_id")
   sessionNumber   Int      @map("numero_sesion")
   date            DateTime @db.Date @map("fecha")
-  startTime       String   @db.VarChar(5) @map("hora_inicio")
+  startTime       String   @db.VarChar(5) @map("hora_inicio_api")
   durationMinutes Int      @map("duracion_minutos")
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt       DateTime @default(now()) @map("fecha_registro")
   updatedAt       DateTime @updatedAt @map("updated_at")
   course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
   attendance      Attendance[]
@@ -118,7 +121,7 @@ model CourseSession {
   @@unique([id, courseId])
   @@unique([courseId, date, startTime])
   @@unique([courseId, sessionNumber])
-  @@map("sesiones_curso")
+  @@map("sesiones")
 }
 
 model CoursePrice {
@@ -166,8 +169,8 @@ model Attendance {
   sessionId    Int              @map("sesion_id")
   enrollmentId Int              @map("inscripcion_id")
   status       AttendanceStatus @map("estado")
-  recordedById Int              @map("registrado_por_id")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  recordedById Int              @map("registrado_por")
+  createdAt    DateTime         @default(now()) @map("fecha_registro")
   updatedAt    DateTime         @updatedAt @map("updated_at")
   session      CourseSession   @relation(fields: [sessionId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
   enrollment   Enrollment      @relation(fields: [enrollmentId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
@@ -175,7 +178,7 @@ model Attendance {
 
   @@unique([sessionId, enrollmentId])
   @@index([enrollmentId])
-  @@map("asistencias")
+  @@map("asistencias_participantes")
 }
 
 model InstructorAttendance {
@@ -184,8 +187,8 @@ model InstructorAttendance {
   sessionId    Int              @unique @map("sesion_id")
   instructorId Int              @map("instructor_id")
   status       AttendanceStatus @map("estado")
-  recordedById Int              @map("registrado_por_id")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  recordedById Int              @map("registrado_por")
+  createdAt    DateTime         @default(now()) @map("fecha_registro")
   updatedAt    DateTime         @updatedAt @map("updated_at")
   session      CourseSession    @relation(fields: [sessionId, courseId], references: [id, courseId], onDelete: Restrict, onUpdate: Restrict)
   instructor   User             @relation("AttendanceInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
@@ -193,7 +196,7 @@ model InstructorAttendance {
 
   @@index([instructorId])
   @@unique([sessionId, courseId])
-  @@map("asistencias_instructor")
+  @@map("asistencias_instructores")
 }
 
 model Payment {
@@ -209,10 +212,10 @@ model Payment {
 model CourseEvaluation {
   id        Int               @id @default(autoincrement())
   courseId  Int               @map("curso_id")
-  title     String            @map("titulo")
+  title     String            @map("nombre")
   maxScore  Decimal           @default(100) @map("puntaje_maximo") @db.Decimal(7, 2)
   weight    Decimal           @default(100) @map("ponderacion") @db.Decimal(7, 2)
-  createdAt DateTime          @default(now()) @map("created_at")
+  createdAt DateTime          @default(now()) @map("fecha_registro")
   updatedAt DateTime          @updatedAt @map("updated_at")
   course    Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
   grades    EvaluationGrade[]
@@ -226,7 +229,8 @@ model EvaluationGrade {
   enrollmentId Int             @map("inscripcion_id")
   score        Decimal         @map("nota") @db.Decimal(7, 2)
   comment      String?         @map("observacion")
-  gradedAt     DateTime        @default(now()) @map("calificada_en")
+  gradedAt     DateTime        @default(now()) @map("fecha_modificacion")
+  recordedById Int             @map("registrado_por")
   evaluation   CourseEvaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
   enrollment   Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   @@unique([evaluationId, enrollmentId])
