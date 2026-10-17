@@ -92,6 +92,10 @@ export const courseInputSchema = z
       .or(z.literal('').transform(() => undefined)),
     name: requiredText('El nombre', 3),
     content: requiredText('El contenido', 10),
+    coverUrl: z.string().trim().max(2048).refine(value => {
+      if (!value || /^\/images\/[a-zA-Z0-9/_\-.]+$/.test(value)) return true;
+      try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password; } catch { return false; }
+    }, 'Usa una URL HTTPS válida para la portada.').nullable().optional(),
     durationHours: z.coerce
       .number({ error: 'Las horas son obligatorias.' })
       .int('Las horas deben ser un numero entero.')

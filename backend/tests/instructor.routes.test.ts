@@ -1,3 +1,4 @@
+import './fixtures/bearer-auth.js';
 import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -13,8 +14,8 @@ let server: Server; let base: string;
 describe('create instructor HTTP', () => {
   beforeAll(async () => { const app = express(); app.use(express.json()); app.use('/api/admin', instructorRoutes); app.use(errorMiddleware); server = await new Promise<Server>(resolve => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)); }); base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/admin/instructors`; });
   afterAll(() => new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections(); }));
-  beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockImplementation(async ({ where }) => where.authId ? null : { id: 1, role: 'ADMIN' }); mocks.user.findFirst.mockResolvedValue(null); mocks.createIdentity.mockResolvedValue('new-auth'); mocks.deleteIdentity.mockResolvedValue(undefined); mocks.user.create.mockImplementation(async ({ data }) => ({ id: 7, ...data })); });
-  const post = (body: unknown = input, user = '1') => fetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Id': user }, body: JSON.stringify(body) });
+  beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockImplementation(async ({ where }) => where.authId === '1' ? { id: 1, role: 'ADMIN' } : null); mocks.user.findFirst.mockResolvedValue(null); mocks.createIdentity.mockResolvedValue('new-auth'); mocks.deleteIdentity.mockResolvedValue(undefined); mocks.user.create.mockImplementation(async ({ data }) => ({ id: 7, ...data })); });
+  const post = (body: unknown = input, user = '1') => fetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: user ? `Bearer ${user}` : '' }, body: JSON.stringify(body) });
   it('denies anonymous users before creating an account', async () => { expect((await post(input, '')).status).toBe(401); expect(mocks.createIdentity).not.toHaveBeenCalled(); });
   it.each(['INSTRUCTOR', 'PARTICIPANT'])('denies %s', async role => { mocks.user.findUnique.mockResolvedValue({ id: 2, role }); expect((await post()).status).toBe(403); expect(mocks.createIdentity).not.toHaveBeenCalled(); });
   it('creates normalized instructor and returns only profile data', async () => {
@@ -49,15 +50,15 @@ describe('create instructor HTTP', () => {
   it('recovers an INSERT committed before its response was lost', async () => {
     let committed: unknown;
     mocks.user.create.mockImplementation(async ({ data }) => { committed = { id: 7, ...data }; throw { code: 'P1017' }; });
-    mocks.user.findUnique.mockImplementation(async ({ where }) => where.authId ? committed : { id: 1, role: 'ADMIN' });
+    mocks.user.findUnique.mockImplementation(async ({ where }) => where.authId !== '1' ? committed : { id: 1, role: 'ADMIN' });
     const response = await post(); expect(response.status).toBe(201); expect(await response.json()).toMatchObject({ id: '7', email: 'ana@example.com', sis: input.sis }); expect(mocks.deleteIdentity).not.toHaveBeenCalled();
   });
   it('preserves Auth when an ambiguous DB outcome cannot be reconciled', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    try { mocks.user.create.mockRejectedValue(new Error(input.password)); mocks.user.findUnique.mockImplementation(async ({ where }) => { if (where.authId) throw new Error(input.password); return { id: 1, role: 'ADMIN' }; }); const response = await post(); expect(response.status).toBe(503); expect(mocks.deleteIdentity).not.toHaveBeenCalled(); expect(log.mock.calls).toEqual([['instructor_profile_creation_unresolved', { authId: 'new-auth' }]]); expect(await response.text()).not.toContain(input.password); } finally { log.mockRestore(); }
+    try { mocks.user.create.mockRejectedValue(new Error(input.password)); mocks.user.findUnique.mockImplementation(async ({ where }) => { if (where.authId !== '1') throw new Error(input.password); return { id: 1, role: 'ADMIN' }; }); const response = await post(); expect(response.status).toBe(503); expect(mocks.deleteIdentity).not.toHaveBeenCalled(); expect(log.mock.calls).toEqual([['instructor_profile_creation_unresolved', { authId: 'new-auth' }]]); expect(await response.text()).not.toContain(input.password); } finally { log.mockRestore(); }
   });
   it('preserves Auth when reconciliation finds a mismatched profile', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    try { mocks.user.create.mockRejectedValue({ code: 'P1001' }); mocks.user.findUnique.mockImplementation(async ({ where }) => where.authId ? { id: 7, authId: 'new-auth', email: 'other@example.com' } : { id: 1, role: 'ADMIN' }); expect((await post()).status).toBe(503); expect(mocks.deleteIdentity).not.toHaveBeenCalled(); } finally { log.mockRestore(); }
+    try { mocks.user.create.mockRejectedValue({ code: 'P1001' }); mocks.user.findUnique.mockImplementation(async ({ where }) => where.authId !== '1' ? { id: 7, authId: 'new-auth', email: 'other@example.com' } : { id: 1, role: 'ADMIN' }); expect((await post()).status).toBe(503); expect(mocks.deleteIdentity).not.toHaveBeenCalled(); } finally { log.mockRestore(); }
   });
 });

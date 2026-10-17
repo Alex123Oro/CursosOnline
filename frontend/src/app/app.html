@@ -28,6 +28,8 @@
     <p class="nav-label">OPERACIÓN</p>
     <nav aria-label="Navegación principal" (click)="sidebarOpen.set(false)">
       @if (session.currentUser()?.role === 'ADMIN') {
+      <a class="nav-item" routerLink="/certificados" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Certificados</span></a>
+      <a class="nav-item" routerLink="/plantillas-certificados" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Plantillas de certificados</span></a>
       <a class="nav-item" routerLink="/cursos" routerLinkActive="active" ariaCurrentWhenActive="page">
         <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         <span>Cursos</span>
@@ -52,6 +54,7 @@
         </a>
       }
       @if (session.currentUser()?.role === 'PARTICIPANT') {
+        <a class="nav-item" routerLink="/mis-certificados" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Mis certificados</span></a>
         <a class="nav-item" routerLink="/mi-progreso" routerLinkActive="active" ariaCurrentWhenActive="page">
           <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v17h17M8 16v-4m5 4V8m5 8V5"/></svg>
           <span>Mi progreso</span>

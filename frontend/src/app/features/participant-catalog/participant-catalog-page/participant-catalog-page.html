@@ -1,40 +1,82 @@
-﻿<a class="skip-link" href="#catalog-content">Saltar al contenido</a>
+<a class="skip-link" href="#catalog-content">Saltar al contenido</a>
 <app-participant-header />
-
-<section id="catalog-content" class="participant-catalog" tabindex="-1">
-  <section class="catalog-hero" aria-labelledby="catalog-title">
+<section id="catalog-content" class="participant-catalog" tabindex="-1" aria-labelledby="catalog-title">
+  <section class="catalog-hero">
     <div class="hero-copy">
-    <p class="eyebrow">CURSOS DISPONIBLES</p>
-    <h1 id="catalog-title">Encuentra tu próximo curso</h1>
-    <p>Explora oportunidades de aprendizaje creadas para acompañar tu desarrollo profesional.</p>
+      <p class="eyebrow">● UN NUEVO PASO EN TU APRENDIZAJE</p>
+      <h1 id="catalog-title">Lo que aprendes hoy,<br>te lleva <em>más lejos.</em></h1>
+      <p class="hero-description">Desarrolla habilidades para tu próximo reto.</p>
+      <div class="hero-search">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+        <label class="sr-only" for="course-search">Buscar cursos por nombre, código o instructor</label>
+        <input #search id="course-search" type="search" placeholder="¿Qué quieres aprender?" [value]="query()" (input)="onSearch(search.value)">
+        <button class="search-action" type="button" (click)="scrollTo('results-title')" aria-label="Ver resultados de búsqueda"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+      </div>
+      <p class="search-hint">Busca un tema, un curso o a tu instructor.</p>
+    </div>
+    <div class="hero-visual">
+      <img src="/images/catalog-students.png" alt="Tres estudiantes aprendiendo juntos con una computadora" width="2172" height="724" fetchpriority="high">
+      <div class="photo-caption"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5-9-5Zm4 3v6c3 3 7 3 10 0v-6M21 8v8"/></svg></span><div><strong>El siguiente paso es tuyo</strong><small>Aprende. Aplica. Sigue creciendo.</small></div></div>
+      <span class="photo-decoration" aria-hidden="true">✦</span>
     </div>
   </section>
-
-  <section class="catalog-controls" aria-label="Buscar y filtrar cursos">
-    <label class="search-field" for="course-search"><span>Buscar cursos</span><input #search id="course-search" class="search-input" type="search" placeholder="Nombre, código o instructor" [value]="query()" (input)="onSearch(search.value)"></label>
-  </section>
-
-  <section class="catalog-results" aria-labelledby="results-title">
-    <div class="results-heading"><div><p class="eyebrow">OFERTA FORMATIVA</p><h2 id="results-title">Cursos para ti</h2></div><p class="result-count" role="status" aria-live="polite" aria-atomic="true">{{ filteredCourses().length }} {{ filteredCourses().length === 1 ? 'curso disponible' : 'cursos disponibles' }}</p></div>
-    @if (loading()) {
-      <div class="empty-state" role="status" aria-live="polite"><p class="eyebrow">CARGANDO</p><h3>Estamos cargando los cursos disponibles</h3></div>
-    } @else if (loadFailed()) {
-      <div class="empty-state catalog-error" role="alert"><p class="eyebrow">NO DISPONIBLE</p><h3>No pudimos cargar los cursos</h3><p>Verifica que el backend esté en ejecución e inténtalo nuevamente.</p></div>
-    } @else if (filteredCourses().length) {
-      <div class="catalog-grid">
-        @for (course of filteredCourses(); track course.id) {
-          <article class="course-card">
-            <div class="card-topline"><span class="course-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v15M3 4c4-1 6 0 9 1 3-1 5-2 9-1v15c-4-1-6 0-9 1-3-1-5-2-9-1Z"/></svg></span><span class="duration-badge">{{ course.durationHours }} horas</span></div>
-            <h3>{{ course.name }}</h3><p class="course-summary">{{ course.content }}</p>
-            <p class="course-instructor"><span>Con</span> {{ course.instructor || 'Instructor por confirmar' }}</p>
-            <div class="course-facts"><span>Inicio <strong>{{ shortDate(course.startDate) }}</strong></span><span>{{ course.remainingSlots === null ? 'Cupos por confirmar' : course.remainingSlots === 0 ? 'Sin cupos' : course.remainingSlots + ' cupos disponibles' }}</span></div>
-            <div class="card-footer"><div class="card-price">@if (startingPrice(course) !== null) { <span>Desde</span><strong>{{ startingPrice(course) }} <small>Bs</small></strong> } @else { <span>Precio</span><strong>Por confirmar</strong> }</div><a class="course-action" [routerLink]="['/catalogo', course.id]" [attr.aria-label]="'Ver detalles de ' + course.name">Ver detalles <span aria-hidden="true">→</span></a></div>
-          </article>
-        }
+  <nav class="quick-filters" aria-label="Explorar cursos">
+    <span>Explora a tu manera</span>
+    <button type="button" [class.active]="!activeFilterCount() && !query()" (click)="clearFilters()">Todos los cursos</button>
+    <button type="button" [class.active]="onlyAvailable()" [attr.aria-pressed]="onlyAvailable()" (click)="setFilter('available', !onlyAvailable())">Inscripción abierta ↗</button>
+    <button type="button" [class.active]="onlyFree()" [attr.aria-pressed]="onlyFree()" (click)="setFilter('free', !onlyFree())">Desde Bs 0</button>
+    <button type="button" [class.active]="duration() === 'short'" [attr.aria-pressed]="duration() === 'short'" (click)="setDuration(duration() === 'short' ? 'all' : 'short')">Hasta 20 horas</button>
+  </nav>
+  <div class="catalog-layout">
+    <button class="mobile-filter-button" type="button" aria-controls="catalog-filters" [attr.aria-expanded]="filtersOpen()" (click)="filtersOpen.set(!filtersOpen())">{{ filtersOpen() ? 'Ocultar filtros' : 'Filtrar cursos' }} @if (activeFilterCount()) { ({{ activeFilterCount() }}) }</button>
+    <aside class="filters" [class.mobile-open]="filtersOpen()" id="catalog-filters" aria-label="Filtrar cursos">
+      <div class="filter-heading"><h2>Filtros @if (activeFilterCount()) { <span>{{ activeFilterCount() }}</span> }</h2>@if (activeFilterCount() || query()) { <button type="button" (click)="clearFilters()">Limpiar</button> }</div>
+      <fieldset><legend>Disponibilidad</legend><label><input type="checkbox" [checked]="onlyAvailable()" (change)="setFilter('available', $any($event.target).checked)">Inscripción abierta</label></fieldset>
+      <fieldset><legend>Precio</legend><label><input type="checkbox" [checked]="onlyFree()" (change)="setFilter('free', $any($event.target).checked)">Desde Bs 0</label><p class="filter-hint">Según tu tipo de participante.</p></fieldset>
+      <fieldset><legend>Duración</legend>
+        <label><input type="radio" name="duration" [checked]="duration() === 'all'" (change)="setDuration('all')">Cualquier duración</label>
+        <label><input type="radio" name="duration" [checked]="duration() === 'short'" (change)="setDuration('short')">Hasta 20 horas</label>
+        <label><input type="radio" name="duration" [checked]="duration() === 'long'" (change)="setDuration('long')">Más de 20 horas</label>
+      </fieldset>
+      <div class="instructor-filter"><label for="instructor-filter">Instructor</label><select id="instructor-filter" [value]="instructor()" (change)="setInstructor($any($event.target).value)"><option value="all">Todos los instructores</option>@for (name of instructors(); track name) { <option [value]="name">{{ name }}</option> }</select></div>
+      <div class="filter-note"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 8 4v6c0 4-8 8-8 8s-8-4-8-8V7l8-4Z"/><path d="m8 12 3 3 5-6"/></svg><p>Tu próximo paso empieza aquí.<span>Consulta los horarios y requisitos de cada curso.</span></p></div>
+    </aside>
+    <section class="catalog-results" aria-labelledby="results-title">
+      <div class="results-heading"><div><p class="eyebrow">ENCUENTRA TU SIGUIENTE RETO</p><h2 id="results-title" tabindex="-1">Explora nuestros cursos</h2></div><button type="button" (click)="scrollTo('course-search')">Buscar un curso ↑</button></div>
+      <div class="results-toolbar">
+        <p class="result-count" role="status" aria-live="polite" aria-atomic="true">@if (loading()) { Cargando cursos… } @else if (loadFailed()) { Catálogo no disponible } @else { <strong>{{ filteredCourses().length }}</strong> {{ filteredCourses().length === 1 ? 'curso' : 'cursos' }} @if (query()) { para «{{ query() }}» } }</p>
+        <label class="sort-label" for="course-sort"><span>Ordenar por:</span><select id="course-sort" [value]="sort()" (change)="setSort($any($event.target).value)"><option value="recent">Más recientes</option><option value="name">Nombre: A–Z</option><option value="price">Menor precio</option></select></label>
       </div>
-    } @else {
-      <div class="empty-state"><p class="eyebrow">SIN RESULTADOS</p><h3>No encontramos cursos con esos filtros</h3><p>Prueba otra búsqueda o vuelve a ver todas las áreas disponibles.</p><button class="clear-filters" type="button" (click)="clearFilters()">Limpiar filtros</button></div>
-    }
-  </section>
+      @if (loading()) {
+        <div class="catalog-grid" role="status" aria-label="Cargando cursos" aria-busy="true">@for (item of [1,2,3,4,5,6]; track item) { <div class="skeleton-card" aria-hidden="true"><div></div><span></span><span></span><span></span></div> }</div>
+      } @else if (loadFailed()) {
+        <div class="empty-state catalog-error" role="alert"><span class="empty-symbol" aria-hidden="true">!</span><h3>No pudimos cargar los cursos</h3><p>El catálogo no está disponible en este momento. Vuelve a intentarlo en unos minutos.</p></div>
+      } @else if (filteredCourses().length) {
+        <div class="catalog-grid">
+          @for (course of visibleCourses(); track course.id) {
+            <article class="course-card">
+              <a [class]="'course-cover cover-' + artwork(course)" [class.has-cover]="hasCover(course)" [routerLink]="['/catalogo', course.id]" tabindex="-1" aria-hidden="true">
+                @if (hasCover(course)) { <img class="uploaded-cover" [src]="course.coverUrl" alt="" width="1200" height="675" loading="lazy" (error)="coverFailed(course.coverUrl!)"> }
+                <span class="cover-brand">EVA <span>/</span> APRENDE Y AVANZA</span><span class="cover-orbit"></span>
+                @if (coverLabel(course)) { <span class="cover-word">{{ coverLabel(course) }}</span> } @else { <svg class="cover-book" viewBox="0 0 80 80"><path d="M40 23C28 15 18 16 10 18v43c11-3 20-1 30 5 10-6 19-8 30-5V18c-8-2-18-3-30 5Zm0 0v43M19 29c4-1 8 0 12 2m-12 9c4-1 8 0 12 2m18-11c4-2 8-3 12-2m-12 13c4-2 8-3 12-2"/></svg> }
+                <span class="cover-detail" aria-hidden="true">+</span>
+              </a>
+              <div class="card-body">
+                <div class="card-topline"><span class="course-provider"><span aria-hidden="true">E</span>EVA · Formación continua</span><span class="duration-badge">{{ course.durationHours > 0 ? course.durationHours + ' h' : 'Por confirmar' }}</span></div>
+                <h3><a [routerLink]="['/catalogo', course.id]">{{ course.name }}</a></h3>
+                <p class="course-instructor">{{ course.instructor || 'Instructor por confirmar' }}</p>
+                <p class="course-summary">{{ course.content || 'Conoce el programa, los horarios y los requisitos de este curso.' }}</p>
+                <div class="course-facts"><span><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="15" rx="2"/><path d="M8 3v6m8-6v6M4 12h16"/></svg>{{ shortDate(course.startDate) }}</span><span class="availability" [class.is-open]="isOpen(course)"><i aria-hidden="true"></i>{{ course.remainingSlots === 0 ? 'Sin cupos' : isOpen(course) ? 'Inscripción abierta' : 'Ver convocatoria' }}</span></div>
+                <div class="card-footer"><div class="card-price">@if (startingPrice(course) !== null) { <span>Desde</span><strong>Bs {{ startingPrice(course) }}</strong> } @else { <span>Precio</span><strong class="price-pending">Por confirmar</strong> }</div><a class="course-action" [routerLink]="['/catalogo', course.id]" [attr.aria-label]="'Ver detalles de ' + course.name">Ver curso <span aria-hidden="true">↗</span></a></div>
+              </div>
+            </article>
+          }
+        </div>
+        <div class="results-bottom"><p>Mostrando {{ firstResult() }}–{{ lastResult() }} de {{ filteredCourses().length }} cursos</p>@if (pageCount() > 1) { <nav class="pagination" aria-label="Páginas del catálogo"><button type="button" aria-label="Página anterior" [disabled]="currentPage() === 1" (click)="changePage(currentPage() - 1)">←</button>@for (number of pageNumbers(); track number) { <button type="button" [class.active]="currentPage() === number" [attr.aria-current]="currentPage() === number ? 'page' : null" [attr.aria-label]="'Página ' + number" (click)="changePage(number)">{{ number }}</button> }<button type="button" aria-label="Página siguiente" [disabled]="currentPage() === pageCount()" (click)="changePage(currentPage() + 1)">→</button></nav> }</div>
+      } @else {
+        <div class="empty-state"><span class="empty-symbol" aria-hidden="true">⌕</span><h3>No encontramos cursos con esos filtros</h3><p>Intenta con otro tema o ajusta los filtros para descubrir más cursos.</p><button class="clear-filters" type="button" (click)="clearFilters()">Ver todos los cursos</button></div>
+      }
+    </section>
+  </div>
+  <footer class="catalog-footer"><a routerLink="/catalogo" class="footer-brand">EVA<span>Aprender abre caminos.</span></a><p>Encuentra un curso. Desarrolla una habilidad. Da el siguiente paso.</p><button type="button" (click)="scrollTo('catalog-content')">Volver arriba ↑</button></footer>
 </section>
-

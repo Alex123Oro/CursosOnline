@@ -15,6 +15,7 @@
         @for (course of filteredCourses(); track course.id) {
           <tr>
             <td>
+              @if (course.coverUrl) { <img class="admin-course-cover" [src]="course.coverUrl" alt="" width="64" height="40" (error)="$any($event.target).style.display = 'none'"> }
               <button class="course-name" (click)="editCourse.emit(course)">{{ course.name }}</button>
               <small>{{ course.code }}</small>
             </td>

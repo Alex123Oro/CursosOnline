@@ -2,13 +2,16 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { CourseForm } from './course-form';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { environment } from '../../../../environments/environment';
 
 describe('CourseForm', () => {
   let fixture: ComponentFixture<CourseForm>;
   let component: CourseForm;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [CourseForm], providers: [provideRouter([])] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [CourseForm], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
     fixture = TestBed.createComponent(CourseForm);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('participantTypes', [{ id: '1', name: 'Estudiante' }]);
@@ -19,6 +22,34 @@ describe('CourseForm', () => {
   });
 
   // HU4: Reject a course submission without approval criteria.
+  it('uploads a cover and includes its persisted URL in the course payload', () => {
+    validForm();
+    const emit = vi.spyOn(component.save, 'emit');
+    const file = new File(['image'], 'cover.png', { type: 'image/png' });
+    component.uploadCover({ files: [file], value: 'cover.png' } as unknown as HTMLInputElement);
+    expect(component.uploadingCover()).toBe(true);
+    component.submit(); expect(emit).not.toHaveBeenCalled();
+    const request = TestBed.inject(HttpTestingController).expectOne(`${environment.apiBaseUrl}/courses/covers`);
+    expect(request.request.body).toBe(file);
+    expect(request.request.headers.get('Content-Type')).toBe('image/png');
+    request.flush({ coverUrl: 'https://example.com/cover.png' });
+    component.submit();
+    expect(emit).toHaveBeenCalledWith(expect.objectContaining({ coverUrl: 'https://example.com/cover.png' }));
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('rejects executable cover URLs and permits removing a selected cover', () => {
+    validForm();
+    component.selectCover('javascript:alert(1)');
+    expect(component.form.controls.coverUrl.invalid).toBe(true);
+    component.selectCover('/images/course-covers/python.svg');
+    expect(component.form.controls.coverUrl.valid).toBe(true);
+    component.selectCover('');
+    const emit = vi.spyOn(component.save, 'emit');
+    component.submit();
+    expect(emit).toHaveBeenCalledWith(expect.objectContaining({ coverUrl: null }));
+  });
+
   it('requires approval criteria before emitting a course', () => {
     const emit = vi.spyOn(component.save, 'emit');
     component.form.patchValue({

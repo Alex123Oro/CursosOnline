@@ -15,6 +15,12 @@ import { LoginPage } from './features/auth/login-page';
 import { ProgressPage } from './features/progress/progress-page';
 
 export const routes: Routes = [
+  { path: 'plantillas-certificados', loadComponent: () => import('./features/certificates/certificate-templates-page').then(m => m.CertificateTemplatesPage), canActivate: [roleGuard(['ADMIN'])], canDeactivate: [async (component: import('./features/certificates/certificate-templates-page').CertificateTemplatesPage) => component.canLeave()], title: 'Plantillas de certificados | EVA' },
+  { path: 'verificar', loadComponent: () => import('./features/certificates/certificate-verification-page').then(m => m.CertificateVerificationPage), title: 'Verificar certificado | EVA' },
+  { path: 'verificar/:codigo', loadComponent: () => import('./features/certificates/certificate-verification-page').then(m => m.CertificateVerificationPage), title: 'Verificar certificado | EVA' },
+  { path: 'certificados', loadComponent: () => import('./features/certificates/certificate-emission-page').then(m => m.CertificateEmissionPage), canActivate: [roleGuard(['ADMIN'])], title: 'Emitir certificados | EVA' },
+  { path: 'mis-certificados', loadComponent: () => import('./features/certificates/my-certificates-page').then(m => m.MyCertificatesPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mis certificados | EVA' },
+  { path: 'mis-certificados/:id', loadComponent: () => import('./features/certificates/certificate-detail-page').then(m => m.CertificateDetailPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Detalle del certificado | EVA' },
   { path: 'iniciar-sesion', component: LoginPage, title: 'Iniciar sesión | EVA' },
   { path: 'mi-progreso', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mi progreso | EVA' },
   { path: '', redirectTo: 'catalogo', pathMatch: 'full' },

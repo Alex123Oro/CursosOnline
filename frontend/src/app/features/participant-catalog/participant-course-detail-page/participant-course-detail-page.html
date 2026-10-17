@@ -9,6 +9,7 @@
   } @else if (loadFailed()) {
     <div class="course-feedback course-detail-error" role="alert"><p class="eyebrow">NO DISPONIBLE</p><h1>Este curso no está disponible</h1><p>Es posible que haya sido retirado o que el enlace ya no sea válido.</p><a class="return-link" routerLink="/catalogo">Volver al catálogo</a></div>
   } @else if (course(); as course) {
+    @if (course.coverUrl) { <img class="course-cover-banner" [src]="course.coverUrl" alt="Portada del curso" (error)="$any($event.target).style.display = 'none'"> }
     <section class="course-hero" aria-labelledby="course-title">
       <div class="hero-topline"><span class="course-category">FORMACIÓN CONTINUA</span><span class="course-code">{{ course.code }}</span></div>
       <h1 id="course-title">{{ course.name }}</h1>

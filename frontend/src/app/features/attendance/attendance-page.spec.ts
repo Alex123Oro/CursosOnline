@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../../testing/session-fixture';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -60,7 +61,7 @@ describe('AttendancePage', () => {
   it('clears and cancels pending changes on identity change', () => {
     const page = fixture.componentInstance; page.mark(student, 'PRESENT');
     const request = http.expectOne(`${base}/courses/2/sessions/1/attendance/3`);
-    TestBed.inject(SessionService).selectUser('10'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '10'); fixture.detectChanges();
     expect(request.cancelled).toBe(true); expect(page.students()).toEqual([]);
     http.expectNone(`${base}/courses/2/attendance`);
   });
@@ -85,7 +86,7 @@ describe('AttendancePage', () => {
     page.setSearch('Alumno 16'); expect(page.visibleStudents()).toHaveLength(1); expect(page.visibleStudents()[0].name).toBe('Alumno 16');
   });
   function signInInstructor() {
-    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '8'); fixture.detectChanges();
     http.expectOne(`${base}/courses/2/attendance`).flush(data); fixture.detectChanges();
     return fixture.componentInstance;
   }

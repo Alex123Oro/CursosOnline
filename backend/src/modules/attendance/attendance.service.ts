@@ -48,7 +48,7 @@ export const attendanceService = {
       // Serialize changes to this student while keeping different students independent.
       await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR SHARE`;
       await authorizedCourse(tx, courseId, user);
-      await tx.$queryRaw`SELECT id FROM sesiones_curso WHERE id = ${sessionId} AND curso_id = ${courseId} FOR SHARE`;
+      await tx.$queryRaw`SELECT id FROM sesiones WHERE id = ${sessionId} AND curso_id = ${courseId} FOR SHARE`;
       const session = await tx.courseSession.findUnique({ where: { id: sessionId } });
       if (!session || session.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');
       const today = boliviaToday();

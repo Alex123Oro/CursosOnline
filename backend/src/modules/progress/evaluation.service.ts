@@ -72,8 +72,8 @@ export const evaluationService = {
 
     const grade = await prisma.evaluationGrade.upsert({
       where: { evaluationId_enrollmentId: { evaluationId, enrollmentId } },
-      create: { evaluationId, enrollmentId, score: input.score, comment: input.comment?.trim() || null },
-      update: { score: input.score, comment: input.comment?.trim() || null, gradedAt: new Date() }
+      create: { evaluationId, enrollmentId, score: input.score, comment: input.comment?.trim() || null, recordedById: user.id },
+      update: { score: input.score, comment: input.comment?.trim() || null, gradedAt: new Date(), recordedById: user.id }
     });
     return { id: String(grade.id), evaluationId: String(evaluationId), enrollmentId: String(enrollmentId), score: Number(grade.score), comment: grade.comment, gradedAt: grade.gradedAt.toISOString() };
   }

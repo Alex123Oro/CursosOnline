@@ -113,4 +113,54 @@ describe('ParticipantCatalogPage', () => {
     expect(fixture.nativeElement.querySelector('main')).toBeNull();
     expect(fixture.nativeElement.querySelector('section#catalog-content')).not.toBeNull();
   });
+
+  it('combines availability, price, duration and instructor filters, excluding full or closed courses', async () => {
+    const open = { ...catalogCourse, preinscriptionStart: '2000-01-01', preinscriptionEnd: '2099-12-31', durationHours: 12, prices: [{ participantTypeId: '1', participantTypeName: 'Estudiante', basePrice: 0 }] };
+    httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`).flush([
+      open,
+      { ...open, id: '43', remainingSlots: 0 },
+      { ...open, id: '44', preinscriptionEnd: '2000-01-02' },
+      { ...open, id: '45', durationHours: 40 },
+      { ...open, id: '46', instructor: 'Otro instructor' },
+      { ...open, id: '47', prices: [{ participantTypeId: '1', participantTypeName: 'Estudiante', basePrice: 200 }] }
+    ]);
+    component.setFilter('available', true);
+    component.setFilter('free', true);
+    component.setDuration('short');
+    component.setInstructor(catalogCourse.instructor);
+    await fixture.whenStable();
+    expect(component.filteredCourses().map(course => course.id)).toEqual(['42']);
+    expect(component.activeFilterCount()).toBe(4);
+    expect(fixture.nativeElement.querySelectorAll('.course-card')).toHaveLength(1);
+    component.clearFilters();
+    expect(component.filteredCourses()).toHaveLength(6);
+    expect(component.activeFilterCount()).toBe(0);
+  });
+
+  it('paginates results and returns to the first page when a filter changes', async () => {
+    const courses = Array.from({ length: 25 }, (_, index) => ({ ...catalogCourse, id: String(index), code: `CUR-${index}` }));
+    httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`).flush(courses);
+    component.changePage(3);
+    await fixture.whenStable();
+    expect(component.visibleCourses()).toHaveLength(1);
+    expect(component.firstResult()).toBe(25);
+    expect(fixture.nativeElement.querySelector('[aria-current="page"]')?.textContent.trim()).toBe('3');
+    component.onSearch('CUR-24');
+    await fixture.whenStable();
+    expect(component.currentPage()).toBe(1);
+    expect(component.visibleCourses().map(course => course.id)).toEqual(['24']);
+    expect(fixture.nativeElement.querySelector('.pagination')).toBeNull();
+  });
+
+  it('sorts real prices with unknown prices last and normalizes accents in search', async () => {
+    const priced = (id: string, amount: number) => ({ ...catalogCourse, id, prices: [{ participantTypeId: '1', participantTypeName: 'Estudiante', basePrice: amount }] });
+    httpTesting.expectOne(`${environment.apiBaseUrl}/courses/catalog`).flush([
+      { ...catalogCourse, id: 'unknown' }, priced('paid', 200), { ...priced('free', 0), name: 'Análisis de datos' }
+    ]);
+    component.setSort('price');
+    expect(component.filteredCourses().map(course => course.id)).toEqual(['free', 'paid', 'unknown']);
+    component.onSearch('analisis');
+    expect(component.filteredCourses().map(course => course.id)).toEqual(['free']);
+    await fixture.whenStable();
+  });
 });

@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../../testing/session-fixture';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
@@ -13,7 +14,7 @@ describe('Instructor courses', () => {
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); clearFixtureSession(); });
   it('paginates eight courses and searches names and codes without accents', () => {
     const http = TestBed.inject(HttpTestingController);
-    const session = authenticateAdminFixture(http); session.selectUser('5');
+    const session = authenticateAdminFixture(http); selectFixtureUser(session, '5');
     const fixture = TestBed.createComponent(TeachingCoursesPage);
     fixture.detectChanges();
     http.expectOne(request => request.url.endsWith('/teaching/courses')).flush(Array.from({ length: 10 }, (_, i) => ({ id: String(i), name: `Programación ${i}`, code: `PG-${i}`, startDate: null, endDate: null })));
@@ -29,11 +30,11 @@ describe('Instructor courses', () => {
   });
   it('cancels previous loads on identity changes and retries a failure', () => {
     const http = TestBed.inject(HttpTestingController);
-    const session = authenticateAdminFixture(http); session.selectUser('5');
+    const session = authenticateAdminFixture(http); selectFixtureUser(session, '5');
     const fixture = TestBed.createComponent(TeachingCoursesPage);
     fixture.detectChanges();
     const first = http.expectOne(request => request.url.endsWith('/teaching/courses'));
-    session.selectUser('6'); fixture.detectChanges();
+    selectFixtureUser(session, '6'); fixture.detectChanges();
     expect(first.cancelled).toBe(true);
     http.expectOne(request => request.url.endsWith('/teaching/courses')).flush({}, { status: 500, statusText: 'Error' }); fixture.detectChanges();
     fixture.componentInstance.reload(); fixture.detectChanges();

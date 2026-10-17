@@ -1,3 +1,4 @@
+import './fixtures/bearer-auth.js';
 import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -53,8 +54,8 @@ describe('course-scoped enrollment browsing', () => {
     vi.resetAllMocks();
     db.$transaction.mockImplementation((callback) => callback(db));
     db.user.findUnique.mockImplementation(({ where }) => ({
-      id: where.id,
-      role: where.id === 1 ? 'ADMIN' : 'INSTRUCTOR',
+      id: Number(where.authId),
+      role: Number(where.authId) === 1 ? 'ADMIN' : 'INSTRUCTOR',
     }));
     db.course.findUnique.mockResolvedValue({ id: 7 });
     db.course.findMany.mockResolvedValue([
@@ -70,7 +71,7 @@ describe('course-scoped enrollment browsing', () => {
   });
   it('filters in the database and returns fixed-size pagination', async () => {
     const response = await fetch(`${base}?courseId=7&status=PREINSCRITO&page=2&search=Carla`, {
-      headers: { 'X-User-Id': '1' },
+      headers: { Authorization: 'Bearer 1' },
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -95,12 +96,12 @@ describe('course-scoped enrollment browsing', () => {
   it('clamps an obsolete page after records move to the other tab', async () => {
     db.enrollment.count.mockResolvedValue(1);
     const response = await fetch(`${base}?courseId=7&status=INSCRITO&page=9`, {
-      headers: { 'X-User-Id': '1' },
+      headers: { Authorization: 'Bearer 1' },
     });
     expect(await response.json()).toMatchObject({ page: 1, totalPages: 1 });
   });
   it('includes draft courses in summaries without fetching participant details', async () => {
-    const response = await fetch(`${base}/courses`, { headers: { 'X-User-Id': '1' } });
+    const response = await fetch(`${base}/courses`, { headers: { Authorization: 'Bearer 1' } });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([
       {
@@ -116,11 +117,11 @@ describe('course-scoped enrollment browsing', () => {
     expect(db.enrollment.findMany).not.toHaveBeenCalled();
   });
   it('loads one enrollment and reports missing records', async () => {
-    const response = await fetch(`${base}/9`, { headers: { 'X-User-Id': '1' } });
+    const response = await fetch(`${base}/9`, { headers: { Authorization: 'Bearer 1' } });
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ id: '9', participantName: 'Carla' });
     db.enrollment.findUnique.mockResolvedValue(null);
-    expect((await fetch(`${base}/999`, { headers: { 'X-User-Id': '1' } })).status).toBe(404);
+    expect((await fetch(`${base}/999`, { headers: { Authorization: 'Bearer 1' } })).status).toBe(404);
   });
   it.each([
     '?courseId=7',
@@ -128,11 +129,11 @@ describe('course-scoped enrollment browsing', () => {
     '?courseId=7&status=OTHER',
     '?courseId=7&status=INSCRITO&page=0',
   ])('rejects malformed filters %s', async (query) => {
-    expect((await fetch(base + query, { headers: { 'X-User-Id': '1' } })).status).toBe(400);
+    expect((await fetch(base + query, { headers: { Authorization: 'Bearer 1' } })).status).toBe(400);
     expect(db.enrollment.findMany).not.toHaveBeenCalled();
   });
   it.each(['', '/courses', '/9'])('protects administrative browsing %s', async (path) => {
     expect((await fetch(base + path)).status).toBe(401);
-    expect((await fetch(base + path, { headers: { 'X-User-Id': '8' } })).status).toBe(403);
+    expect((await fetch(base + path, { headers: { Authorization: 'Bearer 8' } })).status).toBe(403);
   });
 });

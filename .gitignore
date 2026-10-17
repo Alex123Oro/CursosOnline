@@ -9,4 +9,5 @@ frontend/dist/
 .angular/
 .vscode/
 *.log
+.local/
 docs/

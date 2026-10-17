@@ -1,0 +1,40 @@
+<section class="emission-page">
+  <header><p class="eyebrow">ADMINISTRACIÓN / ACREDITACIÓN</p><h1>Emitir certificados</h1><p>Emite certificados digitales de aprobación o participación para participantes que cumplieron los requisitos.</p></header>
+  @if (coursesLoading()) { <p role="status">Cargando cursos…</p> }
+  @if (coursesError()) { <p class="error" role="alert">{{ coursesError() }} <button type="button" (click)="retryCourses()">Reintentar</button></p> }
+  <div class="toolbar">
+    <label>Plantilla del documento<select [value]="templateId()" (change)="selectTemplate($any($event.target).value)" [disabled]="saving()"><option value="">Selecciona una plantilla</option>@for (template of availableTemplates(); track template.id) { <option [value]="template.id">{{ template.name }} · v{{ template.version }}</option> }</select><a routerLink="/plantillas-certificados">Crear o editar plantillas ↗</a></label>
+    <label>Tipo de certificado<select [value]="type()" (change)="selectType($any($event.target).value)" [disabled]="saving()"><option value="aprobacion">Aprobación: nota y asistencia</option><option value="participacion">Participación: asistencia</option></select></label>
+    <label>Curso<select [value]="courseId()" (change)="selectCourse($any($event.target).value)" [disabled]="saving() || coursesLoading()"><option value="">Selecciona un curso</option>@for (course of courses(); track course.id) { <option [value]="course.id">{{ course.name }} {{ course.code ? '· ' + course.code : '' }}</option> }</select></label>
+    <label>Buscar participante<input type="search" [value]="search()" (input)="search.set($any($event.target).value); page.set(0)" /></label>
+  </div>
+  @if (feedback()) { <p class="notice" role="status">{{ feedback() }}</p> }
+  @if (templateError()) { <p class="error" role="alert">{{ templateError() }} <button type="button" (click)="retryCourses()">Reintentar</button></p> }
+  @if (selectedTemplate(); as template) { <p class="notice">Las nuevas emisiones usarán «{{ template.name }}», versión {{ template.version }}.</p> }
+  @if (failures().length) { <ul class="error" aria-label="Emisiones no realizadas">@for (failure of failures(); track $index) { <li>{{ failure }}</li> }</ul> }
+  @if (loading()) { <p role="status">Cargando participantes y requisitos…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }} <button type="button" (click)="retryList()" [disabled]="saving()">Recargar lista</button></p> }
+  @if (!courseId()) { <p class="notice">Selecciona un curso para consultar sus participantes.</p> }
+  @else if (!loading() && !error()) {
+    <div class="bulk"><button type="button" class="primary" (click)="requestBulk()" [disabled]="saving() || !eligible().length">Emitir elegibles ({{ eligible().length }})</button><small>Hasta 100 por lote, sin duplicar los ya emitidos.</small></div>
+    @if (!students().length) { <p class="notice" role="status">Este curso aún no tiene participantes inscritos.</p> }
+    @else if (!filtered().length) { <p class="notice" role="status">No hay participantes que coincidan con la búsqueda.</p> }
+    @else {
+      <ul class="roster" aria-label="Participantes por curso">
+        @for (student of visible(); track student.enrollmentId) {
+          <li><div class="student"><strong>{{ student.name }}</strong><span class="badge" [class.failed]="student.approvalStatus === 'REPROBADO'">{{ student.approvalStatus === 'APROBADO' ? (type() === 'aprobacion' ? 'Aprobado' : 'Asistencia cumplida') : student.approvalStatus === 'REPROBADO' ? (type() === 'aprobacion' ? 'No aprobado' : 'Asistencia insuficiente') : 'Requisitos pendientes' }}</span></div>
+            <div><span class="badge">{{ student.certificate ? 'Emitido' : 'Pendiente' }}</span>@if (student.certificate) { <small>{{ student.certificate.code }}{{ student.certificate.status === 'REVOKED' ? ' · Anulado' : '' }}</small> }</div>
+            <span class="action-wrapper" [attr.tabindex]="canIssue(student) ? null : 0" [attr.aria-label]="canIssue(student) ? null : reason(student)">
+              <button type="button" (click)="requestIssue(student)" [disabled]="saving() || !canIssue(student)" [attr.title]="canIssue(student) ? null : reason(student)">Emitir certificado</button>
+              @if (!canIssue(student)) { <span class="tooltip" role="tooltip">{{ reason(student) }}</span> }
+            </span>
+          </li>
+        }
+      </ul>
+      <nav class="pagination" aria-label="Paginación de participantes"><button type="button" (click)="changePage(-1)" [disabled]="currentPage() === 0">Anterior</button><span>Página {{ currentPage() + 1 }} de {{ pageCount() }}</span><button type="button" (click)="changePage(1)" [disabled]="currentPage() + 1 === pageCount()">Siguiente</button></nav>
+    }
+  }
+  @if (confirmation()) {
+    <section class="confirmation" role="dialog" aria-labelledby="emission-confirmation" tabindex="-1"><h2 id="emission-confirmation">Confirmar emisión</h2><p>{{ confirmationText() }}</p><p>El resultado y los datos del certificado se conservarán como historial.</p><div class="bulk"><button class="primary" type="button" (click)="confirm()" [disabled]="saving()">{{ saving() ? 'Emitiendo…' : 'Confirmar emisión' }}</button><button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button></div></section>
+  }
+</section>
