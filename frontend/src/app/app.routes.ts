@@ -27,6 +27,8 @@ export const routes: Routes = [
   { path: 'cursos/nuevo', component: CoursesPage, canActivate: [roleGuard(['ADMIN'])], data: { createCourse: true }, title: 'Nuevo curso | EVA' },
   { path: 'cursos/:courseId/editar', component: CoursesPage, canActivate: [roleGuard(['ADMIN'])], data: { editCourse: true }, title: 'Editar curso | EVA' },
   { path: 'cursos', component: CoursesWorkspace, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Cursos | EVA' },
+  { path: 'asignaciones-instructores', loadComponent: () => import('./features/courses/instructor-assignments-page').then(m => m.InstructorAssignmentsPage), canActivate: [roleGuard(['ADMIN'])], title: 'Asignar instructores | EVA' },
+  { path: 'cursos/:courseId/evaluaciones', loadComponent: () => import('./features/progress/course-evaluations-page').then(m => m.CourseEvaluationsPage), canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Evaluaciones del curso | EVA' },
   { path: 'cursos/:courseId/sesiones', component: CourseSessionsPage, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Sesiones del curso | EVA' },
   { path: 'cursos/:courseId/asistencia', component: AttendancePage, canActivate: [roleGuard(['ADMIN', 'INSTRUCTOR'])], title: 'Asistencia del curso | EVA' },
   { path: 'mis-cursos', redirectTo: 'cursos', pathMatch: 'full' },

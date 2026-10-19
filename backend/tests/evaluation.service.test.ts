@@ -6,18 +6,24 @@ const mocks = vi.hoisted(() => ({
   evaluationCreate: vi.fn(),
   evaluationAggregate: vi.fn(),
   evaluationFindFirst: vi.fn(),
-  enrollmentFindUnique: vi.fn(),
-  gradeUpsert: vi.fn()
+  enrollmentFindFirst: vi.fn(),
+  assignmentFindUnique: vi.fn(),
+  gradeUpsert: vi.fn(),
+  resultUpdateMany: vi.fn(),
+  transaction: vi.fn()
 }));
 
-vi.mock('../src/config/prisma.js', () => ({
-  prisma: {
+vi.mock('../src/config/prisma.js', () => {
+  const tx = {
     course: { findUnique: mocks.courseFindUnique },
+    courseInstructor: { findUnique: mocks.assignmentFindUnique },
     courseEvaluation: { findMany: mocks.evaluationFindMany, aggregate: mocks.evaluationAggregate, create: mocks.evaluationCreate, findFirst: mocks.evaluationFindFirst },
-    enrollment: { findUnique: mocks.enrollmentFindUnique },
-    evaluationGrade: { upsert: mocks.gradeUpsert }
-  }
-}));
+    enrollment: { findFirst: mocks.enrollmentFindFirst },
+    evaluationGrade: { upsert: mocks.gradeUpsert },
+    courseResult: { updateMany: mocks.resultUpdateMany }
+  };
+  return { prisma: { ...tx, $transaction: mocks.transaction } };
+});
 
 import { evaluationService } from '../src/modules/progress/evaluation.service.js';
 
@@ -28,6 +34,14 @@ describe('evaluation management', () => {
     vi.resetAllMocks();
     mocks.courseFindUnique.mockResolvedValue({ id: 4, instructorId: 8 });
     mocks.evaluationAggregate.mockResolvedValue({ _sum: { weight: 0 } });
+    mocks.transaction.mockImplementation((work: (tx: unknown) => unknown) => work({
+      course: { findUnique: mocks.courseFindUnique },
+      courseInstructor: { findUnique: mocks.assignmentFindUnique },
+      courseEvaluation: { findMany: mocks.evaluationFindMany, aggregate: mocks.evaluationAggregate, create: mocks.evaluationCreate, findFirst: mocks.evaluationFindFirst },
+      enrollment: { findFirst: mocks.enrollmentFindFirst },
+      evaluationGrade: { upsert: mocks.gradeUpsert },
+      courseResult: { updateMany: mocks.resultUpdateMany }
+    }));
   });
 
   it('rejects a new evaluation when total weight would exceed 100 percent', async () => {
@@ -46,7 +60,7 @@ describe('evaluation management', () => {
 
   it('rejects a score above the evaluation maximum', async () => {
     mocks.evaluationFindFirst.mockResolvedValue({ id: 3, maxScore: 20 });
-    mocks.enrollmentFindUnique.mockResolvedValue({ id: 12, courseId: 4, status: 'INSCRITO' });
+    mocks.enrollmentFindFirst.mockResolvedValue({ id: 12, courseId: 4, status: 'INSCRITO' });
 
     await expect(evaluationService.recordGrade(4, 3, 12, { score: 21 }, instructor)).rejects.toMatchObject({ statusCode: 400 });
     expect(mocks.gradeUpsert).not.toHaveBeenCalled();

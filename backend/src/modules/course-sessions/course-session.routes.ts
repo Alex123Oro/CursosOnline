@@ -9,5 +9,6 @@ courseSessionRoutes.post('/:courseId/sessions', requireUser, asyncHandler(course
 courseSessionRoutes.post('/:courseId/sessions/schedule', requireUser, asyncHandler(courseSessionController.schedule));
 courseSessionRoutes.put('/:courseId/sessions/:sessionId', requireUser, asyncHandler(courseSessionController.update));
 courseSessionRoutes.delete('/:courseId/sessions/:sessionId', requireUser, asyncHandler(courseSessionController.remove));
+
 export const teachingRoutes = Router();
 teachingRoutes.get('/courses', requireUser, asyncHandler(courseSessionController.teachingCourses));

@@ -53,12 +53,13 @@
             @if (item.currentGrade !== null) { <p class="grade-summary">Promedio actual <strong>{{ item.currentGrade }} / 100</strong></p> }
             @if (item.finalGrade !== null) {
               <p class="final-result" [class.passed]="item.finalStatus === 'APROBADO'" [class.failed]="item.finalStatus === 'REPROBADO'">
-                Resultado final: <strong>{{ item.finalStatus }}</strong> · {{ item.finalGrade }} / 100
+                Resultado académico: <strong>{{ item.finalStatus === 'NO_CUMPLE_ASISTENCIA' ? 'APROBADO · ASISTENCIA INSUFICIENTE' : item.finalStatus }}</strong> · {{ item.finalGrade }} / 100
               </p>
             }
             @if (item.finalGrade !== null) {
               <p>Requisito académico: {{ item.requirements.academicMet ? 'Cumplido' : 'No cumplido' }}</p>
               <p>Requisito de asistencia: {{ item.requirements.attendanceMet ? 'Cumplido' : 'No cumplido' }}</p>
+              <p>Certificado: {{ item.certificateEligible ? 'Elegible' : 'No elegible' }}</p>
             }
           </section>
         </article>

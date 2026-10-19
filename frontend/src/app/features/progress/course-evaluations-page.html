@@ -1,0 +1,21 @@
+<section class="page">
+  <a routerLink="/cursos" class="back">← Mis cursos</a>
+  <header><p class="eyebrow">CURSO / EVALUACIONES</p><h1>{{ courseName() || 'Evaluaciones y calificaciones' }}</h1><p>Administra evaluaciones, notas y consulta el estado académico de cada participante.</p></header>
+  @if (loading()) { <p role="status">Cargando información del curso…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
+  @if (!loading() && !error()) {
+    <form class="new-evaluation" (ngSubmit)="addEvaluation()"><h2>Nueva evaluación</h2><label>Nombre<input name="title" required minlength="2" maxlength="200" [(ngModel)]="title"></label><label>Ponderación (%)<input name="weight" type="number" min="0.01" max="100" step="0.01" required [(ngModel)]="weight"></label><p class="weight">Ponderación asignada: {{ weightTotal }} % / 100 %</p><button [disabled]="saving() || !canAddEvaluation()">Crear evaluación</button></form>
+    @if (evaluations().length === 0) { <p class="empty">Todavía no hay evaluaciones.</p> }
+    @for (evaluation of evaluations(); track evaluation.id) {
+      <section class="evaluation"><header><div><h2>{{ evaluation.title }}</h2><p>{{ evaluation.weight }} % de ponderación · nota máxima {{ evaluation.maxScore }}</p></div></header>
+        @for (student of students(); track student.enrollmentId) { <div class="student"><div><strong>{{ student.name }}</strong><small>Asistencia: {{ student.percentage === null ? 'Pendiente' : student.percentage + '%' }}</small></div><label>Nota<input type="number" min="0" max="100" step="0.01" [value]="existingScore(evaluation, student) ?? ''" (input)="scores[evaluation.id + ':' + student.enrollmentId] = $any($event.target).value === '' ? null : +$any($event.target).value" [attr.aria-label]="'Nota de ' + student.name"></label><button [disabled]="saving() || !validScore(evaluation, student)" (click)="saveGrade(evaluation, student)">Guardar nota</button><small class="updated">{{ evaluation.grades.find(g => g.enrollmentId === student.enrollmentId)?.gradedAt ? 'Actualizada: ' + (evaluation.grades.find(g => g.enrollmentId === student.enrollmentId)?.gradedAt | date:'short') : 'Sin calificar' }}</small></div> }
+        @empty { <p>No hay participantes inscritos.</p> }
+      </section>
+    }
+    <section class="results"><div class="results-head"><div><h2>Resultados del curso</h2><p>El cierre requiere que el curso haya finalizado, todas las evaluaciones estén calificadas y la ponderación total sea 100 %.</p></div><button [disabled]="saving()" (click)="recalculate()">Recalcular resultados</button></div>
+      @for (student of students(); track student.enrollmentId) { @let row = result(student); <article><strong>{{ student.name }}</strong><span>Nota final: {{ row?.finalGrade ?? 'Pendiente' }}</span><span>Asistencia: {{ row?.attendance?.percentage ?? student.percentage ?? 'Pendiente' }}%</span><span>Académico: {{ requirementLabel(student, 'academicMet') }}</span><span>Asistencia requerida: {{ requirementLabel(student, 'attendanceMet') }}</span><b>{{ resultStatusLabel(student) }}</b></article> }
+      @empty { <p>No hay participantes inscritos.</p> }
+    </section>
+  }
+</section>
