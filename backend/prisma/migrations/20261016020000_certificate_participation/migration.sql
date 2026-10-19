@@ -134,11 +134,29 @@ END;
 $$;
 
 
-REVOKE ALL ON FUNCTION public.certificate_assessment_for_type(BIGINT,TEXT) FROM PUBLIC,anon,authenticated;
-REVOKE ALL ON FUNCTION public.certificate_candidates_for_type(BIGINT,TEXT) FROM PUBLIC,anon,authenticated;
-REVOKE ALL ON FUNCTION public.emit_certificate_for_type(BIGINT,TEXT,TEXT,BIGINT,TEXT) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.certificate_assessment_for_type(BIGINT,TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.certificate_candidates_for_type(BIGINT,TEXT) TO service_role;
-GRANT EXECUTE ON FUNCTION public.emit_certificate_for_type(BIGINT,TEXT,TEXT,BIGINT,TEXT) TO service_role;
+REVOKE ALL ON FUNCTION public.certificate_assessment_for_type(BIGINT,TEXT) FROM PUBLIC;
+DO $permissions$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN REVOKE ALL ON FUNCTION public.certificate_assessment_for_type(BIGINT,TEXT) FROM anon; END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN REVOKE ALL ON FUNCTION public.certificate_assessment_for_type(BIGINT,TEXT) FROM authenticated; END IF;
+END $permissions$;
+REVOKE ALL ON FUNCTION public.certificate_candidates_for_type(BIGINT,TEXT) FROM PUBLIC;
+DO $permissions$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN REVOKE ALL ON FUNCTION public.certificate_candidates_for_type(BIGINT,TEXT) FROM anon; END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN REVOKE ALL ON FUNCTION public.certificate_candidates_for_type(BIGINT,TEXT) FROM authenticated; END IF;
+END $permissions$;
+REVOKE ALL ON FUNCTION public.emit_certificate_for_type(BIGINT,TEXT,TEXT,BIGINT,TEXT) FROM PUBLIC;
+DO $permissions$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN REVOKE ALL ON FUNCTION public.emit_certificate_for_type(BIGINT,TEXT,TEXT,BIGINT,TEXT) FROM anon; END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN REVOKE ALL ON FUNCTION public.emit_certificate_for_type(BIGINT,TEXT,TEXT,BIGINT,TEXT) FROM authenticated; END IF;
+END $permissions$;
+DO $permissions$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN GRANT EXECUTE ON FUNCTION public.certificate_assessment_for_type(BIGINT,TEXT) TO service_role; END IF;
+END $permissions$;
+DO $permissions$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN GRANT EXECUTE ON FUNCTION public.certificate_candidates_for_type(BIGINT,TEXT) TO service_role; END IF;
+END $permissions$;
+DO $permissions$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role') THEN GRANT EXECUTE ON FUNCTION public.emit_certificate_for_type(BIGINT,TEXT,TEXT,BIGINT,TEXT) TO service_role; END IF;
+END $permissions$;
 NOTIFY pgrst,'reload schema';
 COMMIT;

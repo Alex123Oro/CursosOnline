@@ -1,9 +1,9 @@
-<section class="emission-page">
+<section class="emission-page eva-workspace eva-page">
   <header><p class="eyebrow">ADMINISTRACIÓN / ACREDITACIÓN</p><h1>Emitir certificados</h1><p>Emite certificados digitales de aprobación o participación para participantes que cumplieron los requisitos.</p></header>
   @if (coursesLoading()) { <p role="status">Cargando cursos…</p> }
   @if (coursesError()) { <p class="error" role="alert">{{ coursesError() }} <button type="button" (click)="retryCourses()">Reintentar</button></p> }
   <div class="toolbar">
-    <label>Plantilla del documento<select [value]="templateId()" (change)="selectTemplate($any($event.target).value)" [disabled]="saving()"><option value="">Selecciona una plantilla</option>@for (template of availableTemplates(); track template.id) { <option [value]="template.id">{{ template.name }} · v{{ template.version }}</option> }</select><a routerLink="/plantillas-certificados">Crear o editar plantillas ↗</a></label>
+    <div class="template-selector"><label>Plantilla del documento<select [value]="templateId()" (change)="selectTemplate($any($event.target).value)" [disabled]="saving()"><option value="">Selecciona una plantilla</option>@for (template of availableTemplates(); track template.id) { <option [value]="template.id">{{ template.name }} · v{{ template.version }}</option> }</select></label><a class="text-link" routerLink="/plantillas-certificados">Crear o editar plantillas ↗</a></div>
     <label>Tipo de certificado<select [value]="type()" (change)="selectType($any($event.target).value)" [disabled]="saving()"><option value="aprobacion">Aprobación: nota y asistencia</option><option value="participacion">Participación: asistencia</option></select></label>
     <label>Curso<select [value]="courseId()" (change)="selectCourse($any($event.target).value)" [disabled]="saving() || coursesLoading()"><option value="">Selecciona un curso</option>@for (course of courses(); track course.id) { <option [value]="course.id">{{ course.name }} {{ course.code ? '· ' + course.code : '' }}</option> }</select></label>
     <label>Buscar participante<input type="search" [value]="search()" (input)="search.set($any($event.target).value); page.set(0)" /></label>

@@ -1,11 +1,12 @@
-<section class="enrollments-workspace">
+<section class="enrollments-workspace eva-workspace eva-page">
   <header class="page-header">
     <p class="eyebrow">ADMINISTRACIÓN / INSCRIPCIONES</p>
     <h1>Inscripciones</h1>
-    <p>Selecciona un curso para consultar sus participantes y gestionar sus inscripciones.</p>
+    <p class="subtitle">Selecciona un curso para consultar sus participantes y gestionar sus inscripciones.</p>
   </header>
   <nav class="enrollment-tabs" aria-label="Estado de las inscripciones">
     <a
+      class="enrollment-tab"
       routerLink="/inscripciones"
       [queryParams]="tabQuery('PREINSCRITO')"
       [class.active]="state().status === 'PREINSCRITO'"
@@ -13,6 +14,7 @@
       >Preinscritos</a
     >
     <a
+      class="enrollment-tab"
       routerLink="/inscripciones"
       [queryParams]="tabQuery('INSCRITO')"
       [class.active]="state().status === 'INSCRITO'"
@@ -61,7 +63,7 @@
   }
   @if (!state().courseId) {
     <section class="empty-state">
-      <span class="empty-symbol" aria-hidden="true">↗</span>
+      <span class="empty-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 5v16m0-16C9 3 6 3 3 4v15c3-1 6-1 9 2 3-3 6-3 9-2V4c-3-1-6-1-9 1Z"/></svg></span>
       <h2>Selecciona un curso para ver sus participantes</h2>
       <p>
         Elige un curso en el buscador. Aquí aparecerán únicamente sus

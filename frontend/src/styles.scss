@@ -1,3 +1,5 @@
+@use './styles/workspace';
+
 :root {
   --eva-font-family: 'Manrope', Arial, sans-serif;
   --eva-font-title: 30px;
@@ -7,6 +9,22 @@
   --eva-font-label: 13px;
   --eva-font-helper: 12px;
   --eva-font-caption: 11px;
+  --eva-weight-regular: 400;
+  --eva-weight-semibold: 600;
+  --eva-weight-bold: 700;
+  --eva-line-body: 1.6;
+  --eva-color-ink: #174b48;
+  --eva-color-muted: #526d68;
+  --eva-color-accent: #087f78;
+  --eva-color-accent-hover: #066a64;
+  --eva-page-width: 1324px;
+  --eva-page-top: 36px;
+  --eva-page-gutter: 42px;
+  --eva-page-bottom: 48px;
+  --eva-space-section: 24px;
+  --eva-space-card: 24px;
+  --eva-control-height: 44px;
+  --eva-radius-control: 7px;
 }
 
 html,
@@ -19,6 +37,8 @@ body {
   color: #174b48;
   background: #f3f8f7;
   font-family: var(--eva-font-family);
+  font-size: var(--eva-font-body);
+  line-height: var(--eva-line-body);
 }
 
 button,
@@ -26,4 +46,11 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+@media (max-width: 800px) {
+  :root { --eva-page-top: 24px; --eva-page-gutter: 20px; --eva-page-bottom: 32px; --eva-space-card: 20px; }
+}
+@media (max-width: 480px) {
+  :root { --eva-page-top: 20px; --eva-page-gutter: 16px; --eva-page-bottom: 28px; }
 }

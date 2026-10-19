@@ -1,0 +1,159 @@
+// Shared presentation contract for authenticated EVA workspaces.
+// Public catalogue pages and generated certificate artwork keep their own layout.
+.main-content:not(.public-content) .eva-workspace {
+  display: block;
+  color: var(--eva-color-ink);
+  font-family: var(--eva-font-family);
+  font-size: var(--eva-font-body);
+  font-weight: var(--eva-weight-regular);
+  line-height: var(--eva-line-body);
+
+  &.eva-page {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--eva-page-width);
+    margin: 0 auto;
+    padding: var(--eva-page-top) var(--eva-page-gutter) var(--eva-page-bottom);
+  }
+
+  :is(h1, .page-heading h1, .page-header h1) {
+    margin: 0;
+    color: var(--eva-color-ink);
+    font-family: var(--eva-font-family);
+    font-size: var(--eva-font-title);
+    font-weight: var(--eva-weight-bold);
+    line-height: 1.25;
+    letter-spacing: -.03em;
+    overflow-wrap: anywhere;
+  }
+
+  :is(h2, .editor-heading h2, .preview-heading h2) {
+    font-family: var(--eva-font-family);
+    font-size: var(--eva-font-section);
+    font-weight: var(--eva-weight-bold);
+    line-height: 1.4;
+  }
+
+  :is(.eyebrow, .preview-heading .eyebrow) {
+    margin: 0 0 8px;
+    color: var(--eva-color-accent);
+    font-size: var(--eva-font-caption);
+    font-weight: var(--eva-weight-bold);
+    line-height: 1.5;
+    letter-spacing: .08em;
+  }
+
+  :is(.subtitle, .page-heading > div > p:last-child, .create-header p) {
+    margin: 8px 0 0;
+    color: var(--eva-color-muted);
+    font-size: var(--eva-font-body);
+    font-weight: var(--eva-weight-regular);
+    line-height: var(--eva-line-body);
+  }
+
+  :is(label, .search-field) {
+    font-size: var(--eva-font-label);
+    font-weight: var(--eva-weight-semibold);
+    line-height: 1.5;
+  }
+
+  :is(input:not([type='checkbox']):not([type='radio']):not([type='color']), select, textarea) {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: var(--eva-control-height);
+    padding: 10px 12px;
+    border-radius: var(--eva-radius-control);
+    font-family: var(--eva-font-family);
+    font-size: var(--eva-font-body);
+    font-weight: var(--eva-weight-regular);
+    line-height: 1.5;
+  }
+
+  button {
+    font-family: var(--eva-font-family);
+    font-size: var(--eva-font-label);
+    font-weight: var(--eva-weight-semibold);
+    line-height: 1.5;
+  }
+
+  :is(.primary, .primary-btn, .button, .new-instructor) {
+    min-height: var(--eva-control-height);
+    font-size: var(--eva-font-label);
+    font-weight: var(--eva-weight-bold);
+  }
+
+  :is(.helper, .field-help, .preview-notes p, .preview-state, .save-bar > span, .template-list small, .editor-heading > span) {
+    color: var(--eva-color-muted);
+    font-size: var(--eva-font-helper);
+    font-weight: var(--eva-weight-regular);
+    line-height: var(--eva-line-body);
+  }
+
+  :is(.error, .success, .notice) {
+    font-size: var(--eva-font-body);
+    line-height: var(--eva-line-body);
+  }
+
+  :is(a:not([class]), .text-link), :is(a:not([class]), .text-link):visited {
+    color: var(--eva-color-accent);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: var(--eva-weight-semibold);
+    text-decoration: none;
+    text-underline-offset: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  :is(a:not([class]), .text-link):hover {
+    color: var(--eva-color-accent-hover);
+    text-decoration: underline;
+  }
+
+  :is(a, button, input, select, textarea):focus-visible {
+    outline: 3px solid var(--eva-color-accent);
+    outline-offset: 3px;
+  }
+
+  &.eva-page > :is(header, .page-header, .page-heading, .detail-header, .create-header) {
+    margin: 0 0 var(--eva-space-section);
+  }
+
+}
+
+// Courses renders its heading and content as siblings, so it shares gutters
+// without adding a second padded page container.
+.main-content:not(.public-content) .eva-course-workspace {
+  > :is(.page-header, .metrics, .app-feedback, .table-card) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--eva-page-width);
+    padding-inline: var(--eva-page-gutter);
+  }
+  > .page-header { padding-block: var(--eva-page-top) var(--eva-space-section); }
+  > .create-header { max-width: 1124px; }
+}
+
+.main-content:not(.public-content) .templates-page {
+  :is(.editor-heading, .preview) { padding: var(--eva-space-card); }
+  fieldset { margin-inline: var(--eva-space-card); }
+  fieldset legend { font-size: var(--eva-font-label); font-weight: var(--eva-weight-bold); }
+  .save-bar { padding-inline: var(--eva-space-card); }
+  .template-list strong, .preview-notes strong { font-size: var(--eva-font-body); font-weight: var(--eva-weight-semibold); }
+  .template-icon { width: 24px; height: 24px; flex: 0 0 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .header-actions { flex-wrap: wrap; }
+  .header-actions a { font-size: var(--eva-font-label); }
+}
+
+.main-content:not(.public-content) .emission-page {
+  .toolbar { align-items: start; padding: var(--eva-space-card); gap: var(--eva-space-section); }
+  .template-selector { display: grid; align-content: start; gap: 8px; min-width: 0; }
+  .text-link { justify-self: start; display: inline-flex; align-items: center; min-height: 32px; font-size: var(--eva-font-label); }
+  .roster strong { font-weight: var(--eva-weight-semibold); }
+}
+
+@media (max-width: 800px) {
+  .main-content:not(.public-content) .eva-workspace {
+    :is(h1, .page-heading h1, .page-header h1) { font-size: var(--eva-font-title-mobile); }
+    :is(input:not([type='checkbox']):not([type='radio']):not([type='color']), select, textarea) { font-size: 16px; }
+  }
+}

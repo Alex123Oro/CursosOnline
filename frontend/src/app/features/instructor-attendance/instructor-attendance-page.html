@@ -1,4 +1,4 @@
-<section class="instructor-attendance">
+<section class="instructor-attendance eva-workspace eva-page">
   <header><p class="eyebrow">CONTROL ADMINISTRATIVO</p><h1>Asistencia de instructores</h1><p class="helper">Consulta las clases y registra la presencia de cada instructor. Hora de Bolivia.</p></header>
   @if (error()) { <div class="notice error" role="alert">{{ error() }} @if (identity.currentUser()?.role === 'ADMIN') { <button (click)="reload()">Reintentar</button> }</div> }
   @if (identity.currentUser()?.role === 'ADMIN') {
