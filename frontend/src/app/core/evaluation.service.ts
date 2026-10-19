@@ -17,6 +17,8 @@ export class EvaluationService {
   private readonly base = environment.apiBaseUrl;
   list(courseId: string) { return this.http.get<CourseEvaluation[]>(`${this.base}/courses/${courseId}/evaluations`); }
   create(courseId: string, input: EvaluationInput) { return this.http.post<CourseEvaluation>(`${this.base}/courses/${courseId}/evaluations`, input); }
+  update(courseId: string, evaluationId: string, input: EvaluationInput) { return this.http.put<CourseEvaluation>(`${this.base}/courses/${courseId}/evaluations/${evaluationId}`, input); }
+  remove(courseId: string, evaluationId: string) { return this.http.delete<void>(`${this.base}/courses/${courseId}/evaluations/${evaluationId}`); }
   grade(courseId: string, evaluationId: string, enrollmentId: string, score: number, comment?: string) {
     return this.http.put<{ score: number; gradedAt: string }>(`${this.base}/courses/${courseId}/evaluations/${evaluationId}/grades/${enrollmentId}`, { score, comment });
   }

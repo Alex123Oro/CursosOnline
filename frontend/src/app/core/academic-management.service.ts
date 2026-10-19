@@ -19,4 +19,5 @@ export class AcademicManagementService {
   change(id: number, instructorId: string) {
     return this.http.put<InstructorAssignment>(`${this.base}/admin/instructor-assignments/${id}`, { instructorId: Number(instructorId) });
   }
+  remove(id: number) { return this.http.delete<{ deleted: boolean }>(`${this.base}/admin/instructor-assignments/${id}`); }
 }

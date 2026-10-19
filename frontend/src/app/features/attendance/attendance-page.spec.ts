@@ -35,19 +35,21 @@ describe('AttendancePage', () => {
     expect(page.sessionId()).toBe('1');
     expect(fixture.nativeElement.querySelector('select').value).toBe('1');
   });
-  it('autosaves without optimistic success and prevents concurrent changes to the same student', () => {
+  it('keeps selected marks pending until save and prevents duplicate writes', () => {
     const page = fixture.componentInstance;
-    page.mark(student, 'PRESENT'); page.mark(student, 'ABSENT');
-    expect(page.statusFor(student)).toBe('ABSENT');
+    page.mark(student, 'PRESENT');
+    expect(page.statusFor(student)).toBe('PRESENT');
+    http.expectNone(request => request.method === 'PUT');
+    page.saveBulk();
     const request = http.expectOne(`${base}/courses/2/sessions/1/attendance/3`);
     expect(request.request.method).toBe('PUT'); expect(request.request.body).toEqual({ status: 'PRESENT' });
     request.flush({ ...student, percentage: 100, attendance: [{ sessionId: '1', status: 'PRESENT', updatedAt: '' }] });
     expect(page.statusFor(page.students()[0])).toBe('PRESENT'); expect(page.rowState()['3'].phase).toBe('saved');
   });
   it('keeps the previous mark on failure and allows retrying the intended choice', () => {
-    const page = fixture.componentInstance; page.mark(student, 'PRESENT');
+    const page = fixture.componentInstance; page.mark(student, 'PRESENT'); page.saveBulk();
     http.expectOne(`${base}/courses/2/sessions/1/attendance/3`).flush({ message: 'Error de conexión' }, { status: 500, statusText: 'Error' });
-    expect(page.statusFor(student)).toBe('ABSENT'); expect(page.rowState()['3'].phase).toBe('error');
+    expect(page.statusFor(student)).toBe('PRESENT'); expect(page.rowState()['3'].phase).toBe('error');
     page.retry(student);
     http.expectOne(`${base}/courses/2/sessions/1/attendance/3`).flush({ ...student, attendance: [{ sessionId: '1', status: 'PRESENT', updatedAt: '' }] });
     expect(page.statusFor(page.students()[0])).toBe('PRESENT');
@@ -58,22 +60,22 @@ describe('AttendancePage', () => {
     page.mark(student, 'PRESENT'); http.expectNone(`${base}/courses/2/sessions/2/attendance/3`);
     expect(fixture.nativeElement.textContent).toContain('sesión futura');
   });
-  it('clears and cancels pending changes on identity change', () => {
+  it('clears unsaved changes on identity change', () => {
     const page = fixture.componentInstance; page.mark(student, 'PRESENT');
-    const request = http.expectOne(`${base}/courses/2/sessions/1/attendance/3`);
+    http.expectNone(request => request.method === 'PUT');
     selectFixtureUser(TestBed.inject(SessionService), '10'); fixture.detectChanges();
-    expect(request.cancelled).toBe(true); expect(page.students()).toEqual([]);
+    expect(page.draftStatuses()).toEqual({}); expect(page.students()).toEqual([]);
     http.expectNone(`${base}/courses/2/attendance`);
   });
-  it.each(['session', 'course', 'query'])('cancels pending saves when changing %s context', context => {
+  it.each(['session', 'course', 'query'])('discards pending marks when changing %s context', context => {
     const page = fixture.componentInstance; page.mark(student, 'PRESENT');
-    const request = http.expectOne(`${base}/courses/2/sessions/1/attendance/3`);
+    http.expectNone(request => request.method === 'PUT');
     const route = TestBed.inject(ActivatedRoute);
     if (context === 'session') page.selectSession('2');
     if (context === 'course') (route.paramMap as BehaviorSubject<ReturnType<typeof convertToParamMap>>).next(convertToParamMap({ courseId: '5' }));
     if (context === 'query') (route.queryParamMap as BehaviorSubject<ReturnType<typeof convertToParamMap>>).next(convertToParamMap({ session: '2' }));
     fixture.detectChanges();
-    expect(request.cancelled).toBe(true); expect(page.rowState()).toEqual({});
+    expect(page.draftStatuses()).toEqual({}); expect(page.rowState()).toEqual({});
     http.expectOne(`${base}/courses/${context === 'course' ? '5' : '2'}/attendance`).flush(data);
     fixture.detectChanges();
     expect(page.sessionId()).toBe(context === 'course' ? '1' : '2');
@@ -97,6 +99,8 @@ describe('AttendancePage', () => {
     (fixture.nativeElement.querySelector('.mark-all-present') as HTMLButtonElement).click();
     page.markAllPresent(); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.mark-all-present').disabled).toBe(true);
+    http.expectNone(request => request.method === 'PUT');
+    page.saveBulk();
     const requests = http.match(request => request.method === 'PUT');
     expect(requests).toHaveLength(17);
     requests.forEach(request => {
@@ -105,17 +109,20 @@ describe('AttendancePage', () => {
       request.flush({ ...student, enrollmentId, attendance: [{ sessionId: '1', status: 'PRESENT', updatedAt: '' }] });
     });
     expect(page.sessionCounts().present).toBe(17);
-    expect(page.bulkResult()).toEqual({ total: 17, saving: false, saved: 17, failed: 0 });
+    expect(page.bulkResult()).toEqual({ total: 17, pending: 0, saving: false, saved: 17, failed: 0 });
   });
   it('skips existing present marks and retains failures for retry', () => {
     const page = signInInstructor();
     const present = { ...student, enrollmentId: '4', attendance: [{ sessionId: '1', status: 'PRESENT' as const, updatedAt: '' }] };
     page.students.set([student, present]); page.markAllPresent();
     http.expectNone(`${base}/courses/2/sessions/1/attendance/4`);
+    http.expectNone(request => request.method === 'PUT');
+    page.saveBulk();
     http.expectOne(`${base}/courses/2/sessions/1/attendance/3`).flush({ message: 'Error' }, { status: 500, statusText: 'Error' });
-    expect(page.statusFor(page.students()[0])).toBe('ABSENT');
+    expect(page.statusFor(page.students()[0])).toBe('PRESENT');
     expect(page.bulkResult().failed).toBe(1);
     page.markAllPresent();
+    page.saveBulk();
     http.expectOne(`${base}/courses/2/sessions/1/attendance/3`).flush({ ...student, attendance: [{ sessionId: '1', status: 'PRESENT', updatedAt: '' }] });
     expect(page.allPresent()).toBe(true);
   });

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
-const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), course: { findUnique: vi.fn(), findMany: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionService } from '../src/modules/course-sessions/course-session.service.js';
 
@@ -8,7 +8,7 @@ const admin = { id: 1, name: 'Admin', email: 'admin@test', role: 'ADMIN' as cons
 const instructor = { ...admin, id: 8, role: 'INSTRUCTOR' as const };
 const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-11-12') };
 const input = { sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
-const record = { id: 3, courseId: 2, ...input, date: new Date(input.date), createdAt: new Date('2026-10-01'), updatedAt: new Date('2026-10-01') };
+const record = { id: 3, courseId: 2, ...input, date: new Date(input.date), createdAt: new Date('2026-10-01'), updatedAt: new Date('2026-10-01'), _count: { attendance: 0 }, instructorAttendance: null };
 describe('course session service', () => {
   it('deletes only the session in the requested course', async () => {
     mocks.course.findUnique.mockResolvedValue(course);
@@ -91,6 +91,16 @@ describe('course session service', () => {
   it('returns only published courses assigned to the current instructor', async () => {
     mocks.course.findMany.mockResolvedValue([course]);
     expect((await courseSessionService.teachingCourses(instructor))[0]).toMatchObject({ id: '2', instructorId: '8' });
-    expect(mocks.course.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'PUBLISHED', instructorId: 8 } }));
+    expect(mocks.course.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'PUBLISHED', OR: [{ instructorId: 8 }] } }));
+  });
+  it('includes additional assignments when the Supabase assignment table exists', async () => {
+    mocks.$queryRaw
+      .mockResolvedValueOnce([{ tableName: 'asignaciones_instructores' }])
+      .mockResolvedValueOnce([{ courseId: 5 }]);
+    mocks.course.findMany.mockResolvedValue([course]);
+    await courseSessionService.teachingCourses(instructor);
+    expect(mocks.course.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {
+      status: 'PUBLISHED', OR: [{ instructorId: 8 }, { id: { in: [5] } }]
+    } }));
   });
 });

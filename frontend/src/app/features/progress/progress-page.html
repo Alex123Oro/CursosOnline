@@ -2,15 +2,16 @@
   <header class="page-header">
     <div>
       <p class="eyebrow">PARTICIPANTE / SEGUIMIENTO</p>
-      <h1>Mi progreso</h1>
+      <h1>{{ pageTitle }}</h1>
       <p class="subtitle">Consulta tus inscripciones, asistencia y calificaciones.</p>
+      <button type="button" class="refresh" [disabled]="loading()" (click)="load()">{{ loading() ? 'Actualizando…' : 'Actualizar información' }}</button>
     </div>
   </header>
 
   @if (loading()) {
     <p role="status">Cargando tu progreso...</p>
   } @else if (error()) {
-    <p class="progress-message error" role="alert">{{ error() }}</p>
+    <div class="progress-message error" role="alert"><p>{{ error() }}</p><button type="button" (click)="load()">Reintentar</button></div>
   } @else if (items().length === 0) {
     <p class="progress-message" role="status">Aún no tienes inscripciones para mostrar.</p>
   } @else {
@@ -26,14 +27,27 @@
             <span class="status">{{ enrollmentLabel(item.enrollmentStatus) }}</span>
           </header>
 
+          @if (view === 'all' || view === 'courses' || view === 'attendance') {
           <section class="attendance" aria-label="Asistencia acumulada">
             <div><span>Asistencia acumulada</span><strong>{{ item.attendance.percentage === null ? 'Sin sesiones realizadas' : item.attendance.percentage + '%' }}</strong></div>
             @if (item.attendance.percentage !== null) {
               <progress max="100" [value]="item.attendance.percentage" [attr.aria-label]="'Asistencia ' + item.attendance.percentage + '%'">{{ item.attendance.percentage }}%</progress>
               <small>{{ item.attendance.presentSessions }} de {{ item.attendance.completedSessions }} sesiones</small>
             }
+            @if (view === 'attendance' || view === 'all') {
+              <h3>Historial de sesiones</h3>
+              @if (item.attendance.sessions.length) {
+                <ul>
+                  @for (session of item.attendance.sessions; track session.sessionId) {
+                    <li><span>Sesión {{ session.sessionNumber }} · {{ formatDate(session.date) }} · {{ session.startTime }}</span><strong>{{ session.status === 'PRESENT' ? 'Presente' : session.status === 'ABSENT' ? 'Ausente' : 'Pendiente' }}</strong></li>
+                  }
+                </ul>
+              } @else { <p class="muted">Todavía no hay sesiones realizadas.</p> }
+            }
           </section>
+          }
 
+          @if (view === 'all' || view === 'courses' || view === 'grades') {
           <section class="evaluations" aria-label="Evaluaciones y notas">
             <h3>Evaluaciones</h3>
             <p class="muted">Aprobación: nota mínima {{ item.minimumPassingScore }} / 100 y asistencia mínima {{ item.requirements.minimumAttendancePercent }}%.</p>
@@ -53,7 +67,7 @@
             @if (item.currentGrade !== null) { <p class="grade-summary">Promedio actual <strong>{{ item.currentGrade }} / 100</strong></p> }
             @if (item.finalGrade !== null) {
               <p class="final-result" [class.passed]="item.finalStatus === 'APROBADO'" [class.failed]="item.finalStatus === 'REPROBADO'">
-                Resultado académico: <strong>{{ item.finalStatus === 'NO_CUMPLE_ASISTENCIA' ? 'APROBADO · ASISTENCIA INSUFICIENTE' : item.finalStatus }}</strong> · {{ item.finalGrade }} / 100
+                Resultado académico: <strong>{{ resultLabel(item.finalStatus) }}</strong> · {{ item.finalGrade }} / 100
               </p>
             }
             @if (item.finalGrade !== null) {
@@ -62,6 +76,20 @@
               <p>Certificado: {{ item.certificateEligible ? 'Elegible' : 'No elegible' }}</p>
             }
           </section>
+          }
+          @if (view === 'all' || view === 'courses' || view === 'results') {
+            <section class="evaluations" aria-label="Resultado final">
+              <h3>Resultado final</h3>
+              <p>Estado: <strong>{{ resultLabel(item.finalStatus) }}</strong></p>
+              <p>Nota final: <strong>{{ item.finalGrade === null ? 'Pendiente' : item.finalGrade + ' / 100' }}</strong></p>
+              <p>Asistencia requerida ({{ item.requirements.minimumAttendancePercent }} %): {{ item.requirements.attendanceMet === null ? 'Pendiente' : item.requirements.attendanceMet ? 'Cumplida' : 'No cumplida' }}</p>
+              <p>Nota mínima ({{ item.minimumPassingScore }}): {{ item.requirements.academicMet === null ? 'Pendiente' : item.requirements.academicMet ? 'Cumplida' : 'No cumplida' }}</p>
+              <p>Certificado: {{ item.certificateEligible ? 'Elegible' : 'Aún no elegible' }}</p>
+            </section>
+          }
+          <nav class="course-links" aria-label="Consultar información del curso">
+            <a routerLink="/mis-cursos">Mis cursos</a><a routerLink="/mi-asistencia">Mi asistencia</a><a routerLink="/mis-calificaciones">Mis calificaciones</a><a routerLink="/mis-resultados">Mis resultados</a>
+          </nav>
         </article>
       }
     </div>

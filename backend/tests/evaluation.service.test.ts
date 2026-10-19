@@ -72,4 +72,11 @@ describe('evaluation management', () => {
     await expect(evaluationService.create(4, { title: 'Examen', maxScore: 100, weight: 40 }, instructor)).rejects.toMatchObject({ statusCode: 403 });
     expect(mocks.evaluationCreate).not.toHaveBeenCalled();
   });
+
+  it('allows an instructor assigned through the course assignment relation', async () => {
+    mocks.courseFindUnique.mockResolvedValue({ id: 4, instructorId: 9 });
+    mocks.assignmentFindUnique.mockResolvedValue({ id: 2 });
+    mocks.evaluationCreate.mockResolvedValue({ id: 3, title: 'Examen', maxScore: 100, weight: 40 });
+    await expect(evaluationService.create(4, { title: 'Examen', maxScore: 100, weight: 40 }, instructor)).resolves.toMatchObject({ id: '3' });
+  });
 });
