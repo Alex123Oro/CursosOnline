@@ -2,6 +2,10 @@
 .bulk-attendance { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
 .mark-all-present { color: white; background: #087f78; border-color: #087f78; font-weight: 600; }
 .mark-all-present:hover:not(:disabled) { color: white; background: #066a64; }
+.mark-all-absent { color: #a03838; background: #fff; border-color: #d8a5a5; font-weight: 600; }
+.save-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0 16px; color:#526d66; font-size:var(--eva-font-helper); }
+.save-toolbar > button,.save-row { color:white; background:#087f78; border-color:#087f78; font-weight:600; }
+.save-row { min-height:36px; padding:6px 10px; }
 .attendance-page { max-width: 1240px; margin: auto; padding: 36px 42px; }
 .back-link { color: #087f78; font-size: var(--eva-font-label); text-decoration: none; }
 header { margin: 24px 0; }

@@ -1,0 +1,42 @@
+<section class="page">
+  <a routerLink="/cursos" class="back">← Mis cursos</a>
+  <header><p class="eyebrow">CURSO / EVALUACIONES</p><h1>{{ courseName() || 'Evaluaciones y calificaciones' }}</h1><p>Administra evaluaciones y notas, y consulta los resultados del curso.</p></header>
+  @if (loading()) { <p role="status">Cargando información del curso…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
+  @if (!loading() && !error()) {
+    <form class="new-evaluation" (ngSubmit)="saveEvaluation()">
+      <h2>{{ editingId() ? 'Editar evaluación' : 'Nueva evaluación' }}</h2>
+      <label>Nombre<input name="title" required minlength="2" maxlength="200" [(ngModel)]="title"></label>
+      <label>Puntaje máximo<input name="maxScore" type="number" min="0.01" max="100" step="0.01" required [(ngModel)]="maxScore"></label>
+      <label>Ponderación (%)<input name="weight" type="number" min="0.01" max="100" step="0.01" required [(ngModel)]="weight"></label>
+      <p class="weight">Ponderación actual: {{ weightTotal }} % / 100 %. @if (weightTotal < 100) { Faltan {{ (100 - weightTotal).toFixed(2) }} % por asignar. }</p>
+      <div class="form-actions"><button type="submit" [disabled]="saving() || !canSaveEvaluation()">{{ saving() ? 'Guardando…' : editingId() ? 'Guardar cambios' : 'Crear evaluación' }}</button>@if (editingId()) { <button type="button" class="secondary" [disabled]="saving()" (click)="cancelEdit()">Cancelar</button> }</div>
+    </form>
+    @if (evaluations().length === 0) { <p class="empty">Todavía no hay evaluaciones.</p> }
+    @for (evaluation of evaluations(); track evaluation.id) {
+      <section class="evaluation">
+        <header><div><h2>{{ evaluation.title }}</h2><p>{{ evaluation.weight }} % de ponderación · puntaje máximo {{ evaluation.maxScore }} · {{ evaluation.grades.length }} participantes calificados</p></div>
+          <div class="form-actions"><button type="button" class="secondary" [disabled]="saving()" (click)="edit(evaluation)">Editar evaluación</button>
+            @if (deletingId() === evaluation.id) { <button type="button" class="danger" [disabled]="saving()" (click)="remove(evaluation)">Confirmar eliminación</button><button type="button" class="secondary" [disabled]="saving()" (click)="deletingId.set(null)">Cancelar</button> }
+            @else { <button type="button" class="danger" [disabled]="saving()" (click)="deletingId.set(evaluation.id)">Eliminar evaluación</button> }
+          </div>
+        </header>
+        @if (evaluation.grades.length === 0) { <p class="muted">Aún no hay notas registradas.</p> }
+        @for (student of students(); track student.enrollmentId) {
+          <div class="student"><div><strong>{{ student.name }}</strong><small>Asistencia: {{ student.percentage === null ? 'Pendiente' : student.percentage + '%' }}</small></div>
+            <label>Nota<input type="number" min="0" [max]="evaluation.maxScore" step="0.01" [value]="scoreInputValue(evaluation, student)" (input)="scores[evaluation.id + ':' + student.enrollmentId] = $any($event.target).value === '' ? null : +$any($event.target).value" [attr.aria-label]="'Nota de ' + student.name"></label>
+            <label>Observaciones<textarea maxlength="1000" [value]="commentInputValue(evaluation, student)" (input)="comments[evaluation.id + ':' + student.enrollmentId] = $any($event.target).value" [attr.aria-label]="'Observaciones para ' + student.name"></textarea></label>
+            <button type="button" [disabled]="saving() || !validScore(evaluation, student)" (click)="saveGrade(evaluation, student)">{{ existingScore(evaluation, student) === null ? 'Registrar nota' : 'Guardar cambios' }}</button>
+            <small class="updated">{{ evaluation.grades.find(g => g.enrollmentId === student.enrollmentId)?.gradedAt ? 'Actualizada: ' + (evaluation.grades.find(g => g.enrollmentId === student.enrollmentId)?.gradedAt | date:'short') : 'Sin calificar' }}</small>
+          </div>
+        } @empty { <p>No hay participantes oficialmente inscritos.</p> }
+      </section>
+    }
+    <section class="results" id="resultados"><div class="results-head"><div><h2>Resultados finales</h2><p>El cierre requiere curso finalizado, todas las evaluaciones calificadas y ponderación total de 100 %.</p></div><button type="button" [disabled]="saving() || !weightsComplete" (click)="recalculate()">Calcular / actualizar resultados</button></div>
+      @if (!weightsComplete) { <p class="muted">Completa el 100 % de ponderación antes de calcular resultados.</p> }
+      @for (student of students(); track student.enrollmentId) { @let row = result(student); <article><strong>{{ student.name }}</strong><span>Nota final: {{ row?.finalGrade ?? 'Pendiente' }}</span><span>Asistencia: {{ row?.attendance?.percentage ?? student.percentage ?? 'Pendiente' }}{{ row?.attendance?.percentage !== null || student.percentage !== null ? '%' : '' }}</span><span>Requisito académico: {{ requirementLabel(student, 'academicMet') }}</span><span>Requisito de asistencia: {{ requirementLabel(student, 'attendanceMet') }}</span><b>{{ resultStatusLabel(student) }}</b></article> }
+      @empty { <p>No hay participantes inscritos.</p> }
+    </section>
+  }
+</section>

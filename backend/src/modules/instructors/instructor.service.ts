@@ -1,19 +1,35 @@
+import { Prisma, type User } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../shared/http-error.js';
 import { instructorAuth } from './instructor-auth.js';
 import { degreeLabel, degreeValues, type InstructorInput } from './instructor.rules.js';
-import type { User } from '@prisma/client';
 
-const toResponse = (user: User) => ({ id: String(user.id), name: user.name, email: user.email, degree: degreeLabel(user.degree),
-  sis: user.sis, phone: user.phone, role: user.role, participantTypeId: null, participantTypeName: null });
+const toResponse = (user: User) => ({
+  id: String(user.id), name: user.name, email: user.email,
+  degree: degreeLabel(user.degree), sis: user.sis, phone: user.phone,
+  role: user.role, participantTypeId: null, participantTypeName: null
+});
+
 const definitivePersistenceFailure = (error: unknown) => {
   if (typeof error !== 'object' || error === null) return false;
   if ('name' in error && error.name === 'PrismaClientValidationError') return true;
-  return 'code' in error && typeof error.code === 'string' && ['P2000', 'P2002', 'P2003', 'P2004', 'P2011', 'P2012', 'P2014', 'P2025'].includes(error.code);
+  return 'code' in error && typeof error.code === 'string' &&
+    ['P2000', 'P2002', 'P2003', 'P2004', 'P2011', 'P2012', 'P2014', 'P2025'].includes(error.code);
 };
 
 const duplicate = (paths: string[]) => new HttpError(409, 'Ya existe una cuenta con estos datos.',
   paths.map(path => ({ path, message: path === 'sis' ? 'El SIS ya está registrado.' : 'El correo ya está registrado.' })));
+
+const assignmentSelect = {
+  id: true, courseId: true, instructorId: true, assignedById: true, assignedAt: true,
+  course: { select: { id: true, name: true, code: true, status: true } },
+  instructor: { select: { id: true, name: true, email: true } }
+} satisfies Prisma.CourseInstructorSelect;
+
+async function assertInstructor(id: number) {
+  const user = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+  if (!user || user.role !== 'INSTRUCTOR') throw new HttpError(400, 'El usuario seleccionado no es un instructor válido.');
+}
 
 export const instructorService = {
   async create(input: InstructorInput) {
@@ -25,7 +41,7 @@ export const instructorService = {
       });
     } catch { throw new HttpError(500, 'No se pudo verificar el instructor.'); }
     if (existing) {
-      const paths = [];
+      const paths: string[] = [];
       if (existing.email.toLowerCase() === input.email) paths.push('email');
       if (existing.sis === input.sis) paths.push('sis');
       throw duplicate(paths);
@@ -68,5 +84,83 @@ export const instructorService = {
       }
       throw new HttpError(500, 'No se pudo guardar el instructor.');
     }
+  },
+
+  async assignments(courseId?: number) {
+    return prisma.courseInstructor.findMany({
+      where: courseId === undefined ? {} : { courseId },
+      select: assignmentSelect, orderBy: [{ courseId: 'asc' }, { assignedAt: 'asc' }]
+    });
+  },
+
+  async assign(courseId: number, instructorId: number, assignedById?: number) {
+    await assertInstructor(instructorId);
+    try {
+      return await prisma.$transaction(async tx => {
+        const course = await tx.course.findUnique({ where: { id: courseId }, select: { id: true, instructorId: true } });
+        if (!course) throw new HttpError(404, 'Curso no encontrado.');
+        const assignment = await tx.courseInstructor.create({
+          data: { courseId, instructorId, ...(assignedById ? { assignedById } : {}) },
+          select: assignmentSelect
+        });
+        if (course.instructorId === null) {
+          await tx.course.update({ where: { id: courseId }, data: { instructorId, instructor: assignment.instructor.name } });
+        }
+        return assignment;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new HttpError(409, 'Este instructor ya está asignado al curso.');
+      }
+      throw error;
+    }
+  },
+
+  async changeAssignment(assignmentId: number, instructorId: number) {
+    await assertInstructor(instructorId);
+    try {
+      return await prisma.$transaction(async tx => {
+        const existing = await tx.courseInstructor.findUnique({ where: { id: assignmentId } });
+        if (!existing) throw new HttpError(404, 'Asignación no encontrada.');
+        const updated = await tx.courseInstructor.update({
+          where: { id: assignmentId }, data: { instructorId }, select: assignmentSelect
+        });
+        const course = await tx.course.findUnique({ where: { id: existing.courseId }, select: { instructorId: true } });
+        if (course?.instructorId === existing.instructorId) {
+          const primaryStillAssigned = await tx.courseInstructor.findFirst({
+            where: { courseId: existing.courseId, instructorId: existing.instructorId }
+          });
+          if (!primaryStillAssigned) {
+            await tx.course.update({ where: { id: existing.courseId },
+              data: { instructorId, instructor: updated.instructor.name } });
+          }
+        }
+        return updated;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new HttpError(409, 'Este instructor ya está asignado al curso.');
+      }
+      throw error;
+    }
+  },
+
+  async removeAssignment(assignmentId: number) {
+    return prisma.$transaction(async tx => {
+      const existing = await tx.courseInstructor.findUnique({ where: { id: assignmentId } });
+      if (!existing) throw new HttpError(404, 'Asignación no encontrada.');
+      await tx.courseInstructor.delete({ where: { id: assignmentId } });
+      const course = await tx.course.findUnique({ where: { id: existing.courseId }, select: { instructorId: true } });
+      if (course?.instructorId === existing.instructorId) {
+        const replacement = await tx.courseInstructor.findFirst({
+          where: { courseId: existing.courseId }, orderBy: [{ assignedAt: 'asc' }, { id: 'asc' }],
+          include: { instructor: { select: { name: true } } }
+        });
+        await tx.course.update({ where: { id: existing.courseId }, data: {
+          instructorId: replacement?.instructorId ?? null, instructor: replacement?.instructor.name ?? null
+        } });
+      }
+      return { deleted: true };
+    });
   }
 };

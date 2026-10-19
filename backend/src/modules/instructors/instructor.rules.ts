@@ -12,3 +12,11 @@ export type InstructorInput = z.infer<typeof instructorInputSchema>;
 export const degreeValues = { Estudiante: 'STUDENT', Ingeniero: 'ENGINEER', Técnico: 'TECHNICIAN' } as const;
 export const degreeLabel = (value: 'STUDENT' | 'ENGINEER' | 'TECHNICIAN' | null | undefined) =>
   value ? ({ STUDENT: 'Estudiante', ENGINEER: 'Ingeniero', TECHNICIAN: 'Técnico' } as const)[value] : null;
+
+export const assignInstructorSchema = z.strictObject({
+  courseId: z.coerce.number().int().positive(),
+  instructorId: z.coerce.number().int().positive()
+});
+export const updateAssignmentSchema = z.strictObject({
+  instructorId: z.coerce.number().int().positive()
+});

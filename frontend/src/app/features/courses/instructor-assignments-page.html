@@ -1,0 +1,29 @@
+<section class="page">
+  <header><p class="eyebrow">ADMINISTRACIÓN / DOCENCIA</p><h1>Asignar instructores</h1><p>Asigna responsables a cursos existentes y consulta las asignaciones actuales.</p></header>
+  @if (loading()) { <p role="status">Cargando cursos e instructores…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
+  @if (!loading()) {
+    <form (ngSubmit)="save()">
+      <label>Curso existente<select name="course" required [(ngModel)]="courseId"><option value="">Selecciona un curso</option>@for (course of courses(); track course.id) { <option [value]="course.id">{{ course.name }}{{ course.code ? ' · ' + course.code : '' }}</option> }</select></label>
+      <label>Instructor<select name="instructor" required [(ngModel)]="instructorId"><option value="">Selecciona un instructor</option>@for (instructor of instructors(); track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }</select></label>
+      <button type="submit" [disabled]="saving() || !courseId || !instructorId || assignmentExists(courseId, instructorId)">{{ saving() ? 'Guardando…' : 'Asignar instructor' }}</button>
+    </form>
+    <div class="page-actions"><button type="button" (click)="load()" [disabled]="saving()">Actualizar lista</button><a routerLink="/cursos">Volver a cursos</a></div>
+    <section class="assignments"><h2>Asignaciones actuales</h2>
+      @for (row of assignments(); track row.id) {
+        <article>
+          <div><strong>{{ row.course.name }}</strong><small>{{ row.course.code || 'Sin código' }} · {{ row.instructor.email }}</small><small>Asignado: {{ row.assignedAt | date:'mediumDate' }}</small></div>
+          @if (editingId() === row.id) {
+            <label>Instructor<select [ngModel]="editInstructorId()" (ngModelChange)="editInstructorId.set($event)" [ngModelOptions]="{standalone: true}">@for (instructor of instructors(); track instructor.id) { <option [value]="instructor.id" [disabled]="!isSameInstructor(instructor.id, row.instructor.id) && assignmentExists(row.course.id, instructor.id)">{{ instructor.name }}</option> }</select></label>
+            <button type="button" [disabled]="saving() || isSameInstructor(editInstructorId(), row.instructor.id)" (click)="saveEdit(row)">{{ saving() ? 'Guardando…' : 'Guardar cambios' }}</button><button type="button" class="secondary" [disabled]="saving()" (click)="cancelEdit()">Cancelar</button>
+          } @else if (deletingId() === row.id) {
+            <div class="confirm-delete" role="group" aria-label="Confirmar eliminación"><span>¿Eliminar esta asignación?</span><button type="button" [disabled]="saving()" (click)="remove(row)">Confirmar eliminación</button><button type="button" class="secondary" [disabled]="saving()" (click)="cancelRemove()">Cancelar</button></div>
+          } @else {
+            <div class="row-actions"><button type="button" class="secondary" [disabled]="saving()" (click)="startEdit(row)">Editar asignación</button><button type="button" class="danger" [disabled]="saving()" (click)="confirmRemove(row)">Eliminar asignación</button></div>
+          }
+        </article>
+      } @empty { <p>Aún no hay instructores asignados.</p> }
+    </section>
+  }
+</section>

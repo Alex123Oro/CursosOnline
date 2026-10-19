@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const db = vi.hoisted(() => ({ user: { findFirst: vi.fn(), findMany: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn() }, courseSession: { findUnique: vi.fn(), findMany: vi.fn() }, instructorAttendance: { upsert: vi.fn() }, $transaction: vi.fn(), $queryRaw: vi.fn() }));
+const db = vi.hoisted(() => ({ user: { findFirst: vi.fn(), findMany: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn() }, courseInstructor: { findMany: vi.fn(), findUnique: vi.fn() }, courseSession: { findUnique: vi.fn(), findMany: vi.fn() }, instructorAttendance: { upsert: vi.fn() }, $transaction: vi.fn(), $queryRaw: vi.fn() }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: db }));
 import { instructorAttendanceService } from '../src/modules/instructor-attendance/instructor-attendance.service.js';
 import { instructorAttendanceFilters } from '../src/modules/instructor-attendance/instructor-attendance.rules.js';
@@ -13,6 +13,7 @@ describe('instructor attendance', () => {
     db.$transaction.mockImplementation(cb => cb(db)); db.$queryRaw.mockResolvedValue([]);
     db.user.findFirst.mockResolvedValue({ id: 8, name: 'Carla' }); db.user.findMany.mockResolvedValue([{ id: 8, name: 'Carla' }]);
     db.course.findUnique.mockResolvedValue(course); db.course.findMany.mockResolvedValue([course]);
+    db.courseInstructor.findMany.mockResolvedValue([]); db.courseInstructor.findUnique.mockResolvedValue(null);
     db.courseSession.findUnique.mockResolvedValue(session); db.courseSession.findMany.mockResolvedValue([session]);
     db.instructorAttendance.upsert.mockImplementation(({ update }) => ({ ...record, status: update.status }));
   });
@@ -25,23 +26,23 @@ describe('instructor attendance', () => {
   });
   it('lists instructors including those with preserved history', async () => {
     expect(await instructorAttendanceService.instructors(admin)).toEqual([{ id: '8', name: 'Carla' }]);
-    expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { OR: [{ role: 'INSTRUCTOR' }, { teachingAttendance: { some: {} } }] } }));
+    expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { OR: [{ role: 'INSTRUCTOR' }, { teachingAttendance: { some: {} } }, { courseAssignments: { some: {} } }] } }));
   });
   it('separates future sessions from eligible summary without percentages', async () => {
     db.courseSession.findMany.mockResolvedValue([{ ...session, instructorAttendance: record }, { ...session, id: 4 }, { ...session, id: 5, date: new Date('2026-10-07') }]);
     const result = await instructorAttendanceService.list(8, {}, admin);
     expect(result.summary).toEqual({ present: 0, absent: 1, pending: 1 });
-    expect(result.sessions[2].editable).toBe(true); expect(result).not.toHaveProperty('percentage');
+    expect(result.sessions[2].editable).toBe(false); expect(result).not.toHaveProperty('percentage');
   });
   it('retains saved summary but blocks corrections while the course has no assigned user', async () => {
     db.courseSession.findMany.mockResolvedValue([{...session,course:{...course,instructorId:null},instructorAttendance:record}]);
     const result=await instructorAttendanceService.list(8,{},admin);
     expect(result.summary.absent).toBe(1); expect(result.sessions[0].editable).toBe(false);
-    expect(result.sessions[0].blockedReason).toContain('Asigna');
+    expect(result.sessions[0].blockedReason).toContain('asignado');
   });
   it('queries own records and unmarked currently assigned sessions with inclusive filters', async () => {
     await instructorAttendanceService.list(8, { courseId: 2, from: '2026-10-01', to: '2026-10-06' }, admin);
-    expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ courseId: 2, date: { gte: new Date('2026-10-01'), lte: new Date('2026-10-06') }, OR: [{ instructorAttendance: { is: { instructorId: 8 } } }, { course: { instructorId: 8 }, instructorAttendance: { is: null } }] }) }));
+    expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ courseId: 2, date: { gte: new Date('2026-10-01'), lte: new Date('2026-10-06') }, OR: [{ instructorAttendance: { is: { instructorId: 8 } } }, { instructorAttendance: { is: null }, course: { instructorId: 8 } }, { instructorAttendance: { is: null }, course: { instructorAssignments: { some: { instructorId: 8 } } } }] }) }));
   });
   it('creates one record with original instructor and administrator', async () => {
     expect(await instructorAttendanceService.save(8, 3, 'PRESENT', admin)).toMatchObject({ status: 'PRESENT' });
@@ -58,7 +59,7 @@ describe('instructor attendance', () => {
     await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 409 });
   });
   it('rejects another instructor on the first mark', async () => { await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 400 }); });
-  it('allows future sessions', async () => { db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-07') }); await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).resolves.toMatchObject({ status: 'PRESENT' }); });
+  it('rejects future sessions', async () => { db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-07') }); await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 400 }); });
   it.each(['PRESENT', 'ABSENT'] as const)('allows recording or correcting past sessions (%s)', async status => {
     db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-05'), instructorAttendance: record });
     await expect(instructorAttendanceService.save(8, 3, status, admin)).resolves.toMatchObject({ status });
@@ -70,7 +71,7 @@ describe('instructor attendance', () => {
       { ...session, date: new Date('2026-10-07') }
     ]);
     const result = await instructorAttendanceService.list(8, {}, admin);
-    expect(result.sessions.map(row => row.editable)).toEqual([true, true, true]);
+    expect(result.sessions.map(row => row.editable)).toEqual([true, true, false]);
     expect(result.sessions[0].blockedReason).toBeNull();
     expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: [{ date: 'desc' }, { startTime: 'desc' }, { id: 'desc' }] }));
   });

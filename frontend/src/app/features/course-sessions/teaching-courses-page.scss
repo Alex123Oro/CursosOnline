@@ -9,7 +9,7 @@ input { min-height: 44px; border: 1px solid #cadbd8; border-radius: 8px; padding
 .course-list { list-style: none; padding: 0; margin: 0; border: 1px solid #dce8e5; border-radius: 12px; overflow: hidden; background: white; }
 li { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 16px 20px; } li + li { border-top: 1px solid #e5eeeb; }
 .course-info { min-width: 0; } .code { font-size: var(--eva-font-helper); color: #087f78; font-weight: 700; } h2 { font-size: var(--eva-font-section); margin: 5px 0; overflow-wrap: anywhere; } .course-info p { margin: 0; color: #526d66; font-size: var(--eva-font-label); line-height: 1.6; }
-.actions { display: flex; gap: 8px; flex-shrink: 0; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex-shrink: 0; max-width: 620px; }
 a, button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; box-sizing: border-box; border: 1px solid #cadbd8; border-radius: 8px; padding: 8px 14px; background: white; color: #087f78; text-decoration: none; font: inherit; font-size: var(--eva-font-label); cursor: pointer; }
 .primary { background: #087f78; border-color: #087f78; color: white; } a:hover, button:hover { filter: brightness(.95); } :is(a, button, input):focus-visible { outline: 3px solid #18afa0; outline-offset: 3px; } button:disabled { opacity: .45; cursor: default; }
 .pagination, .pagination > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; } .pagination { margin-top: 16px; color: #526d66; font-size: var(--eva-font-label); }

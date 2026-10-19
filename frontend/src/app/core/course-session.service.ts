@@ -4,8 +4,9 @@ import { environment } from '../../environments/environment';
 
 export interface SessionCourse {
   status?: 'DRAFT' | 'PUBLISHED';
-  id: string; code: string; name: string; instructor: string; instructorId: string | null;
+  id: string; code: string; name: string; instructor: string; instructorId: string | null; description?: string;
   startDate: string | null; endDate: string | null;
+  participantCount?: number; sessionCount?: number; evaluationCount?: number; evaluationWeight?: number;
 }
 export interface SessionPayload { sessionNumber: number; date: string; startTime: string; durationMinutes: number; }
 export interface CourseSession extends SessionPayload {

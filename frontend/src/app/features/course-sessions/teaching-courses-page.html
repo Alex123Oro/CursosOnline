@@ -6,7 +6,17 @@
     <div class="toolbar"><span>{{ courses().length }} cursos asignados</span><label>Buscar curso<input type="search" placeholder="Nombre o código" [value]="search()" (input)="searchCourses($any($event.target).value)"></label></div>
     <ul class="course-list" aria-label="Cursos asignados">
       @for (course of visibleCourses(); track course.id) {
-        <li><div class="course-info"><span class="code">{{ course.code || 'CURSO' }}</span><h2>{{ course.name }}</h2><p>{{ formatDate(course.startDate) }} — {{ formatDate(course.endDate) }}</p></div><div class="actions"><a [routerLink]="['/cursos', course.id, 'sesiones']">Ver clases</a><a class="primary" [routerLink]="['/cursos', course.id, 'asistencia']">Asistencia de alumnos</a></div></li>
+        <li><div class="course-info"><span class="code">{{ course.code || 'CURSO' }} · {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Borrador' }}</span><h2>{{ course.name }}</h2><p>{{ course.description || 'Sin descripción registrada.' }}</p><p>{{ formatDate(course.startDate) }} — {{ formatDate(course.endDate) }}</p><p>{{ course.participantCount ?? 0 }} participantes inscritos · {{ course.sessionCount ?? 0 }} sesiones · {{ course.evaluationCount ?? 0 }} evaluaciones · {{ course.evaluationWeight ?? 0 }} % ponderado</p></div><div class="actions">
+          <a [routerLink]="['/catalogo', course.id]">Ver detalles</a>
+          <a [routerLink]="['/cursos', course.id, 'asistencia']">Ver participantes</a>
+          <a [routerLink]="['/cursos', course.id, 'sesiones']">Gestionar sesiones</a>
+          <a class="primary" [routerLink]="['/cursos', course.id, 'asistencia']">Registrar asistencia</a>
+          <a [routerLink]="['/cursos', course.id, 'asistencia']">Ver asistencias</a>
+          <a [routerLink]="['/cursos', course.id, 'evaluaciones']">Gestionar evaluaciones</a>
+          <a [routerLink]="['/cursos', course.id, 'evaluaciones']">Registrar notas</a>
+          <a [routerLink]="['/cursos', course.id, 'evaluaciones']">Ver notas</a>
+          <a [routerLink]="['/cursos', course.id, 'evaluaciones']" fragment="resultados">Ver resultados finales</a>
+        </div></li>
       }
       @empty { <li class="empty">{{ courses().length ? 'No hay cursos que coincidan con tu búsqueda.' : 'No tienes cursos publicados asignados. Solicita la asignación al administrador.' }}</li> }
     </ul>

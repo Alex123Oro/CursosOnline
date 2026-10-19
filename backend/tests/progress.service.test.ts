@@ -21,8 +21,8 @@ describe('participant progress', () => {
         endDate: new Date('2026-08-31'),
         minimumPassingScore: 70,
         sessions: [
-          { id: 1, date: new Date('2026-08-05') },
-          { id: 2, date: new Date('2026-08-12') }
+          { id: 1, sessionNumber: 1, startTime: '10:00', durationMinutes: 60, date: new Date('2026-08-05') },
+          { id: 2, sessionNumber: 2, startTime: '10:00', durationMinutes: 60, date: new Date('2026-08-12') }
         ],
         evaluations: [{
           id: 3,
@@ -33,8 +33,8 @@ describe('participant progress', () => {
         }]
       },
       attendance: [
-        { status: 'PRESENT', session: { date: new Date('2026-08-05') } },
-        { status: 'ABSENT', session: { date: new Date('2026-08-12') } }
+        { status: 'PRESENT', session: { id: 1, date: new Date('2026-08-05') } },
+        { status: 'ABSENT', session: { id: 2, date: new Date('2026-08-12') } }
       ]
     }]);
 
@@ -45,23 +45,24 @@ describe('participant progress', () => {
       attendance: { presentSessions: 1, completedSessions: 2, percentage: 50 },
       currentGrade: 82,
       finalGrade: 82,
-      finalStatus: 'REPROBADO',
+      finalStatus: 'NO_CUMPLE_ASISTENCIA', certificateEligible: false,
       requirements: { academicMet: true, attendanceMet: false, minimumAttendancePercent: 80 }
     });
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { participantId: 9 } }));
   });
 
-  it('approves only when both grade and attendance thresholds are met', async () => {
+  it('marks certificate eligibility only when grade and attendance thresholds are met', async () => {
     findMany.mockResolvedValue([{
       id: 12, status: 'INSCRITO', course: {
         id: 4, code: 'HU12', name: 'Curso', startDate: null, endDate: new Date('2026-08-31'), minimumPassingScore: 70,
-        sessions: [{ id: 1, date: new Date('2026-08-05') }, { id: 2, date: new Date('2026-08-12') }, { id: 3, date: new Date('2026-08-19') }, { id: 4, date: new Date('2026-08-26') }],
+        sessions: [{ id: 1, sessionNumber: 1, startTime: '10:00', durationMinutes: 60, date: new Date('2026-08-05') }, { id: 2, sessionNumber: 2, startTime: '10:00', durationMinutes: 60, date: new Date('2026-08-12') }, { id: 3, sessionNumber: 3, startTime: '10:00', durationMinutes: 60, date: new Date('2026-08-19') }, { id: 4, sessionNumber: 4, startTime: '10:00', durationMinutes: 60, date: new Date('2026-08-26') }],
         evaluations: [{ id: 1, title: 'Examen', maxScore: 100, weight: 100, grades: [{ enrollmentId: 12, score: 70, comment: null, gradedAt: new Date() }] }]
       },
-      attendance: [1, 2, 3, 4].map(() => ({ status: 'PRESENT', session: { date: new Date('2026-08-05') } }))
+      attendance: [1, 2, 3, 4].map(id => ({ status: 'PRESENT', session: { id, date: new Date('2026-08-05') } }))
     }]);
     const [progress] = await progressService.listForParticipant(9);
     expect(progress.finalStatus).toBe('APROBADO');
+    expect(progress.certificateEligible).toBe(true);
     expect(progress.requirements).toMatchObject({ academicMet: true, attendanceMet: true });
   });
 
@@ -80,5 +81,18 @@ describe('participant progress', () => {
 
     const [progress] = await progressService.listForParticipant(9);
     expect(progress).toMatchObject({ currentGrade: null, finalGrade: null, finalStatus: null });
+  });
+
+  it('keeps the final result pending until every completed session has an attendance record', async () => {
+    findMany.mockResolvedValue([{
+      id: 12, status: 'INSCRITO', course: {
+        id: 4, code: 'HU12', name: 'Curso', startDate: null, endDate: new Date('2020-01-31'), minimumPassingScore: 70,
+        sessions: [{ id: 1, sessionNumber: 1, startTime: '10:00', durationMinutes: 60, date: new Date('2020-01-05') }],
+        evaluations: [{ id: 1, title: 'Examen', maxScore: 100, weight: 100, grades: [{ enrollmentId: 12, score: 90, comment: null, gradedAt: new Date() }] }]
+      }, attendance: []
+    }]);
+    const [progress] = await progressService.listForParticipant(9);
+    expect(progress).toMatchObject({ finalGrade: null, finalStatus: null, requirements: { attendanceMet: null } });
+    expect(progress.attendance.sessions[0]?.status).toBeNull();
   });
 });

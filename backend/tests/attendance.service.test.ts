@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn() }, courseSession: { findMany: vi.fn(), findUnique: vi.fn() }, enrollment: { findMany: vi.fn(), findUnique: vi.fn() }, attendance: { upsert: vi.fn() }, $queryRaw: vi.fn(), $transaction: vi.fn() }));
+const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, courseSession: { findMany: vi.fn(), findUnique: vi.fn() }, enrollment: { findMany: vi.fn(), findUnique: vi.fn() }, attendance: { upsert: vi.fn() }, $queryRaw: vi.fn(), $transaction: vi.fn() }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { attendanceService } from '../src/modules/attendance/attendance.service.js';
 import { attendanceInputSchema, boliviaToday } from '../src/modules/attendance/attendance.rules.js';
@@ -14,6 +14,7 @@ describe('participant attendance', () => {
     vi.resetAllMocks(); vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-07T02:00:00Z'));
     mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
     mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue(sessions); mocks.courseSession.findUnique.mockResolvedValue(sessions[0]);
+    mocks.courseInstructor.findUnique.mockResolvedValue(null);
     mocks.enrollment.findMany.mockResolvedValue([enrollment]); mocks.enrollment.findUnique.mockResolvedValue(enrollment); mocks.attendance.upsert.mockImplementation(({ where, update }) => ({ sessionId: where.sessionId_enrollmentId.sessionId, status: update.status, updatedAt: new Date('2026-10-06') }));
   });
   it('uses the Bolivia date before UTC midnight boundaries', () => { expect(boliviaToday(new Date('2026-10-07T02:00:00Z'))).toBe('2026-10-06'); });
@@ -23,13 +24,13 @@ describe('participant attendance', () => {
     expect(result.sessions.at(-1)?.editable).toBe(false);
     expect(mocks.enrollment.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { courseId: 2, status: 'INSCRITO' } }));
   });
-  it('returns null percentage for no saved records and reports previous sessions as pending', async () => {
+  it('counts unmarked completed sessions as not attended and reports them as pending', async () => {
     mocks.enrollment.findMany.mockResolvedValue([{ ...enrollment, attendance: [] }]);
-    expect((await attendanceService.list(2, admin)).students[0]).toMatchObject({ percentage: null, pendingCount: 4 });
+    expect((await attendanceService.list(2, admin)).students[0]).toMatchObject({ percentage: 0, pendingCount: 4 });
   });
-  it('shows 75 percent with two additional unmarked past classes', async () => {
+  it('includes unmarked past classes in the attendance percentage', async () => {
     mocks.courseSession.findMany.mockResolvedValue([...sessions, { ...sessions[0], id: 6 }, { ...sessions[1], id: 7 }]);
-    expect((await attendanceService.list(2, admin)).students[0]).toMatchObject({ percentage: 75, pendingCount: 2 });
+    expect((await attendanceService.list(2, admin)).students[0]).toMatchObject({ percentage: 50, pendingCount: 2 });
   });
   it('saves and corrects using the same unique student/session record', async () => {
     await attendanceService.save(2, 1, 3, 'PRESENT', instructor);
