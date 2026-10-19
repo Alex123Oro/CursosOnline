@@ -8,7 +8,7 @@ Este servicio ejecuta un servidor Node independiente del backend Express. No req
 |---|---|
 | Tipo | Web Service |
 | Repositorio | `Alex123Oro/CursosOnline` (original, sin copia) |
-| Rama | `develop` |
+| Rama | `main` |
 | Root Directory | `frontend` |
 | Runtime | Node |
 | Build Command | `npm ci --include=dev && npm run build:deploy` |
