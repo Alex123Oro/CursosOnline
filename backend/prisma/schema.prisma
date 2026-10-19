@@ -323,5 +323,6 @@ model CourseResult {
 
   @@index([courseId])
   @@unique([enrollmentId, courseId])
-  @@map("resultados_curso")
+  // Certificate issuance owns resultados_curso; recalculation must not overwrite it.
+  @@map("resultados_academicos_curso")
 }
