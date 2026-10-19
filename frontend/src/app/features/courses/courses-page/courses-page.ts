@@ -12,6 +12,7 @@ type FormMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-courses-page',
+  host: { class: 'eva-workspace eva-course-workspace' },
   standalone: true,
   imports: [CommonModule, CourseList, CourseForm],
   templateUrl: './courses-page.html',

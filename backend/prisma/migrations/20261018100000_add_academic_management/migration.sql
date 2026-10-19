@@ -1,4 +1,4 @@
-﻿-- Academic results are a recalculable cache. resultados_curso belongs to
+-- Academic results are a recalculable cache. resultados_curso belongs to
 -- certificate issuance and must keep its existing columns and certificate FKs.
 DO $$ BEGIN
   IF NOT EXISTS (

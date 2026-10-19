@@ -1,3 +1,11 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--eva-space-section);
+}
+
 .account-directory {
   max-width: 1240px;
   margin: 0 auto;

@@ -1,4 +1,4 @@
-<section class="detail-page">
+<section class="detail-page eva-workspace eva-page">
   <a routerLink="/mis-certificados">← Mis certificados</a><h1>Detalle del certificado</h1>
   @if (loading()) { <p role="status">Cargando certificado…</p> }
   @else if (error()) { <div role="alert" class="error"><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }

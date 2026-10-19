@@ -1,4 +1,4 @@
-<section class="attendance-page">
+<section class="attendance-page eva-workspace eva-page">
   <a class="back-link" [routerLink]="['/cursos', courseId(), 'sesiones']">← Volver a sesiones</a>
   <header><p class="eyebrow">CONTROL DEL CURSO</p><h1>Asistencia</h1>@if (course(); as current) { <p class="course-name">{{ current.name }}</p><p class="helper">{{ current.code }} · {{ current.instructor }} · Hora de Bolivia</p> }</header>
   @if (error()) { <div class="notice error" role="alert">{{ error() }}<button type="button" (click)="reload()">Reintentar</button></div> }

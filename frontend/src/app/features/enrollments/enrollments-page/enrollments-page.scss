@@ -12,18 +12,20 @@
   color: var(--ink);
 }
 .page-header {
-  margin-bottom: 26px;
+  display: grid;
+  gap: 0;
+  margin-bottom: var(--eva-space-section);
 }
 h1 {
   margin: 0 0 10px;
-  font-size: 32px;
+  font-size: var(--eva-font-title);
   letter-spacing: -0.03em;
 }
 .eyebrow {
-  margin: 0 0 9px;
+  margin: 0;
   color: var(--accent);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--eva-weight-bold);
   letter-spacing: 0.07em;
 }
 .page-header > p:last-child {
@@ -46,18 +48,24 @@ h1 {
   padding: 0 22px;
   border-bottom: 3px solid transparent;
   color: var(--muted);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--eva-font-body);
+  line-height: 1.5;
+  font-weight: var(--eva-weight-semibold);
   text-decoration: none;
 }
+.enrollment-tabs a:hover {
+  color: var(--accent);
+  background: #f3f8f7;
+}
 .enrollment-tabs a.active {
+  font-weight: var(--eva-weight-bold);
   color: var(--accent);
   border-color: var(--accent);
   background: #eaf5f2;
   border-radius: 8px 8px 0 0;
 }
 .course-selection {
-  padding: 24px;
+  padding: var(--eva-space-card);
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fff;
@@ -68,7 +76,7 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px;
+  padding: var(--eva-space-card);
   margin-bottom: 24px;
   background: #eaf5f2;
   border: 1px solid #c7e2d9;
@@ -76,10 +84,11 @@ h1 {
 }
 h2 {
   margin: 0;
-  font-size: 21px;
+  font-size: var(--eva-font-section);
   line-height: 1.4;
 }
 .course-summary dl {
+  flex-wrap: wrap;
   display: flex;
   gap: 30px;
   margin: 0;
@@ -105,7 +114,7 @@ h2 {
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  padding: 22px;
+  padding: var(--eva-space-card);
 }
 .list-toolbar label {
   display: grid;
@@ -147,7 +156,7 @@ input {
   border-radius: 12px;
   background: #eaf5f2;
   color: var(--accent);
-  font-size: 28px;
+
   margin-bottom: 16px;
 }
 .empty-state p {
@@ -217,10 +226,10 @@ input:focus-visible {
 }
 @media (max-width: 550px) {
   h1 {
-    font-size: 27px;
+    font-size: var(--eva-font-title-mobile);
   }
   .course-selection {
-    padding: 18px;
+    padding: var(--eva-space-card);
   }
   .enrollment-tabs a {
     flex: 1;
@@ -232,7 +241,7 @@ input:focus-visible {
   .list-toolbar {
     align-items: stretch;
     flex-direction: column;
-    padding: 18px;
+    padding: var(--eva-space-card);
     gap: 8px;
   }
   .result-count {
@@ -251,4 +260,14 @@ input:focus-visible {
   .empty-state {
     padding: 36px 20px;
   }
+}
+
+.empty-symbol svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
