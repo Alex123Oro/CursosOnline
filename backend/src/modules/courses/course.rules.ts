@@ -92,13 +92,18 @@ export const courseInputSchema = z
       .or(z.literal('').transform(() => undefined)),
     name: requiredText('El nombre', 3),
     content: requiredText('El contenido', 10),
+    coverUrl: z.string().trim().max(2048).refine(value => {
+      if (!value || /^\/images\/[a-zA-Z0-9/_\-.]+$/.test(value)) return true;
+      try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password; } catch { return false; }
+    }, 'Usa una URL HTTPS válida para la portada.').nullable().optional(),
     durationHours: z.coerce
       .number({ error: 'Las horas son obligatorias.' })
       .int('Las horas deben ser un numero entero.')
       .positive('Las horas deben ser mayores a 0.'),
     instructor: requiredText('El instructor', 2),
     instructorId: z.preprocess(value => value === '' ? null : value, z.coerce.number().int().positive().nullable().optional()),
-    schedule: requiredText('El horario', 3),
+    minimumEnrollment: z.coerce.number().int('El mínimo de inscritos debe ser un número entero.').positive('El mínimo de inscritos debe ser mayor a cero.').optional(),
+    schedule: z.string().trim().optional(),
     approvalCriteria: requiredText('Los criterios de aprobación', 3),
     status: courseStatusSchema.optional(),
     startDate: dateStringSchema,
@@ -113,6 +118,10 @@ export const courseInputSchema = z
   .refine(course => hasDateOrder(course.startDate, course.endDate), {
     message: 'La fecha de fin no puede ser anterior a la fecha de inicio.',
     path: ['endDate']
+  })
+  .refine(course => course.minimumEnrollment === undefined || course.capacity === null || course.minimumEnrollment <= course.capacity, {
+    message: 'El mínimo de inscritos no puede superar la capacidad del curso.',
+    path: ['minimumEnrollment']
   })
   .refine(course => hasDateOrder(course.preinscriptionStart, course.preinscriptionEnd), {
     message: 'La fecha de fin de preinscripcion no puede ser anterior a la de inicio.',

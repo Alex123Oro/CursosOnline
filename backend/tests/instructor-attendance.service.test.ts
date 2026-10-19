@@ -31,7 +31,7 @@ describe('instructor attendance', () => {
     db.courseSession.findMany.mockResolvedValue([{ ...session, instructorAttendance: record }, { ...session, id: 4 }, { ...session, id: 5, date: new Date('2026-10-07') }]);
     const result = await instructorAttendanceService.list(8, {}, admin);
     expect(result.summary).toEqual({ present: 0, absent: 1, pending: 1 });
-    expect(result.sessions[2].editable).toBe(false); expect(result).not.toHaveProperty('percentage');
+    expect(result.sessions[2].editable).toBe(true); expect(result).not.toHaveProperty('percentage');
   });
   it('retains saved summary but blocks corrections while the course has no assigned user', async () => {
     db.courseSession.findMany.mockResolvedValue([{...session,course:{...course,instructorId:null},instructorAttendance:record}]);
@@ -58,7 +58,22 @@ describe('instructor attendance', () => {
     await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 409 });
   });
   it('rejects another instructor on the first mark', async () => { await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 400 }); });
-  it('rejects future sessions using Bolivia today', async () => { db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-07') }); await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 400 }); });
+  it('allows future sessions', async () => { db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-07') }); await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).resolves.toMatchObject({ status: 'PRESENT' }); });
+  it.each(['PRESENT', 'ABSENT'] as const)('allows recording or correcting past sessions (%s)', async status => {
+    db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-05'), instructorAttendance: record });
+    await expect(instructorAttendanceService.save(8, 3, status, admin)).resolves.toMatchObject({ status });
+    expect(db.instructorAttendance.upsert).toHaveBeenCalled();
+  });
+  it('allows all assigned dates and requests newest sessions first', async () => {
+    db.courseSession.findMany.mockResolvedValue([
+      { ...session, date: new Date('2026-10-05') }, session,
+      { ...session, date: new Date('2026-10-07') }
+    ]);
+    const result = await instructorAttendanceService.list(8, {}, admin);
+    expect(result.sessions.map(row => row.editable)).toEqual([true, true, true]);
+    expect(result.sessions[0].blockedReason).toBeNull();
+    expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: [{ date: 'desc' }, { startTime: 'desc' }, { id: 'desc' }] }));
+  });
   it.each([null, { ...course, status: 'DRAFT' }, { ...course, instructorId: null }])('rejects invalid courses %j', async value => {
     db.course.findUnique.mockResolvedValue(value); await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: value ? 400 : 404 });
   });

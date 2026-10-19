@@ -6,7 +6,7 @@
 <div class="table-wrap">
   <table>
     <thead>
-      <tr><th>CURSO</th><th>HORAS</th><th>HORARIO</th><th>INSTRUCTOR</th><th>ESTADO</th><th>ACCIÓN</th></tr>
+      <tr><th>CURSO</th><th>HORAS</th><th>ALUMNOS INSCRITOS</th><th>INSTRUCTOR</th><th>ESTADO</th><th class="actions-column">ACCIONES</th></tr>
     </thead>
     <tbody>
       @if (loading) {
@@ -15,23 +15,27 @@
         @for (course of filteredCourses(); track course.id) {
           <tr>
             <td>
+              @if (course.coverUrl) { <img class="admin-course-cover" [src]="course.coverUrl" alt="" width="64" height="40" (error)="$any($event.target).style.display = 'none'"> }
               <button class="course-name" (click)="editCourse.emit(course)">{{ course.name }}</button>
               <small>{{ course.code }}</small>
             </td>
             <td>{{ course.durationHours }}</td>
-            <td>{{ course.schedule }}</td>
+            <td><span class="enrollment-count">{{ course.enrolledCount ?? 0 }}<span class="capacity">{{ course.capacity ? ' / ' + course.capacity : '' }}</span></span><small>Inscripciones confirmadas</small></td>
             <td>{{ course.instructor }}</td>
             <td>
               <span class="badge" [class.draft]="course.status !== 'PUBLISHED'" [class.published]="course.status === 'PUBLISHED'">
                 {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Borrador' }}
               </span>
             </td>
-            <td class="actions">
+            <td class="actions-column"><div class="actions">
+                <a class="more" [routerLink]="['/cursos', course.id, 'sesiones']">Clases</a>
               <button class="more" (click)="editCourse.emit(course)">Editar</button>
-              <button class="more publish" [disabled]="course.status === 'PUBLISHED'" (click)="publishCourse.emit(course)">
-                {{ course.status === 'PUBLISHED' ? 'Publicado' : 'Publicar' }}
-              </button>
-            </td>
+              @if (course.status === 'PUBLISHED') {
+                <button type="button" class="more unpublish" [disabled]="saving" (click)="unpublishCourse.emit(course)">Volver a borrador</button>
+              } @else {
+                <button type="button" class="more publish" [disabled]="saving" (click)="publishCourse.emit(course)">Publicar</button>
+              }
+            </div></td>
           </tr>
         } @empty {
           <tr><td colspan="6">No hay cursos para mostrar.</td></tr>

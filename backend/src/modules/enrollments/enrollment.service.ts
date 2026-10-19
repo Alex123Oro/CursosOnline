@@ -4,6 +4,7 @@ import type { RequestUser } from '../../shared/auth.js';
 import { calculateEnrollmentAmount } from '../../shared/enrollment-amount.js';
 import { HttpError } from '../../shared/http-error.js';
 import { isPreinscriptionOpen } from '../courses/course.rules.js';
+import type { EnrollmentQuery } from './enrollment-query.js';
 
 const enrollmentInclude = {
   course: { select: { id: true, name: true, code: true, capacity: true } },
@@ -52,6 +53,38 @@ const amountsFor = (basePrice: number, scholarshipPercent: number) =>
   calculateEnrollmentAmount(basePrice, scholarshipPercent);
 
 export const enrollmentService = {
+  async courseSummaries() {
+    const [courses, counts] = await Promise.all([
+      prisma.course.findMany({ select: { id: true, name: true, code: true, status: true, capacity: true }, orderBy: [{ name: 'asc' }, { id: 'asc' }] }),
+      prisma.enrollment.groupBy({ by: ['courseId', 'status'], _count: { _all: true } })
+    ]);
+    const totals = new Map(counts.map(item => [`${item.courseId}/${item.status}`, item._count._all]));
+    return courses.map(course => ({ ...course, id: String(course.id), code: course.code ?? '',
+      preenrolledCount: totals.get(`${course.id}/PREINSCRITO`) ?? 0, enrolledCount: totals.get(`${course.id}/INSCRITO`) ?? 0 }));
+  },
+  async detail(id: number) {
+    const enrollment = await prisma.enrollment.findUnique({ where: { id }, include: enrollmentInclude });
+    if (!enrollment) throw new HttpError(404, 'Inscripción no encontrada.');
+    return toEnrollmentResponse(enrollment);
+  },
+  async listPage(query: EnrollmentQuery) {
+    const course = await prisma.course.findUnique({ where: { id: query.courseId }, select: { id: true } });
+    if (!course) throw new HttpError(404, 'Curso no encontrado.');
+    const where: Prisma.EnrollmentWhereInput = { courseId: query.courseId, status: query.status,
+      ...(query.search ? { OR: [
+        { participant: { name: { contains: query.search, mode: 'insensitive' as const } } },
+        { participant: { email: { contains: query.search, mode: 'insensitive' as const } } }
+      ] } : {}) };
+    return prisma.$transaction(async tx => {
+      const total = await tx.enrollment.count({ where });
+      const totalPages = Math.max(1, Math.ceil(total / 20));
+      const page = Math.min(query.page, totalPages);
+      const rows = await tx.enrollment.findMany({ where, include: enrollmentInclude,
+        orderBy: query.status === 'INSCRITO' ? [{ confirmedAt: 'desc' }, { id: 'desc' }] : [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * 20, take: 20 });
+      return { items: rows.map(toEnrollmentResponse), total, page, pageSize: 20, totalPages };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  },
   async list() {
     const enrollments = await prisma.enrollment.findMany({
       include: enrollmentInclude,
@@ -247,7 +280,7 @@ export const enrollmentService = {
 
       const { finalAmount } = amountsFor(
         toMoney(enrollment.basePrice),
-        toMoney(enrollment.scholarshipPercent)
+        enrollment.scholarshipActive ? toMoney(enrollment.scholarshipPercent) : 0
       );
 
       if (finalAmount !== toMoney(enrollment.finalAmount)) {

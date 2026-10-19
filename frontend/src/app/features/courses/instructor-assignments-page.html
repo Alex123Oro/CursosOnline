@@ -1,0 +1,18 @@
+<section class="page">
+  <header><p class="eyebrow">ADMINISTRACIÓN / DOCENCIA</p><h1>Asignar instructores</h1><p>Asigna responsables a cursos existentes y consulta las asignaciones actuales.</p></header>
+  @if (loading()) { <p role="status">Cargando cursos e instructores…</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
+  @if (!loading()) {
+    <form (ngSubmit)="save()">
+      <label>Curso existente<select name="course" required [(ngModel)]="courseId"><option value="">Selecciona un curso</option>@for (course of courses(); track course.id) { @if (!courseAssigned(course.id)) { <option [value]="course.id">{{ course.name }}{{ course.code ? ' · ' + course.code : '' }}</option> } }</select></label>
+      <label>Instructor<select name="instructor" required [(ngModel)]="instructorId"><option value="">Selecciona un instructor</option>@for (instructor of instructors(); track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }</select></label>
+      <button type="submit" [disabled]="saving() || !courseId || !instructorId">{{ saving() ? 'Guardando…' : 'Asignar instructor' }}</button>
+    </form>
+    <section class="assignments"><h2>Asignaciones actuales</h2>
+      @for (row of assignments(); track row.id) {
+        <article><div><strong>{{ row.course.name }}</strong><small>{{ row.course.code || 'Sin código' }} · {{ row.instructor.email }}</small></div><label>Cambiar instructor<select [value]="row.instructor.id" [disabled]="saving()" (change)="change(row, $any($event.target).value)">@for (instructor of instructors(); track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }</select></label></article>
+      } @empty { <p>Aún no hay instructores asignados.</p> }
+    </section>
+  }
+</section>

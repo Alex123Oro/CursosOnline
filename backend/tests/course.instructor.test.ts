@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Prisma } from '@prisma/client';
 const mocks = vi.hoisted(() => ({ user: { findUnique: vi.fn() }, course: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseService } from '../src/modules/courses/course.service.js';
@@ -7,6 +8,20 @@ import { courseInputSchema } from '../src/modules/courses/course.rules.js';
 const input = { name: 'Curso prueba', content: 'Contenido de curso prueba', approvalCriteria: 'Proyecto final aprobado.', durationHours: 10, instructor: 'Nombre anterior', schedule: 'Lunes 19:00', instructorId: '8' };
 const record = { id: 1, ...input, instructorId: 8, status: 'DRAFT', prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date(), startDate: null, endDate: null, preinscriptionStart: null, preinscriptionEnd: null, capacity: null };
 describe('course instructor assignment', () => {
+  it('generates the code from the name and start date instead of trusting a manual code', async () => {
+    await courseService.create(courseInputSchema.parse({ ...input, name: 'Introducción a la Programación', startDate: '2026-11-01', code: 'MANUAL' }));
+    expect(mocks.course.create.mock.calls[0][0].data.code).toBe('IP-20261101');
+  });
+  it('resolves a generated code collision without duplicating a successful creation', async () => {
+    mocks.course.create.mockRejectedValueOnce(new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6', meta: { target: ['codigo'] } }));
+    await courseService.create(courseInputSchema.parse({ ...input, startDate: '2026-11-01' }));
+    expect(mocks.course.create.mock.calls[0][0].data.code).toBe('CP-20261101');
+    expect(mocks.course.create.mock.calls[1][0].data.code).toMatch(/^CP-20261101-[A-F0-9]{8}$/);
+  });
+  it('preserves a saved code when editing the course name or dates', async () => {
+    await courseService.update(1, courseInputSchema.parse({ ...input, code: 'MANUAL' }));
+    expect(mocks.course.update.mock.calls[0][0].data).not.toHaveProperty('code');
+  });
   beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 8, name: 'Carla', role: 'INSTRUCTOR' }); mocks.course.create.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.update.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.findUnique.mockResolvedValue({ status: 'DRAFT', instructorId: 8 }); });
   it('links an instructor and uses their name on creation', async () => {
     const result = await courseService.create(courseInputSchema.parse(input));

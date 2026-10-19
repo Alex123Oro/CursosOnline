@@ -4,19 +4,38 @@ import { parsePositiveInt } from '../courses/course.rules.js';
 import { sessionInputSchema, recurrenceInputSchema } from './course-session.rules.js';
 import { courseSessionService } from './course-session.service.js';
 
-const courseId = (request: Request) => parsePositiveInt(request.params.courseId, 'El identificador del curso no es válido.');
+const getCourseId = (request: Request) =>
+  parsePositiveInt(request.params.courseId, 'El identificador del curso no es válido.');
+
+const getSessionId = (request: Request) =>
+  parsePositiveInt(request.params.sessionId, 'El identificador de la sesión no es válido.');
+
 export const courseSessionController = {
-  async remove(request: Request, response: Response) {
-    const id = parsePositiveInt(request.params.sessionId, 'El identificador de la sesión no es válido.');
-    await courseSessionService.remove(courseId(request), id, currentUser(request));
-    response.status(204).send();
+  async teachingCourses(request: Request, response: Response) {
+    response.json(await courseSessionService.teachingCourses(currentUser(request)));
   },
-  async schedule(request: Request, response: Response) { response.status(201).json(await courseSessionService.schedule(courseId(request), recurrenceInputSchema.parse(request.body), currentUser(request))); },
-  async teachingCourses(request: Request, response: Response) { response.json(await courseSessionService.teachingCourses(currentUser(request))); },
-  async list(request: Request, response: Response) { response.json(await courseSessionService.list(courseId(request), currentUser(request))); },
-  async create(request: Request, response: Response) { response.status(201).json(await courseSessionService.create(courseId(request), sessionInputSchema.parse(request.body), currentUser(request))); },
+
+  async list(request: Request, response: Response) {
+    response.json(await courseSessionService.list(getCourseId(request), currentUser(request)));
+  },
+
+  async create(request: Request, response: Response) {
+    const input = sessionInputSchema.parse(request.body);
+    response.status(201).json(await courseSessionService.create(getCourseId(request), input, currentUser(request)));
+  },
+
+  async schedule(request: Request, response: Response) {
+    const input = recurrenceInputSchema.parse(request.body);
+    response.status(201).json(await courseSessionService.schedule(getCourseId(request), input, currentUser(request)));
+  },
+
   async update(request: Request, response: Response) {
-    const id = parsePositiveInt(request.params.sessionId, 'El identificador de la sesión no es válido.');
-    response.json(await courseSessionService.update(courseId(request), id, sessionInputSchema.parse(request.body), currentUser(request)));
+    const input = sessionInputSchema.parse(request.body);
+    response.json(await courseSessionService.update(getCourseId(request), getSessionId(request), input, currentUser(request)));
+  },
+
+  async remove(request: Request, response: Response) {
+    await courseSessionService.remove(getCourseId(request), getSessionId(request), currentUser(request));
+    response.status(204).send();
   }
 };

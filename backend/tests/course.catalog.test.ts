@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { findFirst } = vi.hoisted(() => ({ findFirst: vi.fn() }));
+const { findFirst, findMany, queryRaw } = vi.hoisted(() => ({ findFirst: vi.fn(), findMany: vi.fn(), queryRaw: vi.fn() }));
 
 vi.mock('../src/config/prisma.js', () => ({
   prisma: {
     course: {
-      findFirst
-    }
+      findMany
+    },
+    $queryRaw: queryRaw
   }
 }));
 
@@ -14,7 +15,16 @@ import { courseService } from '../src/modules/courses/course.service.js';
 import { courseController } from '../src/modules/courses/course.controller.js';
 
 describe('course catalogue (HU-03)', () => {
-  beforeEach(() => findFirst.mockReset());
+  beforeEach(() => {
+    findFirst.mockReset();
+    findMany.mockReset();
+    queryRaw.mockReset();
+    findMany.mockImplementation(async (args) => {
+      const record = await findFirst(args);
+      return record ? [record] : [];
+    });
+    queryRaw.mockImplementation(async () => [{ modern: 'sesiones_curso', legacy: null }]);
+  });
 
   it('returns a published course by id', async () => {
     findFirst.mockResolvedValue({
@@ -33,16 +43,18 @@ describe('course catalogue (HU-03)', () => {
       preinscriptionStart: new Date('2026-09-01'),
       preinscriptionEnd: new Date('2026-12-31'),
       prices: [],
-      _count: { enrollments: 0 },
+      _count: { enrollments: 5 },
+      enrollments: [{ status: 'INSCRITO' }, { status: 'INSCRITO' }],
       createdAt: new Date('2026-09-20T12:00:00.000Z'),
       updatedAt: new Date('2026-09-20T12:00:00.000Z')
     });
 
     const course = await courseService.catalogById(7);
 
-    expect(course).toMatchObject({ id: '7', code: 'INF-JS-101', status: 'PUBLISHED' });
+    expect(course).toMatchObject({ id: '7', code: 'INF-JS-101', status: 'PUBLISHED', occupiedSlots: 5, enrolledCount: 2 });
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 7, status: 'PUBLISHED' }
+      where: { id: 7, status: 'PUBLISHED' },
+      select: expect.objectContaining({ enrollments: { where: { status: 'INSCRITO' }, select: { status: true } } })
     }));
   });
 
@@ -53,6 +65,25 @@ describe('course catalogue (HU-03)', () => {
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 999, status: 'PUBLISHED' }
     }));
+  });
+
+  it('uses actual classes instead of a conflicting legacy schedule', async () => {
+    const record = { id: 7, schedule: 'Horario anterior', prices: [], _count: { enrollments: 0 },
+      createdAt: new Date(), updatedAt: new Date(), sessions: [
+        { date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 90 }
+      ] };
+    findFirst.mockResolvedValue(record);
+    queryRaw.mockImplementation(async () => [{ modern: null, legacy: 'sesiones' }]);
+    queryRaw.mockResolvedValueOnce([{ modern: null, legacy: 'sesiones' }])
+      .mockResolvedValueOnce(record.sessions.map(session => ({ ...session, courseId: 7 })));
+    expect((await courseService.catalogById(7))?.schedule).toBe('Lun 18:00–19:30');
+    findFirst.mockResolvedValue({ ...record, sessions: [{ date: new Date('2026-10-14'), startTime: '19:00', durationMinutes: 60 }] });
+    queryRaw.mockResolvedValueOnce([{ modern: 'sesiones_curso', legacy: null }])
+      .mockResolvedValueOnce([{ courseId: 7, date: new Date('2026-10-14'), startTime: '19:00', durationMinutes: 60 }]);
+    expect((await courseService.catalogById(7))?.schedule).toBe('Mié 19:00–20:00');
+    findFirst.mockResolvedValue({ ...record, schedule: null, sessions: [] });
+    queryRaw.mockResolvedValueOnce([{ modern: null, legacy: 'sesiones' }]).mockResolvedValueOnce([]);
+    expect((await courseService.catalogById(7))?.schedule).toBe('');
   });
 
   it('responds as not found when the public detail is unavailable', async () => {

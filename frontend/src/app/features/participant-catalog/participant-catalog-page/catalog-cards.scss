@@ -1,0 +1,25 @@
+.course-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid #dfe7e2; border-radius: 11px; background: #fff; transition: transform .18s, box-shadow .18s; &:hover { transform: translateY(-4px); box-shadow: 0 10px 26px #163c3214; border-color: #a8c6b6; } }
+.course-cover { position: relative; display: block; height: 140px; overflow: hidden; background: #e7eee6; color: #37634c; text-decoration: none; }
+.uploaded-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.has-cover { .cover-brand, .cover-orbit, .cover-word, .cover-book, .cover-detail { display: none; } }
+.cover-brand { position: absolute; top: 15px; left: 16px; z-index: 1; font-size: 7px; font-weight: 800; letter-spacing: .1em; span { margin: 0 4px; opacity: .5; } }
+.cover-orbit { position: absolute; width: 230px; height: 230px; right: -38px; top: -45px; border: 1px solid currentColor; opacity: .18; border-radius: 50%; &::before, &::after { position: absolute; content: ''; inset: 25px; border: 1px solid currentColor; border-radius: 50%; } &::after { inset: 50px; } }
+.cover-word { position: absolute; top: 40px; right: 32px; font: 700 62px/1.2 'Consolas', monospace; letter-spacing: -.07em; transform: rotate(-9deg); }
+.cover-book { position: absolute; right: 28px; top: 38px; width: 93px; height: 93px; transform: rotate(-10deg); stroke-width: 1.4; }
+.cover-detail { position: absolute; left: 22px; bottom: 16px; font-size: 28px; opacity: .55; }
+.course-cover.cover-code { background: #e6edf7; color: #3e5f95; font: inherit; transform: none; position: relative; top: auto; right: auto; }
+.cover-data { background: #eee8d8; color: #8e6e24; }.cover-systems { background: #e5e8f0; color: #576794; }
+.card-body { display: flex; flex-direction: column; flex: 1; padding: 18px; }
+.card-topline { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.course-provider { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #5e7067; > span { display: grid; place-items: center; width: 17px; height: 17px; border-radius: 4px; border: 1px solid #d7e2da; color: var(--accent); font-size: 10px; font-weight: 800; } }
+.duration-badge { font-size: 11px; white-space: nowrap; color: var(--muted); }
+h3 { margin: 14px 0 7px; font-size: 19px; line-height: 1.4; letter-spacing: -.025em; overflow-wrap: anywhere; a { text-decoration: none; &:hover { color: var(--accent); text-decoration: underline; } } }
+.course-instructor { margin: 0 0 12px; color: #576f62; font-size: 12px; }
+.course-summary { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.7; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.course-facts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-bottom: 16px; font-size: 11px; color: #62756b; > span { display: inline-flex; align-items: center; gap: 5px; } svg { width: 13px; height: 13px; } }
+.availability i { width: 5px; height: 5px; border-radius: 50%; background: #92a299; }.availability.is-open { color: #08755b; i { background: #18825f; } }
+.card-footer { display: flex; justify-content: space-between; gap: 6px; align-items: center; padding-top: 13px; border-top: 1px solid #e8ede9; }
+.card-price { display: flex; flex-direction: column; gap: 3px; > span { color: var(--muted); font-size: 11px; } strong { font-size: 19px; letter-spacing: -.03em; } .price-pending { font-size: 12px; } }
+.course-action { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 37px; padding: 8px 11px; border: 1px solid #bdd6c7; border-radius: 6px; font-size: 12px; color: #11644e; font-weight: 800; text-decoration: none; &:hover { color: #fff; background: var(--accent); border-color: var(--accent); } span { font-size: 16px; } }
+
+.cover-sand { background: #eee8d8; color: #8e6e24; } .cover-coral { background: #f2e3de; color: #9b6151; } .cover-sky { background: #e3ebf4; color: #4f6b94; }

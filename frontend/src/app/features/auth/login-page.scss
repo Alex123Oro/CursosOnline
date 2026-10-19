@@ -38,20 +38,20 @@
 .eyebrow {
   margin: 0 0 8px;
   color: #527364;
-  font-size: 11px;
+  font-size: var(--eva-font-caption);
   font-weight: 700;
 }
 
 h1 {
   margin: 0;
   color: #1b2c24;
-  font-size: 30px;
+  font-size: var(--eva-font-title);
 }
 
 .login-subtitle {
   margin: 10px 0 24px;
   color: #627269;
-  font-size: 14px;
+  font-size: var(--eva-font-helper);
 }
 
 form,
@@ -66,7 +66,7 @@ form {
 
 label span {
   color: #34483d;
-  font-size: 13px;
+  font-size: var(--eva-font-label);
   font-weight: 600;
 }
 
@@ -82,7 +82,7 @@ input {
 small,
 .login-error {
   color: #a33028;
-  font-size: 12px;
+  font-size: var(--eva-font-helper);
 }
 
 .login-error {
@@ -112,7 +112,7 @@ button:disabled {
   display: inline-block;
   margin-top: 22px;
   color: #176852;
-  font-size: 13px;
+  font-size: var(--eva-font-label);
 }
 
 @media (max-width: 480px) {
@@ -120,3 +120,7 @@ button:disabled {
     padding: 26px 20px;
   }
 }
+h1 { letter-spacing: -.03em; }
+input { font-size: var(--eva-font-body); }
+button { font-size: var(--eva-font-label); }
+@media (max-width: 600px) { h1 { font-size: var(--eva-font-title-mobile); } input { font-size: 16px; } }

@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../../testing/session-fixture';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -23,6 +24,7 @@ describe('CourseSessionsPage', () => {
     await TestBed.configureTestingModule({ imports: [CourseSessionsPage], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: ActivatedRoute, useValue: { paramMap: new (await import('rxjs')).BehaviorSubject(convertToParamMap({ courseId: '2' })) } }] }).compileComponents();
     http = TestBed.inject(HttpTestingController);
     authenticateAdminFixture(http);
+    selectFixtureUser(TestBed.inject(SessionService), '8');
     fixture = TestBed.createComponent(CourseSessionsPage);
     fixture.detectChanges();
     http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] });
@@ -51,8 +53,6 @@ describe('CourseSessionsPage', () => {
     expect(page.feedback()).toContain('asistencia registrada');
   });
   it('lets the assigned instructor manage their course sessions', () => {
-    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
-    http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
     const page = fixture.componentInstance;
     expect(fixture.nativeElement.textContent).toContain('Programar sesiones');
     expect(fixture.nativeElement.textContent).toContain('Editar');
@@ -60,10 +60,12 @@ describe('CourseSessionsPage', () => {
     page.openCreate(); expect(page.formOpen()).toBe(true);
   });
   it('offers the instructor attendance link only to administrators', () => {
+    selectFixtureUser(TestBed.inject(SessionService), '1'); fixture.detectChanges();
+    http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
     const link = fixture.nativeElement.querySelector('a[href^="/asistencia-instructores"]');
     expect(link?.getAttribute('href')).toContain('instructor=8');
     expect(link?.getAttribute('href')).toContain('course=2');
-    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '8'); fixture.detectChanges();
     http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('a[href^="/asistencia-instructores"]')).toBe(null);
   });
@@ -141,15 +143,43 @@ describe('CourseSessionsPage', () => {
   it('clears the form and rows on identity change and respects a 403', () => {
     const page = fixture.componentInstance;
     page.openEdit(session);
-    TestBed.inject(SessionService).selectUser('8'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '1'); fixture.detectChanges();
     expect(page.sessions()).toEqual([]); expect(page.formOpen()).toBe(false);
     http.expectOne(`${base}/courses/2/sessions`).flush({ message: 'Sin acceso' }, { status: 403, statusText: 'Forbidden' });
     fixture.detectChanges();
     expect(page.course()).toBeNull(); expect(fixture.nativeElement.textContent).toContain('Sin acceso');
     expect(fixture.nativeElement.querySelector('button.add-session')).toBeNull();
   });
+  it('prevents editing or deleting a session with instructor attendance', () => {
+    const page = fixture.componentInstance; const locked = { ...session, locked: true, instructorAttendanceStatus: 'PRESENT' as const };
+    page.sessions.set([locked]); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Bloqueada');
+    expect(fixture.nativeElement.querySelector('button[aria-label^="Editar sesión"]').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('button[aria-label^="Eliminar sesión"]').disabled).toBe(true);
+    page.openEdit(locked); page.requestDelete(locked);
+    expect(page.formOpen()).toBe(false); expect(page.deleting()).toBeNull();
+    http.expectNone(request => ['PUT', 'DELETE'].includes(request.method));
+  });
+  it('lets administrators create classes while retaining the edit restrictions', () => {
+    selectFixtureUser(TestBed.inject(SessionService), '1'); fixture.detectChanges();
+    http.expectOne(`${base}/courses/2/sessions`).flush({ course, sessions: [session] }); fixture.detectChanges();
+    const page = fixture.componentInstance;
+    expect(fixture.nativeElement.querySelector('button.add-session')).not.toBeNull();
+    page.openEdit(session); page.requestDelete(session);
+    expect(page.formOpen()).toBe(false); expect(page.deleting()).toBeNull();
+    page.openCreate();
+    page.form.setValue({ sessionNumber: 2, date: '2026-10-12', startTime: '18:00', durationMinutes: 60 });
+    page.submit();
+    const create = http.expectOne(`${base}/courses/2/sessions`);
+    expect(create.request.method).toBe('POST'); create.flush({ ...session, id: '4' });
+    page.openSchedule(); expect(page.formOpen()).toBe(true);
+    page.scheduleForm.setValue({ startDate: '2026-10-12', endDate: '2026-10-21', weekdays: [1, 3], startTime: '18:00', durationMinutes: 90 });
+    page.submitSchedule();
+    http.expectOne(`${base}/courses/2/sessions/schedule`).flush({ createdCount: 1, skippedCount: 0, sessions: [session] });
+    expect(page.formOpen()).toBe(false);
+  });
   it('clears administrative data and denies a participant without fetching sessions', () => {
-    TestBed.inject(SessionService).selectUser('9'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '9'); fixture.detectChanges();
     http.expectNone(`${base}/courses/2/sessions`);
     expect(fixture.componentInstance.sessions()).toEqual([]);
     expect(fixture.nativeElement.textContent).toContain('No tienes permisos');

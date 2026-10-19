@@ -45,13 +45,13 @@ describe('participant progress', () => {
       attendance: { presentSessions: 1, completedSessions: 2, percentage: 50 },
       currentGrade: 82,
       finalGrade: 82,
-      finalStatus: 'REPROBADO',
+      finalStatus: 'NO_CUMPLE_ASISTENCIA', certificateEligible: false,
       requirements: { academicMet: true, attendanceMet: false, minimumAttendancePercent: 80 }
     });
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { participantId: 9 } }));
   });
 
-  it('approves only when both grade and attendance thresholds are met', async () => {
+  it('marks certificate eligibility only when grade and attendance thresholds are met', async () => {
     findMany.mockResolvedValue([{
       id: 12, status: 'INSCRITO', course: {
         id: 4, code: 'HU12', name: 'Curso', startDate: null, endDate: new Date('2026-08-31'), minimumPassingScore: 70,
@@ -62,6 +62,7 @@ describe('participant progress', () => {
     }]);
     const [progress] = await progressService.listForParticipant(9);
     expect(progress.finalStatus).toBe('APROBADO');
+    expect(progress.certificateEligible).toBe(true);
     expect(progress.requirements).toMatchObject({ academicMet: true, attendanceMet: true });
   });
 

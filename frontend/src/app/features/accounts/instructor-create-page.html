@@ -1,0 +1,53 @@
+<section class="instructor-create" aria-labelledby="instructor-title">
+  <p class="breadcrumb">Instructores <span aria-hidden="true">/</span> Nuevo instructor</p>
+  <header class="create-header">
+    <div><h1 id="instructor-title">Nuevo instructor</h1><p>Completa los datos del instructor que deseas registrar.</p></div>
+    <span class="role-badge">Rol: Instructor</span>
+  </header>
+  <form [attr.aria-busy]="saving()" class="instructor-form" [formGroup]="form" (ngSubmit)="validate()" novalidate>
+    <div class="form-intro"><h2>Datos del instructor</h2><p>Todos los campos son obligatorios.</p></div>
+    @if (submitted() && (form.invalid || error('confirmPassword'))) {
+      <p class="error-summary" role="alert">Revisa los campos indicados para crear el instructor.</p>
+    }
+    @if (requestError()) { <p class="error-summary" role="alert">{{ requestError() }}</p> }
+    @for (section of sections; track section.title; let index = $index) {
+      <fieldset [disabled]="saving()">
+        <legend><span class="section-number" aria-hidden="true">0{{ index + 1 }}</span>{{ section.title }}</legend>
+        <p class="section-description">{{ section.description }}</p>
+        <div class="field-grid">
+          @for (field of section.fields; track field.id) {
+            <div class="field" [class.full-width]="field.id === 'name'">
+              <label [for]="field.id">{{ field.label }} <span aria-hidden="true">*</span></label>
+              @if (field.type === 'select') {
+                <select [id]="field.id" [formControlName]="field.id" required
+                  [attr.aria-invalid]="!!error(field.id)" [attr.aria-describedby]="error(field.id) ? field.id + '-error' : null">
+                  <option value="" disabled>Selecciona un grado</option>
+                  @for (degree of degrees; track degree) { <option [value]="degree">{{ degree }}</option> }
+                </select>
+              } @else {
+                <input [id]="field.id" [type]="field.id === 'password' ? (showPassword() ? 'text' : 'password') : field.id === 'confirmPassword' ? (showConfirmation() ? 'text' : 'password') : field.type" [formControlName]="field.id" required
+                  [placeholder]="field.placeholder" [autocomplete]="field.autocomplete"
+                  [attr.inputmode]="field.id === 'sis' ? 'numeric' : null"
+                  [attr.aria-invalid]="!!error(field.id)"
+                  [attr.aria-describedby]="(field.id === 'sis' ? 'sis-help ' : '') + (error(field.id) ? field.id + '-error' : '')">
+              }
+              @if (field.type === 'password') {
+                <button class="password-toggle" type="button" [attr.aria-controls]="field.id"
+                  [attr.aria-pressed]="field.id === 'password' ? showPassword() : showConfirmation()"
+                  (click)="field.id === 'password' ? showPassword.set(!showPassword()) : showConfirmation.set(!showConfirmation())">
+                  {{ (field.id === 'password' ? showPassword() : showConfirmation()) ? 'Ocultar' : 'Mostrar' }} {{ field.id === 'password' ? 'contraseña' : 'confirmación de contraseña' }}
+                </button>
+              }
+              @if (field.id === 'sis') { <p id="sis-help" class="field-help">Código universitario de 9 dígitos. Ejemplo: 001234567.</p> }
+              @if (error(field.id); as message) { <p [id]="field.id + '-error'" class="field-error">{{ message }}</p> }
+            </div>
+          }
+        </div>
+      </fieldset>
+    }
+    <footer class="form-actions">
+      <p>El rol asignado será Instructor.</p>
+      <div><button class="button secondary" type="button" data-cancel [disabled]="saving()" (click)="cancel()">Cancelar</button><button class="button primary" type="submit" [disabled]="saving()">{{ saving() ? 'Creando instructor...' : 'Crear instructor' }}</button></div>
+    </footer>
+  </form>
+</section>

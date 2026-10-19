@@ -12,7 +12,8 @@ export interface CourseProgress {
   finalGrade: number | null;
   minimumPassingScore: number;
   requirements: { academicMet: boolean | null; attendanceMet: boolean | null; minimumAttendancePercent: number };
-  finalStatus: 'APROBADO' | 'REPROBADO' | null;
+  finalStatus: 'APROBADO' | 'REPROBADO' | 'NO_CUMPLE_ASISTENCIA' | null;
+  certificateEligible: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

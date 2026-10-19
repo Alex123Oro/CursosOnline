@@ -1,0 +1,10 @@
+:host { display: block; }
+.actions, .share-panel { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 16px; }
+button, input { font: inherit; min-height: 44px; border: 1px solid #afc9c3; border-radius: 7px; padding: 10px 14px; color: #174b48; background: white; box-sizing: border-box; }
+button { cursor: pointer; } button:first-child { background: #087f78; color: white; }
+button:disabled { opacity: .6; cursor: wait; }
+label { display: grid; gap: 8px; min-width: 0; flex: 1; font-size: var(--eva-font-label); }
+input { width: 100%; min-width: 200px; font-size: 16px; }
+:is(button,input):focus-visible { outline: 3px solid #18afa0; outline-offset: 3px; }
+p { font-size: var(--eva-font-helper); overflow-wrap: anywhere; } .error { color: #a03838; }
+@media(max-width:600px) { .share-panel { display: grid; } input { min-width: 0; } }

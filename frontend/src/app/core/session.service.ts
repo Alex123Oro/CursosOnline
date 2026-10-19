@@ -12,6 +12,9 @@ export interface SessionUser {
   role: UserRole;
   participantTypeId: string | null;
   participantTypeName: string | null;
+  sis?: string | null;
+  degree?: 'Estudiante' | 'Ingeniero' | 'Técnico' | null;
+  phone?: string | null;
 }
 
 const STORAGE_KEY = 'eva-user-id';
@@ -44,9 +47,6 @@ export class SessionService {
   private readonly usersState = signal<SessionUser[]>([]);
   readonly users = computed(() => this.usersState());
   readonly ready = signal(false);
-  readonly baseSessionUsers = computed(() => this.usersState().slice(0, 4).filter(user => user.role !== 'INSTRUCTOR'));
-  readonly instructorSessionUsers = computed(() => this.usersState().filter(user => user.role === 'INSTRUCTOR'));
-  readonly sessionUsers = computed(() => [...this.baseSessionUsers(), ...this.instructorSessionUsers()]);
   readonly userId = signal(localStorage.getItem(STORAGE_KEY) ?? readStoredUser()?.id ?? '');
   readonly currentUser = computed(() => this.usersState().find(user => user.id === this.userId()) ?? null);
   readonly accessToken = signal(localStorage.getItem(ACCESS_TOKEN_KEY) ?? '');
@@ -98,20 +98,8 @@ export class SessionService {
     );
   }
 
-  selectUser(id: string) {
-    const selectedUser = this.usersState().find(user => user.id === id) ?? null;
-    if (id && !selectedUser) return;
-    this.accessToken.set('');
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(LOGGED_OUT_KEY);
-    this.userId.set(id);
-    if (selectedUser) {
-      localStorage.setItem(STORAGE_KEY, id);
-      localStorage.setItem(USER_DATA_KEY, JSON.stringify(selectedUser));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(USER_DATA_KEY);
-    }
+  addInstructor(user: SessionUser) {
+    this.usersState.update(users => [...users.filter(existing => existing.id !== user.id), user]);
   }
 
   private restoreSession(token: string) {
@@ -119,6 +107,7 @@ export class SessionService {
       headers: { Authorization: `Bearer ${token}` }
     }).subscribe({
       next: user => {
+        localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
         this.userId.set(user.id);
         localStorage.setItem(STORAGE_KEY, user.id);
         this.usersState.set([user]);
@@ -130,9 +119,8 @@ export class SessionService {
   }
 
   private refreshUsers(token = this.accessToken()) {
-    const headers: Record<string, string> | undefined = token
-      ? { Authorization: `Bearer ${token}` }
-      : this.userId() ? { 'X-User-Id': this.userId() } : undefined;
+    if (!token) return;
+    const headers = { Authorization: `Bearer ${token}` };
     this.http.get<SessionUser[]>(`${environment.apiBaseUrl}/session/users`, { headers }).subscribe({
       next: users => {
         this.usersState.set(users);

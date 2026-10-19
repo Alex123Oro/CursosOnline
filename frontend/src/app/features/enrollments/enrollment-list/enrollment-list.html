@@ -1,69 +1,77 @@
-<div class="toolbar">
-  <label class="search"><span>⌕</span><input placeholder="Buscar por participante, curso o tipo" [value]="query()" (input)="onSearch($any($event.target).value)"></label>
-  <span class="results">{{ filteredEnrollments().length }} resultados</span>
-</div>
-
 <div class="table-wrap">
   <table>
     <thead>
       <tr>
-        <th>PARTICIPANTE</th>
-        <th>CURSO</th>
-        <th>TIPO</th>
-        <th>ESTADO</th>
-        <th>PRECIO</th>
-        <th>BECA</th>
-        <th>MONTO FINAL</th>
-        <th>PAGO</th>
-        <th>ACCIÓN</th>
+        <th>Participante</th>
+        <th>Categoría</th>
+        @if (status() === 'INSCRITO') {
+          <th class="confirmed-column">Confirmación</th>
+        }
+        <th>Importe final</th>
+        <th>Pago</th>
+        <th>Acciones</th>
       </tr>
     </thead>
     <tbody>
       @if (loading()) {
-        <tr><td colspan="9">Cargando inscripciones...</td></tr>
+        <tr>
+          <td [attr.colspan]="status() === 'INSCRITO' ? 6 : 5" role="status">
+            Cargando participantes…
+          </td>
+        </tr>
       } @else {
-        @for (enrollment of filteredEnrollments(); track enrollment.id) {
+        @for (enrollment of enrollments(); track enrollment.id) {
           <tr>
-            <td>
-              <strong class="name">{{ enrollment.participantName }}</strong>
-              <small>{{ enrollment.participantEmail }}</small>
+            <td data-label="Participante">
+              <strong>{{ enrollment.participantName }}</strong
+              ><small>{{ enrollment.participantEmail }}</small>
             </td>
-            <td>
-              <strong class="name">{{ enrollment.courseName }}</strong>
-              <small>{{ enrollment.courseCode }}</small>
+            <td data-label="Categoría">{{ enrollment.participantTypeName }}</td>
+            @if (status() === 'INSCRITO') {
+              <td data-label="Confirmación">
+                {{
+                  enrollment.confirmedAt
+                    ? formatDate(enrollment.confirmedAt)
+                    : 'Sin fecha registrada'
+                }}
+              </td>
+            }
+            <td data-label="Importe final">
+              <strong>{{ enrollment.finalAmount }} Bs</strong>
+              @if (enrollment.scholarshipActive) {
+                <small>Beca {{ enrollment.scholarshipPercent }} %</small>
+              }
             </td>
-            <td>{{ enrollment.participantTypeName }}</td>
-            <td>
-              <span class="badge" [class.draft]="enrollment.status !== 'INSCRITO'" [class.published]="enrollment.status === 'INSCRITO'">
-                {{ enrollment.status === 'INSCRITO' ? 'Inscrito' : 'Preinscrito' }}
-              </span>
-              @if (enrollment.confirmedAt) { <small>Confirmado {{ formatDate(enrollment.confirmedAt) }}</small> }
-            </td>
-            <td>{{ enrollment.basePrice }} Bs</td>
-            <td><span class="badge" [class.published]="enrollment.scholarshipActive" [class.draft]="!enrollment.scholarshipActive">{{ enrollment.scholarshipActive ? 'Activa · ' + enrollment.scholarshipPercent + ' %' : 'Inactiva' }}</span>
-              @if (enrollment.scholarshipReason) { <small>{{ enrollment.scholarshipReason }}</small> }
-            </td>
-            <td class="final">{{ enrollment.finalAmount }} Bs</td>
-            <td>
-              <span class="badge" [class.published]="enrollment.paymentStatus === 'PAGADO' || enrollment.paymentStatus === 'NO_REQUIERE'" [class.draft]="enrollment.paymentStatus === 'PENDIENTE' || enrollment.paymentStatus === 'PARCIAL'">
-                {{ enrollment.paymentStatus === 'NO_REQUIERE' ? 'No requiere' : enrollment.paymentStatus === 'PAGADO' ? 'Pagado' : enrollment.paymentStatus === 'PARCIAL' ? 'Parcial' : 'Pendiente' }}
-              </span>
+            <td data-label="Pago">
+              <span
+                class="payment-badge"
+                [class.paid]="
+                  enrollment.paymentStatus === 'PAGADO' ||
+                  enrollment.paymentStatus === 'NO_REQUIERE'
+                "
+                >{{ paymentLabel(enrollment.paymentStatus) }}</span
+              >
               @if (enrollment.paymentAmount !== null) {
-                <small class="payment-detail">{{ enrollment.paymentAmount }} Bs</small>
-              }
-              @if (enrollment.paymentRegisteredAt) {
-                <small class="payment-detail">{{ formatPaymentDate(enrollment.paymentRegisteredAt) }}</small>
+                <small>{{ enrollment.paymentAmount }} Bs registrados</small>
               }
             </td>
-            <td class="actions">
-              @if (!enrollment.scholarshipActive) { <button class="more" (click)="assignScholarship.emit(enrollment)">Asignar beca</button> }
-              @else { <button class="more" (click)="deactivateScholarship.emit(enrollment)">Desactivar beca</button> }
-              <button class="more" [disabled]="enrollment.finalAmount === 0" (click)="registerPayment.emit(enrollment)">Registrar pago</button>
-              <button class="more publish" [disabled]="enrollment.status !== 'PREINSCRITO' || (enrollment.finalAmount > 0 && enrollment.paymentStatus !== 'PAGADO')" (click)="confirmEnrollment.emit(enrollment)">Confirmar inscripción</button>
+            <td data-label="Acciones">
+              <a
+                class="manage"
+                [routerLink]="['/inscripciones', enrollment.id]"
+                [queryParams]="context()"
+                [attr.aria-label]="'Gestionar inscripción de ' + enrollment.participantName"
+                >Gestionar <span aria-hidden="true">→</span></a
+              >
             </td>
           </tr>
         } @empty {
-          <tr><td colspan="9">No hay preinscripciones para mostrar.</td></tr>
+          <tr>
+            <td class="empty" [attr.colspan]="status() === 'INSCRITO' ? 6 : 5">
+              No hay {{ status() === 'INSCRITO' ? 'inscritos' : 'preinscritos' }} que coincidan en
+              este curso.
+            </td>
+          </tr>
         }
       }
     </tbody>

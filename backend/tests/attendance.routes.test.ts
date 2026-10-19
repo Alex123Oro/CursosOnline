@@ -1,3 +1,4 @@
+import './fixtures/bearer-auth.js';
 import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -16,10 +17,15 @@ describe('attendance HTTP contract', () => {
   });
   afterAll(() => new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections(); }));
   beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 8, name: 'Instructor', role: 'INSTRUCTOR', participantTypeId: null }); mocks.list.mockResolvedValue({ students: [] }); mocks.save.mockResolvedValue({ enrollmentId: '3', percentage: 100 }); });
-  const put = (path: string, status: unknown, user = '8') => fetch(`${base}/${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-User-Id': user }, body: JSON.stringify({ status }) });
+  const put = (path: string, status: unknown, user = '8') => fetch(`${base}/${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: user ? `Bearer ${user}` : '' }, body: JSON.stringify({ status }) });
   it('returns 401 to guests on read and write', async () => {
     expect((await fetch(`${base}/2/attendance`)).status).toBe(401);
     expect((await put('2/sessions/1/attendance/3', 'PRESENT', '')).status).toBe(401);
+  });
+  it('rejects identity headers and invalid tokens before accessing academic data', async () => {
+    expect((await fetch(`${base}/2/attendance`, { headers: { 'X-User-Id': '8' } })).status).toBe(401);
+    expect((await fetch(`${base}/2/attendance`, { headers: { Authorization: 'Bearer demo-token' } })).status).toBe(401);
+    expect(mocks.list).not.toHaveBeenCalled();
   });
   it.each(['PRESENT', 'ABSENT'])('accepts a %s correction with 200 and updated summary', async status => {
     const response = await put('2/sessions/1/attendance/3', status);

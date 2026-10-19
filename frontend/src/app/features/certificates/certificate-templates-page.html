@@ -1,0 +1,54 @@
+<section class="templates-page">
+  <header class="page-heading"><div><p class="eyebrow">ADMINISTRACIÓN / ACREDITACIÓN</p><h1>Plantillas de certificados</h1><p>Personaliza el diseño que recibirán tus participantes.</p></div><div class="header-actions"><a routerLink="/certificados">Ir a emisión ↗</a><button type="button" class="primary" (click)="newTemplate()" [disabled]="saving()">+ Nueva plantilla</button></div></header>
+  @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
+  @if (error()) { <p class="error" role="alert">{{ error() }} @if (!templates().length) { <button type="button" (click)="load()">Recargar</button> }</p> }
+  @if (loading()) { <p role="status">Cargando plantillas…</p> }
+  <nav class="template-list" aria-label="Plantillas guardadas">@for (template of templates(); track template.id) { <button type="button" [class.active]="selected()?.id === template.id" [attr.aria-pressed]="selected()?.id === template.id" (click)="select(template)" [disabled]="saving()"><span class="template-icon" aria-hidden="true">▤</span><span><strong>{{ template.name }}</strong><small>{{ template.type === 'aprobacion' ? 'Aprobación' : 'Participación' }} · Versión {{ template.version }}</small></span></button> }</nav>
+  <div class="editor-layout">
+    <form class="editor" [formGroup]="form" (ngSubmit)="save()">
+      <div class="editor-heading"><h2>{{ selected() ? 'Editar plantilla' : 'Nueva plantilla' }}</h2><span>{{ dirty() ? 'Cambios sin guardar' : selected() ? 'Guardada' : 'Borrador' }}</span></div>
+      <fieldset [disabled]="saving() || imageLoading()"><legend>Subir plantilla PDF</legend>
+        <label>Diseño del certificado<input #templatePdf type="file" accept="application/pdf,.pdf" (change)="uploadPdf(templatePdf)"></label>
+        <p class="helper">PDF horizontal, hasta 10 MB. Se importa la primera página como imagen de fondo. Deja espacio para el nombre en el centro, el curso debajo y la fecha y el QR al pie.</p>
+        @if (form.controls.backgroundImage.value) {
+          <p class="helper">Archivo: {{ form.controls.backgroundName.value }}</p>
+          <label>Contenido sobre el PDF<select formControlName="showTemplateText"><option [ngValue]="false">Solo datos del participante y verificación</option><option [ngValue]="true">También textos, logo y firmante del editor</option></select></label>
+          <button type="button" class="text-button" (click)="removeBackground()">Quitar PDF y usar diseño del editor</button>
+        }
+      </fieldset>
+      <fieldset [disabled]="saving() || imageLoading()"><legend>Datos de la plantilla</legend>
+        <label>Nombre interno *<input formControlName="name" maxlength="100" placeholder="Ej. Aprobación institucional"></label>
+        <label>Tipo de certificado<select formControlName="type" (change)="changeType()"><option value="aprobacion">Aprobación</option><option value="participacion">Participación</option></select></label>
+      </fieldset>
+      <fieldset [disabled]="saving() || imageLoading()"><legend>Institución y contenido</legend>
+        <label>Nombre de la institución *<input formControlName="institution" maxlength="85"></label>
+        <label>Área o departamento<input formControlName="department" maxlength="85"></label>
+        <label>Título del documento *<input formControlName="title" maxlength="50"></label>
+        <label>Texto de presentación *<input formControlName="intro" maxlength="180"></label>
+        <label>Texto del reconocimiento *<textarea formControlName="reason" rows="2" maxlength="180"></textarea></label>
+        <label>Texto al pie<input formControlName="footer" maxlength="140"></label>
+        <p class="helper">El nombre del participante, curso, horas, fecha y QR se completan automáticamente al emitir.</p>
+      </fieldset>
+      <fieldset [disabled]="saving() || imageLoading()"><legend>Apariencia</legend>
+        <div class="fields-row"><label>Estilo<select formControlName="layout"><option value="classic">Marco clásico</option><option value="modern">Moderno</option></select></label><label>Tipografía<select formControlName="font"><option value="serif">Serif · formal</option><option value="sans">Sans serif · moderna</option></select></label></div>
+        <div class="colors"><label>Principal<input type="color" formControlName="primaryColor"></label><label>Acento<input type="color" formControlName="accentColor"></label><label>Fondo<input type="color" formControlName="backgroundColor"></label></div>
+        <div class="image-field"><label>Logo de la institución<input #logoFile type="file" accept="image/png,image/jpeg,image/webp" (change)="image(logoFile,'logo')"></label>@if (form.controls.logo.value) { <img [src]="form.controls.logo.value" alt="Logo seleccionado"><button type="button" class="text-button" (click)="form.controls.logo.setValue('')">Quitar logo</button> }</div>
+      </fieldset>
+      <fieldset [disabled]="saving() || imageLoading()"><legend>Firmante</legend>
+        <label>Nombre de la autoridad<input formControlName="signatoryName" maxlength="80"></label>
+        <label>Cargo<input formControlName="signatoryRole" maxlength="80"></label>
+        <div class="image-field"><label>Imagen de firma<input #signatureFile type="file" accept="image/png,image/jpeg,image/webp" (change)="image(signatureFile,'signature')"></label>@if (form.controls.signature.value) { <img [src]="form.controls.signature.value" alt="Firma seleccionada"><button type="button" class="text-button" (click)="form.controls.signature.setValue('')">Quitar firma</button> }</div>
+        <p class="helper">PNG, JPEG o WebP, hasta 5 MB. La imagen de firma se imprime en el documento.</p>
+      </fieldset>
+      @if (imageLoading()) { <p role="status">Preparando imagen…</p> }
+      @if (form.invalid && form.touched) { <p class="error" role="alert">Revisa los campos obligatorios y sus límites de texto.</p> }
+      <div class="save-bar"><span>{{ selected() ? 'Versión ' + selected()?.version : 'Lista para crear' }}</span><button type="submit" class="primary" [disabled]="saving() || imageLoading() || loading()">{{ saving() ? 'Guardando…' : 'Guardar plantilla' }}</button></div>
+    </form>
+    <aside class="preview" aria-labelledby="preview-title"><div class="preview-heading"><div><p class="eyebrow">ASÍ SE VERÁ TU CERTIFICADO</p><h2 id="preview-title">Vista previa del PDF</h2></div><button type="button" class="text-button" (click)="preview()" [disabled]="previewLoading()">Actualizar ↻</button></div>
+      @if (previewLoading()) { <p role="status" class="preview-state">Actualizando vista previa…</p> }
+      @if (previewError()) { <p class="error" role="alert">{{ previewError() }}</p> }
+      <div class="pdf-stage">@if (previewUrl()) { <img [src]="previewUrl()" width="842" height="595" (error)="previewFailed()" alt="Vista previa del diseño del certificado"> } @else { <p>Completa los datos para visualizar tu certificado.</p> }</div>
+      <button type="button" class="text-button" (click)="downloadPreview()" [disabled]="downloadingPreview() || imageLoading()">{{ downloadingPreview() ? 'Preparando PDF…' : 'Descargar vista previa en PDF ↓' }}</button><div class="preview-notes"><strong>Diseño guardado, emisión controlada</strong><p>Al emitir se guarda una copia de esta versión. Los cambios posteriores de la plantilla se aplican a nuevas emisiones.</p><p>La vista previa utiliza nombres de ejemplo y no emite un certificado.</p></div>
+    </aside>
+  </div>
+</section>

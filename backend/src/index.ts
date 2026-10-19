@@ -12,13 +12,17 @@ import { evaluationRoutes } from './modules/progress/evaluation.routes.js';
 import { courseSessionRoutes, teachingRoutes } from './modules/course-sessions/course-session.routes.js';
 import { attendanceRoutes } from './modules/attendance/attendance.routes.js';
 import { instructorAttendanceRoutes } from './modules/instructor-attendance/instructor-attendance.routes.js';
+import { instructorRoutes } from './modules/instructors/instructor.routes.js';
 import { errorMiddleware } from './shared/error.middleware.js';
+import { certificateRoutes, courseCertificateRoutes } from './modules/certificates/certificate.routes.js';
+import { certificateTemplateRoutes } from './modules/certificates/certificate-template.routes.js';
 
 const app = express();
 const port = Number(process.env.PUERTO ?? 3000);
 
 app.use(cors());
-app.use(express.json());
+app.use('/api/certificate-templates', express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '256kb' }));
 
 app.get('/api/health', (_request, response) => {
 	response.json({ ok: true, servicio: 'backend' });
@@ -28,6 +32,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/courses', courseSessionRoutes);
 app.use('/api/courses', attendanceRoutes);
 app.use('/api/admin', instructorAttendanceRoutes);
+app.use('/api/admin', instructorRoutes);
 app.use('/api/teaching', teachingRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/participant-types', participantTypeRoutes);
@@ -35,6 +40,9 @@ app.use('/api/session', sessionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/courses', evaluationRoutes);
+app.use('/api/certificates', certificateRoutes);
+app.use('/api/certificate-templates', certificateTemplateRoutes);
+app.use('/api/courses', courseCertificateRoutes);
 
 app.get('/api/supabase/health', async (_request, response) => {
 	if (!supabase) {

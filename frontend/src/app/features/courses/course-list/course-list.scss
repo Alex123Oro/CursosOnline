@@ -23,7 +23,7 @@
     width: 100%;
     border: 0;
     outline: 0;
-    font-size: 10px;
+    font-size: var(--eva-font-body);
     color: #174b48;
     background: transparent;
   }
@@ -33,7 +33,7 @@
   margin-left: auto;
   color: #81918e;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: var(--eva-font-body);
 }
 
 .table-wrap {
@@ -46,14 +46,14 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 700px;
+  min-width: 900px;
 }
 
 th {
   padding: 15px 14px 11px;
   text-align: left;
   color: #82918e;
-  font-size: 8px;
+  font-size: var(--eva-font-caption);
   font-weight: 700;
 }
 
@@ -61,11 +61,11 @@ td {
   padding: 14px;
   border-top: 1px solid #edf3f2;
   color: #476c68;
-  font-size: 10px;
+  font-size: var(--eva-font-body);
   vertical-align: middle;
 
   &:first-child {
-    width: 31%;
+    width: 26%;
   }
 }
 
@@ -76,7 +76,7 @@ td {
   background: none;
   color: #1b5550;
   font-weight: 700;
-  font-size: 10px;
+  font-size: var(--eva-font-body);
   text-align: left;
   cursor: pointer;
 
@@ -88,24 +88,38 @@ td {
     display: block;
     margin-top: 4px;
     color: #899a97;
-    font-size: 8px;
+    font-size: var(--eva-font-helper);
   }
 }
 
 .actions {
   display: flex;
-  gap: 7px;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
 }
+.actions-column { min-width: 290px; padding-left: 24px; padding-right: 24px; }
+.enrollment-count { display: block; color: #174b48; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.capacity { color: #526d68; font-size: 14px; font-weight: 400; }
 
 .more {
+  text-decoration: none;
   border: 1px solid #dceae7;
   border-radius: 5px;
   background: #fff;
   color: #168b80;
-  padding: 6px 11px;
-  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 16px;
+  white-space: nowrap;
+  font-size: var(--eva-font-label);
   cursor: pointer;
+  &:hover:not(:disabled) { background: #eaf5f2; border-color: #087f78; }
+  &:focus-visible { outline: 3px solid #087f78; outline-offset: 3px; }
+  &:disabled { opacity: .62; cursor: not-allowed; }
 
   &.publish:disabled {
     color: #a9bab6;
@@ -119,7 +133,7 @@ td {
   display: inline-block;
   padding: 5px 9px;
   border-radius: 20px;
-  font-size: 8px;
+  font-size: var(--eva-font-helper);
   font-weight: 700;
   white-space: nowrap;
 
@@ -133,3 +147,4 @@ td {
     color: #0b7a72;
   }
 }
+.admin-course-cover { float:left; margin:0 12px 8px 0; object-fit:cover; border-radius:6px; }

@@ -7,9 +7,25 @@
   margin: auto;
 }
 
+.back-btn {
+  min-height: 44px;
+  padding: 10px 17px;
+  border: 1px solid #dbe9e6;
+  border-radius: 7px;
+  background: #fff;
+  color: #17645e;
+  font: inherit;
+  font-size: var(--eva-font-label);
+  cursor: pointer;
+  &:disabled { opacity: .62; cursor: not-allowed; }
+  &:focus-visible { outline: 3px solid #087f78; outline-offset: 3px; }
+}
+.create-header { max-width: 1040px; gap: 24px; }
+.create-header .subtitle { color: #526d68; line-height: 1.6; }
+
 .eyebrow {
   margin: 0 0 7px;
-  font-size: 9px;
+  font-size: var(--eva-font-caption);
   letter-spacing: 0.06em;
   color: var(--teal, #087f78);
   font-weight: 800;
@@ -18,14 +34,14 @@
 .page-header h1 {
   margin: 0;
   color: #174b48;
-  font: 800 25px/1.2 'Manrope', sans-serif;
-  letter-spacing: -0.04em;
+  font: 700 var(--eva-font-title)/normal var(--eva-font-family);
+  letter-spacing: -0.03em;
 }
 
 .subtitle {
   margin: 6px 0 0;
   color: #77908c;
-  font-size: 11px;
+  font-size: var(--eva-font-helper);
 }
 
 .primary-btn {
@@ -34,7 +50,7 @@
   padding: 10px 17px;
   color: #fff;
   background: #0a8e84;
-  font-size: 11px;
+  font-size: var(--eva-font-label);
   font-weight: 700;
   box-shadow: 0 7px 14px rgba(9, 142, 132, 0.12);
   cursor: pointer;
@@ -47,7 +63,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   max-width: 1240px;
   margin: 0 auto 25px;
@@ -55,27 +71,32 @@
 }
 
 .metric {
-  padding: 16px 18px;
-  min-height: 70px;
+  padding: 20px;
+  min-width: 0;
   background: #fff;
   border: 1px solid #e0ece9;
   border-radius: 8px;
   box-shadow: 0 3px 8px rgba(19, 74, 68, 0.025);
 
-  small {
-    display: block;
-    color: #81938f;
-    font-size: 9px;
-    margin: 0 0 4px 0;
+  .metric-label {
+    color: #526d68;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 0 0 8px;
   }
 
   strong {
     color: #17605a;
-    font: 800 20px 'Manrope';
+    font: 700 28px/1.2 var(--eva-font-family);
+    font-variant-numeric: tabular-nums;
   }
 
-  &.muted strong {
-    color: #a9bab6;
+  p {
+    margin: 8px 0 0;
+    color: #526d68;
+    font-size: 12px;
+    line-height: 1.5;
   }
 }
 
@@ -112,7 +133,7 @@
   border-radius: 6px;
   background: #fff1c9;
   color: #b07c1b;
-  font-size: 9px;
+  font-size: var(--eva-font-body);
 
   span {
     display: grid;
@@ -131,7 +152,7 @@
   margin: 0 auto 12px;
   padding: 0 42px;
   color: #17645e;
-  font-size: 11px;
+  font-size: var(--eva-font-body);
   font-weight: 700;
 }
 
@@ -150,7 +171,7 @@
   }
 
   .metrics {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     padding: 0 20px;
   }
 
@@ -158,3 +179,4 @@
     padding: 0 20px 25px;
   }
 }
+@media (max-width: 600px) { .page-header h1 { font-size: var(--eva-font-title-mobile); } }

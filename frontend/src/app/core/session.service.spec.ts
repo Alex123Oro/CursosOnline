@@ -33,9 +33,8 @@ describe('SessionService authentication', () => {
     http.expectOne(`${environment.apiBaseUrl}/auth/login`).flush({ accessToken: 'new-token', refreshToken: 'refresh', expiresAt: null, user: admin });
     expect(session.currentUser()).toEqual(admin);
     http.expectOne(request => request.url.endsWith('/session/users')).flush([admin, instructor]);
-    session.selectUser(instructor.id);
-    expect(session.currentUser()).toEqual(instructor);
-    expect(session.accessToken()).toBe('');
+    expect(session.currentUser()).toEqual(admin);
+    expect(session.accessToken()).toBe('new-token');
   });
 
   it('clears local credentials on logout when there is no active token', () => {
@@ -44,5 +43,16 @@ describe('SessionService authentication', () => {
     expect(session.currentUser()).toBeNull();
     expect(session.ready()).toBe(true);
     expect(localStorage.getItem('eva-access-token')).toBeNull();
+  });
+
+  it('adds an instructor to the local directory without persisting or changing the session', () => {
+    const session = TestBed.inject(SessionService);
+    const saved = localStorage.getItem('eva-user');
+    session.addInstructor(instructor);
+    expect(session.users()).toEqual([instructor]);
+    expect(session.currentUser()).toBeNull();
+    expect(localStorage.getItem('eva-user')).toBe(saved);
+    session.addInstructor({ ...instructor, name: 'Updated' });
+    expect(session.users()).toHaveLength(1);
   });
 });

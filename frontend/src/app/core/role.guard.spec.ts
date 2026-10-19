@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../testing/session-fixture';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -11,7 +12,7 @@ describe('role guard', () => {
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); clearFixtureSession(); });
   it.each([['ADMIN', '1', true], ['INSTRUCTOR', '8', '/cursos'], ['PARTICIPANT', '9', '/catalogo']] as const)('enforces access for %s', async (_role, id, expected) => {
     const session = authenticateAdminFixture(TestBed.inject(HttpTestingController));
-    session.selectUser(id);
+    selectFixtureUser(session, id);
     const result = TestBed.runInInjectionContext(() => roleGuard(['ADMIN'])({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot)) as Observable<boolean | UrlTree>;
     const value = await firstValueFrom(result);
     expect(value === true ? true : TestBed.inject(Router).serializeUrl(value as UrlTree)).toBe(expected);

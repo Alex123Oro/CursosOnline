@@ -1,73 +1,85 @@
-<div class="modal-backdrop" (click)="cancel.emit()">
-  <section class="modal form-modal" (click)="$event.stopPropagation()">
-    <button class="close" (click)="cancel.emit()">×</button>
-    <p class="eyebrow">{{ mode === 'create' ? 'NUEVO CURSO' : 'EDITAR CURSO' }}</p>
-    <h2>{{ mode === 'create' ? 'Registrar curso' : 'Actualizar curso' }}</h2>
-
-    <form [formGroup]="form" (ngSubmit)="submit()" class="course-form">
-      <label>
-        <span>Código</span>
-        <input formControlName="code" placeholder="CUR-001">
-      </label>
-
-      <label class="full">
-        <span>Nombre *</span>
-        <input formControlName="name" placeholder="Nombre del curso">
-        @if (fieldError('name')) { <small>El nombre es obligatorio.</small> }
-      </label>
-
-      <fieldset class="full prices-block" [disabled]="saving">
-        <legend>Precios por categoría *</legend>
-        @for (type of participantTypes; track type.id) {
-          <label><span>{{ type.name }} (Bs)</span><input type="number" min="0" step="0.01" [value]="priceValue(type.id)" (input)="setPrice(type.id, $any($event.target).value)"></label>
-        } @empty { <p>No hay categorías de participantes configuradas.</p> }
+<div [class.modal-backdrop]="presentation === 'modal'" [class.form-page]="presentation === 'page'" (click)="presentation === 'modal' && !saving && cancel.emit()">
+  <section [class.modal]="presentation === 'modal'" [class.form-modal]="presentation === 'modal'" [class.form-card]="presentation === 'page'" (click)="$event.stopPropagation()">
+    @if (presentation === 'modal') {
+      <button class="close" type="button" aria-label="Cerrar formulario" [disabled]="saving" (click)="cancel.emit()">×</button>
+      <p class="eyebrow">EDITAR CURSO</p><h2>Actualizar curso</h2>
+    } @else {
+      <div class="form-intro"><div><p class="eyebrow">{{ mode === 'create' ? 'PASO 1 DE 2' : 'DATOS DEL CURSO' }}</p><h2>Información del curso</h2><p>Los campos marcados con * son obligatorios.</p></div><span class="draft-badge">{{ mode === 'create' ? 'Se guardará como borrador' : course?.status === 'PUBLISHED' ? 'Curso publicado' : 'Curso en borrador' }}</span></div>
+    }
+    @if (saveError) { <p class="validation error-summary" role="alert">{{ saveError }}</p> }
+    <form [formGroup]="form" (ngSubmit)="submit()" class="course-form" [attr.aria-busy]="saving">
+      <fieldset class="form-section full cover-section" [disabled]="saving || uploadingCover()">
+        <legend>Portada del curso</legend>
+        <p class="section-description">Elige una portada para el catálogo. Recomendado: imagen horizontal de 1200 × 675 píxeles.</p>
+        <div class="cover-editor">
+          <div class="cover-preview">@if (form.controls.coverUrl.value && !previewFailed()) { <img [src]="form.controls.coverUrl.value" alt="Vista previa de la portada del curso" (error)="previewFailed.set(true)"> } @else { <span>{{ previewFailed() ? 'No se pudo cargar esta imagen' : 'Tu portada aparecerá aquí' }}</span> }</div>
+          <div class="cover-fields">
+            <label><span>Subir imagen</span><input #coverFile type="file" accept="image/png,image/jpeg,image/webp" (change)="uploadCover(coverFile)"><span class="field-help">PNG, JPEG o WebP · hasta 5 MB.</span></label>
+            <label><span>O pegar enlace de imagen</span><input type="url" formControlName="coverUrl" placeholder="https://…" (input)="previewFailed.set(false)">@if (fieldError('coverUrl')) { <small>Ingresa un enlace HTTPS válido.</small> }</label>
+            <button type="button" class="secondary-btn" [disabled]="!form.controls.coverUrl.value" (click)="selectCover('')">Quitar portada</button>
+          </div>
+        </div>
+        <p class="cover-library-label">O utiliza una de estas portadas</p>
+        <div class="cover-options" role="group" aria-label="Portadas disponibles">@for (option of coverOptions; track option[0]) { <button type="button" [attr.aria-pressed]="form.controls.coverUrl.value === '/images/course-covers/' + option[0] + '.svg'" (click)="selectCover('/images/course-covers/' + option[0] + '.svg')"><img [src]="'/images/course-covers/' + option[0] + '.svg'" alt=""><span>{{ option[1] }}</span></button> }</div>
+      </fieldset>
+      @if (uploadingCover()) { <p class="full" role="status">Subiendo portada…</p> }
+      @if (coverError()) { <p class="full validation" role="alert">{{ coverError() }}</p> }
+      <fieldset class="form-section full" [disabled]="saving">
+        <legend><span class="section-number">01</span> Información general</legend>
+        <p class="section-description">Identifica el curso y define lo que aprenderán los participantes.</p>
+        <div class="field-grid">
+          <label class="full"><span>Nombre del curso *</span><input formControlName="name" placeholder="Ej. Introducción a la programación">@if (fieldError('name')) { <small>Ingresa al menos 3 caracteres.</small> }</label>
+          <label class="full"><span>Contenido *</span><textarea formControlName="content" rows="4" placeholder="Describe los temas y objetivos del curso"></textarea>@if (fieldError('content')) { <small>Describe el contenido con al menos 10 caracteres.</small> }</label>
+          <label><span>Instructor *</span><select formControlName="instructorId" [attr.aria-busy]="instructorsLoading" aria-describedby="instructor-feedback"><option value="">{{ instructorsLoading ? 'Cargando instructores…' : 'Selecciona un instructor' }}</option>@for (instructor of instructors; track instructor.id) { <option [value]="instructor.id">{{ instructor.name }}</option> }</select></label>
+          <label><span>Duración total (horas) *</span><input type="number" min="1" step="1" formControlName="durationHours">@if (fieldError('durationHours')) { <small>Ingresa un número entero de horas mayor a cero.</small> }<span class="field-help">Carga horaria prevista del curso.</span></label>
+          <div id="instructor-feedback" class="full">
+            @if (instructorsError) { <small role="alert">{{ instructorsError }}</small><button type="button" class="secondary-btn" (click)="retryInstructors.emit()">Reintentar</button> }
+            @else if (!instructorsLoading && !instructors.length) { <small>Registra un instructor antes de guardar el curso.</small> }
+            @else if (fieldError('instructorId')) { <small>Selecciona un instructor registrado.</small> }
+          </div>
+          <label class="full"><span>Criterios de aprobación *</span><textarea formControlName="approvalCriteria" rows="2" placeholder="Ej. Asistencia mínima del 80 % y proyecto final aprobado"></textarea>@if (fieldError('approvalCriteria')) { <small>Describe los criterios con al menos 3 caracteres.</small> }</label>
+        </div>
+      </fieldset>
+      <fieldset class="form-section full" [disabled]="saving">
+        <legend><span class="section-number">02</span> Periodo y cupos</legend>
+        <p class="section-description">Establece las fechas del curso y la cantidad de participantes.</p>
+        <div class="field-grid">
+          <label><span>Inicio del curso *</span><input type="date" formControlName="startDate">@if (fieldError('startDate')) { <small>La fecha de inicio es obligatoria.</small> }</label>
+          <label><span>Fin del curso *</span><input type="date" formControlName="endDate" [min]="form.controls.startDate.value">@if (fieldError('endDate')) { <small>La fecha de fin es obligatoria.</small> }</label>
+          @if (form.hasError('courseDateOrder')) { <small class="full" role="alert">La fecha de fin no puede ser anterior a la fecha de inicio.</small> }
+          <label><span>Capacidad máxima *</span><input type="number" min="1" step="1" formControlName="capacity">@if (fieldError('capacity')) { <small>Ingresa un número entero mayor a cero.</small> }</label>
+          <label><span>Mínimo de inscritos *</span><input type="number" min="1" step="1" [max]="form.controls.capacity.value" formControlName="minimumEnrollment">@if (fieldError('minimumEnrollment')) { <small>Ingresa un número entero mayor a cero.</small> }@if (form.hasError('minimumEnrollmentCapacity')) { <small>El mínimo no puede superar la capacidad máxima.</small> }</label>
+        </div>
+      </fieldset>
+      <fieldset class="form-section full" [disabled]="saving">
+        <legend><span class="section-number">03</span> Preinscripción</legend>
+        <p class="section-description">Define el periodo en el que recibirás solicitudes de inscripción.</p>
+        <div class="field-grid">
+          <label><span>Inicio de preinscripción *</span><input type="date" formControlName="preinscriptionStart">@if (fieldError('preinscriptionStart')) { <small>La fecha de inicio es obligatoria.</small> }</label>
+          <label><span>Fin de preinscripción *</span><input type="date" formControlName="preinscriptionEnd" [min]="form.controls.preinscriptionStart.value">@if (fieldError('preinscriptionEnd')) { <small>La fecha de fin es obligatoria.</small> }</label>
+          @if (form.hasError('preinscriptionDateOrder')) { <small class="full" role="alert">El fin de preinscripción no puede ser anterior a su inicio.</small> }
+        </div>
+      </fieldset>
+      <fieldset class="form-section prices-block full" [disabled]="saving">
+        <legend><span class="section-number">04</span> Precios por categoría</legend>
+        <p class="section-description">Importe por participante en bolivianos. Usa 0 si la categoría no tiene costo.</p>
+        <div class="field-grid">
+          @for (type of priceCategories; track type.id) {
+            <label><span>{{ type.name }} (Bs) *</span><input type="number" min="0" step="0.01" placeholder="0.00" [value]="priceValue(type.id)" (input)="setPrice(type.id, $any($event.target).value)"></label>
+          } @empty { <p>No hay categorías de participantes configuradas.</p> }
+        </div>
         @if (priceError()) { <small role="alert">{{ priceError() }}</small> }
       </fieldset>
-
-      <label class="full">
-        <span>Contenido *</span>
-        <textarea formControlName="content" rows="3" placeholder="Contenido del curso"></textarea>
-        @if (fieldError('content')) { <small>El contenido es obligatorio.</small> }
-      </label>
-
-      <label>
-        <span>Horas *</span>
-        <input type="number" min="1" formControlName="durationHours">
-        @if (fieldError('durationHours')) { <small>Debe ser mayor a 0.</small> }
-      </label>
-
-      <label>
-        <span>Horario *</span>
-        <input formControlName="schedule" placeholder="Lun y Mie 18:00-20:00">
-        @if (fieldError('schedule')) { <small>El horario es obligatorio.</small> }
-      </label>
-
-      <label>
-        <span>Instructor *</span>
-        <input formControlName="instructor" placeholder="Nombre del instructor">
-        @if (fieldError('instructor')) { <small>El instructor es obligatorio.</small> }
-      </label>
-
-      <label>
-        <span>Fecha de inicio *</span>
-        <input type="date" formControlName="startDate">
-      </label>
-
-      <label>
-        <span>Fecha de fin *</span>
-        <input type="date" formControlName="endDate">
-      </label>
-
-      <label class="full">
-        <span>Criterios de aprobación *</span>
-        <input formControlName="approvalCriteria" placeholder="Proyecto final">
-        @if (fieldError('approvalCriteria')) { <small>Los criterios son obligatorios.</small> }
-      </label>
-
-      <div class="form-actions full">
-        <button type="button" class="secondary-btn" (click)="cancel.emit()">Cancelar</button>
-        <button type="submit" class="primary-btn" [disabled]="saving">{{ saving ? 'Guardando...' : (mode === 'create' ? 'Registrar curso' : 'Guardar cambios') }}</button>
-      </div>
+      <section class="class-planning full" aria-labelledby="class-planning-title">
+        <div><p class="eyebrow">{{ mode === 'create' ? 'SIGUIENTE PASO' : 'CALENDARIO' }}</p><h3 id="class-planning-title">Horario y clases</h3><p>El horario se obtiene de los días y las horas de las clases programadas.</p></div>
+        @if (course) {
+          <p class="schedule-summary">{{ course.schedule || 'Todavía no hay clases programadas.' }}</p>
+          <a class="secondary-btn" [routerLink]="['/cursos', course.id, 'sesiones']">Ver y programar clases</a>
+        } @else {
+          <p class="planning-note">Al guardar, continuarás a la pantalla de clases para elegir días, hora de inicio y duración. El curso seguirá como borrador hasta que lo publiques.</p>
+        }
+      </section>
+      <div class="form-actions full"><p>{{ mode === 'create' ? 'Paso 2: programación de clases' : 'Revisa los datos antes de guardar.' }}</p><div><button type="button" class="secondary-btn" [disabled]="saving" (click)="cancel.emit()">Cancelar</button><button type="submit" class="primary-btn" [disabled]="saving || uploadingCover() || instructorsLoading || !!instructorsError || !instructors.length">{{ saving ? 'Guardando…' : (mode === 'create' ? 'Guardar y programar clases' : 'Guardar cambios') }}</button></div></div>
     </form>
   </section>
 </div>

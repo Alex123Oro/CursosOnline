@@ -21,6 +21,14 @@ export class AttendancePage {
   readonly selectedSession = computed(() => this.sessions().find(session => session.id === this.sessionId()) ?? null);
   readonly rowState = signal<Record<string, RowState>>({});
   readonly anySaving = computed(() => Object.values(this.rowState()).some(row => row.phase === 'saving'));
+  private readonly bulkIds = signal<string[]>([]);
+  readonly bulkResult = computed(() => {
+    const states = this.bulkIds().map(id => this.rowState()[id]);
+    return { total: states.length, saving: states.some(state => state?.phase === 'saving'),
+      saved: states.filter(state => state?.phase === 'saved').length,
+      failed: states.filter(state => state?.phase === 'error').length };
+  });
+  readonly allPresent = computed(() => this.students().every(student => this.statusFor(student) === 'PRESENT'));
   readonly loading = signal(false);
   readonly error = signal('');
   readonly search = signal('');
@@ -51,7 +59,7 @@ export class AttendancePage {
       });
     });
   }
-  private resetRequests() { this.active.unsubscribe(); this.active = new Subscription(); this.rowState.set({}); }
+  private resetRequests() { this.active.unsubscribe(); this.active = new Subscription(); this.rowState.set({}); this.bulkIds.set([]); }
   private load(preferred = this.sessionId()) {
     this.loading.set(true); this.error.set('');
     this.active.add(this.api.list(this.courseId()).subscribe({
@@ -73,6 +81,12 @@ export class AttendancePage {
   setSearch(value: string) { this.search.set(value); this.page.set(0); }
   changePage(delta: number) { this.page.set(Math.max(0, Math.min(this.currentPage() + delta, this.pageCount() - 1))); }
   statusFor(student: AttendanceStudent) { return student.attendance.find(record => record.sessionId === this.sessionId())?.status ?? null; }
+  markAllPresent() {
+    if (this.identity.currentUser()?.role !== 'INSTRUCTOR' || !this.course() || this.loading() || this.anySaving() || !this.selectedSession()?.editable) return;
+    const students = this.students().filter(student => this.statusFor(student) !== 'PRESENT');
+    this.bulkIds.set(students.map(student => student.enrollmentId));
+    for (const student of students) this.mark(student, 'PRESENT');
+  }
   mark(student: AttendanceStudent, status: AttendanceStatus) {
     const user = this.identity.currentUser();
     if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') || !this.course() || this.loading() || !this.selectedSession()?.editable || this.rowState()[student.enrollmentId]?.phase === 'saving') return;

@@ -7,9 +7,14 @@
 .account-count {
   align-self: center;
   color: #46524c;
-  font-size: 14px;
+  font-size: var(--eva-font-body);
   font-weight: 600;
 }
+
+.directory-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+.new-instructor { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 7px; color: #fff; background: #087f78; text-decoration: none; font-size: 14px; font-weight: 700; }
+.new-instructor:hover { background: #065f5a; }
+.new-instructor:focus-visible { outline: 3px solid #087f78; outline-offset: 3px; }
 
 .directory-content {
   border-top: 1px solid #d9e0dc;
@@ -22,7 +27,7 @@
   max-width: 420px;
   margin-bottom: 20px;
   color: #34413a;
-  font-size: 13px;
+  font-size: var(--eva-font-label);
   font-weight: 600;
 }
 
@@ -34,6 +39,7 @@
   background: #fff;
   color: #18221d;
   font: inherit;
+  font-size: var(--eva-font-body);
   font-weight: 400;
 }
 
@@ -60,14 +66,14 @@ td {
 th {
   background: #f3f6f4;
   color: #435149;
-  font-size: 11px;
+  font-size: var(--eva-font-caption);
   font-weight: 700;
   text-transform: uppercase;
 }
 
 td {
   color: #222d27;
-  font-size: 14px;
+  font-size: var(--eva-font-body);
 }
 
 tbody tr:last-child td {
@@ -91,3 +97,5 @@ tbody tr:last-child td {
     gap: 12px;
   }
 }
+h1 { font-size: var(--eva-font-title); letter-spacing: -.03em; }
+@media (max-width: 600px) { h1 { font-size: var(--eva-font-title-mobile); } }

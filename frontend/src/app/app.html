@@ -28,21 +28,62 @@
     <p class="nav-label">OPERACIÓN</p>
     <nav aria-label="Navegación principal" (click)="sidebarOpen.set(false)">
       @if (session.currentUser()?.role === 'ADMIN') {
-      <a class="nav-item" routerLink="/cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Cursos</a>
-      <a class="nav-item" routerLink="/inscripciones" routerLinkActive="active"><span aria-hidden="true">☰</span> Inscripciones</a>
-      <a class="nav-item" routerLink="/asistencia-instructores" routerLinkActive="active">Asistencia de instructores</a>
+      <a class="nav-item" routerLink="/certificados" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Certificados</span></a>
+      <a class="nav-item" routerLink="/plantillas-certificados" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Plantillas de certificados</span></a>
+      <a class="nav-item" routerLink="/cursos" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span>Cursos</span>
+      </a>
+      <a class="nav-item" routerLink="/asignaciones-instructores" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Asignar instructores</span></a>
+      <a class="nav-item" routerLink="/inscripciones" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m8 12 1 1 2-2M13 12h3m-8 5h8"/></svg>
+        <span>Inscripciones</span>
+      </a>
+      <a class="nav-item" routerLink="/instructores" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
+        <span>Instructores</span>
+      </a>
+      <a class="nav-item" routerLink="/asistencia-instructores" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m1-9 2 2 4-4"/></svg>
+        <span>Asistencia de instructores</span>
+      </a>
       }
-      @if (session.currentUser()?.role === 'INSTRUCTOR') { <a class="nav-item" routerLink="/cursos" routerLinkActive="active"><span aria-hidden="true">▦</span> Cursos</a> }
-      @if (session.currentUser()?.role === 'PARTICIPANT') { <a class="nav-item" routerLink="/mi-progreso" routerLinkActive="active">Mi progreso</a> }
-      <a class="nav-item" routerLink="/catalogo" routerLinkActive="active"><span aria-hidden="true">▤</span> Catálogo</a>
+      @if (session.currentUser()?.role === 'INSTRUCTOR') {
+        <a class="nav-item" routerLink="/cursos" routerLinkActive="active" ariaCurrentWhenActive="page">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          <span>Cursos</span>
+        </a>
+      }
+      @if (session.currentUser()?.role === 'PARTICIPANT') {
+        <a class="nav-item" routerLink="/mis-certificados" routerLinkActive="active" ariaCurrentWhenActive="page"><span>Mis certificados</span></a>
+        <a class="nav-item" routerLink="/mi-progreso" routerLinkActive="active" ariaCurrentWhenActive="page">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v17h17M8 16v-4m5 4V8m5 8V5"/></svg>
+          <span>Mi progreso</span>
+        </a>
+      }
+      <a class="nav-item" routerLink="/catalogo" routerLinkActive="active" ariaCurrentWhenActive="page">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v16m0-16C9 3 6 3 3 4v15c3-1 6-1 9 2 3-3 6-3 9-2V4c-3-1-6-1-9 1Z"/></svg>
+        <span>Catálogo</span>
+      </a>
     </nav>
     <div class="sidebar-footer">
-      <strong>{{ session.currentUser()?.role === 'INSTRUCTOR' ? 'Instructor' : 'Administración' }}</strong>
-      <small>Formación continua</small>
+      <div class="sidebar-profile">
+        <span class="profile-icon"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></span>
+        <div class="profile-details">
+          <strong>{{ session.currentUser()?.role === 'INSTRUCTOR' ? 'Instructor' : session.currentUser()?.role === 'PARTICIPANT' ? 'Participante' : 'Administración' }}</strong>
+          <small>Formación continua</small>
+        </div>
+      </div>
       @if (session.accessToken()) {
-        <button class="nav-item logout-action" type="button" (click)="logout()">Cerrar sesión</button>
+        <button class="nav-item session-action" type="button" (click)="logout()">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14 5-5-5-5M9 12h12"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
       } @else {
-        <a class="nav-item" routerLink="/iniciar-sesion">Iniciar sesión</a>
+        <a class="nav-item session-action" routerLink="/iniciar-sesion">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M8 7l5 5-5 5M3 12h10"/></svg>
+          <span>Iniciar sesión</span>
+        </a>
       }
     </div>
   </aside>

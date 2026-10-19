@@ -38,7 +38,9 @@ const weeklyRange = (control: AbstractControl) => {
 export class CourseSessionsPage {
   private readonly api = inject(CourseSessionService);
   readonly identity = inject(SessionService);
-  readonly canManage = computed(() => ['ADMIN', 'INSTRUCTOR'].includes(this.identity.currentUser()?.role ?? ''));
+  readonly canManage = computed(() => this.identity.currentUser()?.role === 'INSTRUCTOR'
+    || (this.identity.currentUser()?.role === 'ADMIN' && this.course()?.status === 'DRAFT'));
+  readonly canPlan = computed(() => ['ADMIN', 'INSTRUCTOR'].includes(this.identity.currentUser()?.role ?? ''));
   private readonly route = inject(ActivatedRoute);
   private readonly id = toSignal(this.route.paramMap.pipe(map(params => params.get('courseId') ?? '')), { initialValue: '' });
   private active = new Subscription();
@@ -119,14 +121,17 @@ export class CourseSessionsPage {
         if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') { this.feedback.set('No tienes permisos para gestionar sesiones.'); return; }
         this.loading.set(true);
         scope.add(this.api.list(id).subscribe({
-          next: data => { this.course.set(data.course); this.sessions.set(data.sessions); this.loading.set(false); },
+          next: data => {
+            this.course.set(data.course); this.sessions.set(data.sessions); this.loading.set(false);
+            if (this.route.snapshot?.queryParamMap.get('plan') === 'weekly') this.openSchedule();
+          },
           error: error => { this.feedback.set(this.errorMessage(error)); this.loading.set(false); }
         }));
       });
     });
   }
   openSchedule() {
-    if (!this.canManage() || !this.course() || this.saving()) return;
+    if (!this.canPlan() || !this.course() || this.saving()) return;
     const course = this.course()!;
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const start = course.startDate ?? today;
@@ -134,12 +139,12 @@ export class CourseSessionsPage {
     this.weekly.set(true); this.editingId.set(null); this.feedback.set(''); this.showAllPreview.set(false); this.formOpen.set(true);
   }
   requestDelete(session: CourseSession) {
-    if (!this.canManage() || this.saving()) return;
+    if (!this.canManage() || this.saving() || session.locked) return;
     this.deleting.set(session); this.feedback.set('');
   }
   confirmDelete() {
     const session = this.deleting();
-    if (!this.canManage() || this.saving() || !session || !this.course()) return;
+    if (!this.canManage() || this.saving() || !session || session.locked || !this.course()) return;
     this.saving.set(true);
     this.active.add(this.api.remove(this.id(), session.id).subscribe({
       next: () => {
@@ -152,7 +157,7 @@ export class CourseSessionsPage {
   }
   toggleDay(day: number) { const control = this.scheduleForm.controls.weekdays; control.setValue(control.value.includes(day) ? control.value.filter(value => value !== day) : [...control.value, day]); control.markAsTouched(); }
   submitSchedule() {
-    if (!this.canManage()) return;
+    if (!this.canPlan()) return;
     this.scheduleForm.markAllAsTouched();
     if (this.scheduleForm.invalid || this.saving() || !this.course() || !this.formOpen() || !this.weekly()) return;
     this.saving.set(true); this.feedback.set('');
@@ -164,13 +169,14 @@ export class CourseSessionsPage {
       error: error => { this.saving.set(false); this.feedback.set(this.errorMessage(error)); }
     }));
   }
-  openCreate() { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(null); this.form.reset({ sessionNumber: Math.max(0, ...this.sessions().map(row => row.sessionNumber)) + 1, date: '', startTime: '', durationMinutes: 60 }); this.feedback.set(''); this.formOpen.set(true); }
-  openEdit(session: CourseSession) { if (!this.canManage() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(session.id); this.form.setValue({ sessionNumber: session.sessionNumber, date: session.date, startTime: session.startTime, durationMinutes: session.durationMinutes }); this.feedback.set(''); this.formOpen.set(true); }
+  openCreate() { if (!this.canPlan() || !this.course() || this.saving()) return; this.weekly.set(false); this.editingId.set(null); this.form.reset({ sessionNumber: Math.max(0, ...this.sessions().map(row => row.sessionNumber)) + 1, date: '', startTime: '', durationMinutes: 60 }); this.feedback.set(''); this.formOpen.set(true); }
+  openEdit(session: CourseSession) { if (!this.canManage() || !this.course() || this.saving() || session.locked) return; this.weekly.set(false); this.editingId.set(session.id); this.form.setValue({ sessionNumber: session.sessionNumber, date: session.date, startTime: session.startTime, durationMinutes: session.durationMinutes }); this.feedback.set(''); this.formOpen.set(true); }
   closeForm() { if (!this.saving()) this.formOpen.set(false); }
   submit() {
-    if (!this.canManage()) return;
+    if (!this.canPlan() || (this.editingId() && !this.canManage())) return;
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving() || !this.course() || !this.formOpen()) return;
+    if (this.editingId() && this.sessions().find(session => session.id === this.editingId())?.locked) return;
     this.saving.set(true); this.feedback.set('');
     const payload = this.form.getRawValue(); const id = this.editingId();
     const request = id ? this.api.update(this.id(), id, payload) : this.api.create(this.id(), payload);

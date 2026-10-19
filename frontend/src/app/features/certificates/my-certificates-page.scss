@@ -1,0 +1,13 @@
+:host { display: block; color: #174b48; }
+.certificates-page { max-width: 1100px; padding: 36px 42px; margin: auto; }
+header { margin-bottom: 28px; } h1 { font-size: var(--eva-font-title); margin: 0; } h2 { font-size: var(--eva-font-section); margin: 0; }
+.eyebrow { color: #087f78; font-size: var(--eva-font-caption); font-weight: 800; letter-spacing: .06em; }
+p { font-size: var(--eva-font-body); line-height: 1.6; }
+.certificate-list { list-style: none; display: grid; gap: 18px; padding: 0; }
+.certificate-list li, .notice { background: white; border: 1px solid #dce8e5; border-radius: 12px; padding: 22px; }
+.heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px; }
+a { color: #087f78; overflow-wrap: anywhere; } .badge { padding: 6px 12px; border-radius: 20px; background: #e5f3ef; font-size: var(--eva-font-helper); font-weight: 700; }
+.revoked { color: #a03838; background: #fff0f0; } .error { color: #a03838; }
+button { min-height: 44px; padding: 8px 14px; border: 1px solid #afc9c3; border-radius: 7px; background: white; color: #174b48; cursor: pointer; }
+:is(a,button):focus-visible { outline: 3px solid #18afa0; outline-offset: 3px; }
+@media(max-width:600px) { .certificates-page { padding: 24px 16px; } h1 { font-size: var(--eva-font-title-mobile); } }

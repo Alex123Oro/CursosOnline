@@ -18,8 +18,10 @@ export interface Course {
   code: string;
   name: string;
   content: string;
+  coverUrl?: string | null;
   durationHours: number;
   instructor: string;
+  instructorId?: string | null;
   schedule: string;
   approvalCriteria: string;
   status: CourseStatus;
@@ -28,8 +30,10 @@ export interface Course {
   createdAt: string;
   updatedAt: string;
   capacity?: number | null;
+  minimumEnrollment?: number;
   remainingSlots: number | null;
   occupiedSlots: number;
+  enrolledCount?: number;
   preinscriptionStart: string | null;
   preinscriptionEnd: string | null;
   prices: CoursePrice[];
@@ -46,13 +50,19 @@ export interface CoursePayload {
   code?: string;
   name: string;
   content: string;
+  coverUrl?: string | null;
   durationHours: number;
   instructor: string;
-  schedule: string;
+  instructorId?: string;
+  schedule?: string;
   approvalCriteria: string;
   status?: CourseStatus;
   startDate?: string | null;
   endDate?: string | null;
+  capacity?: number | null;
+  minimumEnrollment?: number;
+  preinscriptionStart?: string | null;
+  preinscriptionEnd?: string | null;
   prices?: { participantTypeId: string; basePrice: number }[];
 }
 
@@ -68,6 +78,10 @@ export class CourseService {
 
   catalog(): Observable<Course[]> {
     return this.http.get<Course[]>(`${this.apiUrl}/catalog`);
+  }
+
+  uploadCover(file: File): Observable<{ coverUrl: string }> {
+    return this.http.post<{ coverUrl: string }>(`${this.apiUrl}/covers`, file, { headers: { 'Content-Type': file.type } });
   }
 
   catalogById(id: string): Observable<Course> {
@@ -90,6 +104,10 @@ export class CourseService {
 
   publish(id: string): Observable<Course> {
     return this.http.patch<Course>(`${this.apiUrl}/${id}/publish`, {});
+  }
+
+  unpublish(id: string): Observable<Course> {
+    return this.http.patch<Course>(`${this.apiUrl}/${id}/unpublish`, {});
   }
 
   participantTypes(): Observable<ParticipantTypeOption[]> {

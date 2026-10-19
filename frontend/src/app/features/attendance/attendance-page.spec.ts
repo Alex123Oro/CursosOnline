@@ -1,3 +1,4 @@
+import { selectFixtureUser } from '../../../testing/session-fixture';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -60,7 +61,7 @@ describe('AttendancePage', () => {
   it('clears and cancels pending changes on identity change', () => {
     const page = fixture.componentInstance; page.mark(student, 'PRESENT');
     const request = http.expectOne(`${base}/courses/2/sessions/1/attendance/3`);
-    TestBed.inject(SessionService).selectUser('10'); fixture.detectChanges();
+    selectFixtureUser(TestBed.inject(SessionService), '10'); fixture.detectChanges();
     expect(request.cancelled).toBe(true); expect(page.students()).toEqual([]);
     http.expectNone(`${base}/courses/2/attendance`);
   });
@@ -83,5 +84,48 @@ describe('AttendancePage', () => {
     fixture.detectChanges(); expect(page.visibleStudents()).toHaveLength(8);
     page.changePage(1); expect(page.visibleStudents()[0].name).toBe('Alumno 8');
     page.setSearch('Alumno 16'); expect(page.visibleStudents()).toHaveLength(1); expect(page.visibleStudents()[0].name).toBe('Alumno 16');
+  });
+  function signInInstructor() {
+    selectFixtureUser(TestBed.inject(SessionService), '8'); fixture.detectChanges();
+    http.expectOne(`${base}/courses/2/attendance`).flush(data); fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+  it('marks the whole roster present across pages and search results, without duplicate saves', () => {
+    const page = signInInstructor();
+    page.students.set(Array.from({ length: 17 }, (_, i) => ({ ...student, enrollmentId: String(i), name: `Alumno ${i}` })));
+    page.setSearch('Alumno 16'); fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.mark-all-present') as HTMLButtonElement).click();
+    page.markAllPresent(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.mark-all-present').disabled).toBe(true);
+    const requests = http.match(request => request.method === 'PUT');
+    expect(requests).toHaveLength(17);
+    requests.forEach(request => {
+      expect(request.request.body).toEqual({ status: 'PRESENT' });
+      const enrollmentId = request.request.url.split('/').at(-1)!;
+      request.flush({ ...student, enrollmentId, attendance: [{ sessionId: '1', status: 'PRESENT', updatedAt: '' }] });
+    });
+    expect(page.sessionCounts().present).toBe(17);
+    expect(page.bulkResult()).toEqual({ total: 17, saving: false, saved: 17, failed: 0 });
+  });
+  it('skips existing present marks and retains failures for retry', () => {
+    const page = signInInstructor();
+    const present = { ...student, enrollmentId: '4', attendance: [{ sessionId: '1', status: 'PRESENT' as const, updatedAt: '' }] };
+    page.students.set([student, present]); page.markAllPresent();
+    http.expectNone(`${base}/courses/2/sessions/1/attendance/4`);
+    http.expectOne(`${base}/courses/2/sessions/1/attendance/3`).flush({ message: 'Error' }, { status: 500, statusText: 'Error' });
+    expect(page.statusFor(page.students()[0])).toBe('ABSENT');
+    expect(page.bulkResult().failed).toBe(1);
+    page.markAllPresent();
+    http.expectOne(`${base}/courses/2/sessions/1/attendance/3`).flush({ ...student, attendance: [{ sessionId: '1', status: 'PRESENT', updatedAt: '' }] });
+    expect(page.allPresent()).toBe(true);
+  });
+  it('only offers bulk marking to instructors and prevents it for future sessions', () => {
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.mark-all-present')).toBeNull();
+    fixture.componentInstance.markAllPresent(); http.expectNone(request => request.method === 'PUT');
+    const page = signInInstructor(); page.selectSession('2');
+    http.expectOne(`${base}/courses/2/attendance`).flush(data); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.mark-all-present').disabled).toBe(true);
+    page.markAllPresent(); http.expectNone(request => request.method === 'PUT');
   });
 });

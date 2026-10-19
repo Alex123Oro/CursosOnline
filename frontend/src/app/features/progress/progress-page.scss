@@ -25,13 +25,13 @@
 .course-dates,
 .muted {
   color: #68796f;
-  font-size: 13px;
+  font-size: var(--eva-font-label);
 }
 
 .course-heading h2 {
   margin: 4px 0;
   color: #1c3025;
-  font-size: 20px;
+  font-size: var(--eva-font-section);
 }
 
 .course-dates {
@@ -43,7 +43,7 @@
   border-radius: 4px;
   background: #e5f3ed;
   color: #17634a;
-  font-size: 12px;
+  font-size: var(--eva-font-helper);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -58,7 +58,7 @@
   justify-content: space-between;
   gap: 12px;
   color: #384c40;
-  font-size: 14px;
+  font-size: var(--eva-font-body);
 }
 
 progress {
@@ -92,7 +92,7 @@ progress {
   padding: 9px 0;
   border-top: 1px solid #edf1ee;
   color: #34483c;
-  font-size: 13px;
+  font-size: var(--eva-font-label);
 }
 
 .evaluations li small {
@@ -104,7 +104,7 @@ progress {
 .final-result {
   margin: 13px 0 0;
   color: #34483c;
-  font-size: 14px;
+  font-size: var(--eva-font-body);
 }
 
 .final-result.passed { color: #17634a; }
@@ -121,3 +121,5 @@ progress {
   .progress-page { padding: 24px 18px; }
   .course-heading { flex-direction: column; }
 }
+h1 { font-size: var(--eva-font-title); letter-spacing: -.03em; }
+@media (max-width: 600px) { h1 { font-size: var(--eva-font-title-mobile); } }

@@ -6,7 +6,7 @@
     <div class="toolbar"><span>{{ courses().length }} cursos asignados</span><label>Buscar curso<input type="search" placeholder="Nombre o código" [value]="search()" (input)="searchCourses($any($event.target).value)"></label></div>
     <ul class="course-list" aria-label="Cursos asignados">
       @for (course of visibleCourses(); track course.id) {
-        <li><div class="course-info"><span class="code">{{ course.code || 'CURSO' }}</span><h2>{{ course.name }}</h2><p>{{ formatDate(course.startDate) }} — {{ formatDate(course.endDate) }}</p></div><div class="actions"><a [routerLink]="['/cursos', course.id, 'sesiones']">Ver clases</a><a class="primary" [routerLink]="['/cursos', course.id, 'asistencia']">Asistencia de alumnos</a></div></li>
+        <li><div class="course-info"><span class="code">{{ course.code || 'CURSO' }}</span><h2>{{ course.name }}</h2><p>{{ formatDate(course.startDate) }} — {{ formatDate(course.endDate) }}</p></div><div class="actions"><a [routerLink]="['/cursos', course.id, 'sesiones']">Ver clases</a><a [routerLink]="['/cursos', course.id, 'evaluaciones']">Evaluaciones y notas</a><a class="primary" [routerLink]="['/cursos', course.id, 'asistencia']">Asistencia de alumnos</a></div></li>
       }
       @empty { <li class="empty">{{ courses().length ? 'No hay cursos que coincidan con tu búsqueda.' : 'No tienes cursos publicados asignados. Solicita la asignación al administrador.' }}</li> }
     </ul>

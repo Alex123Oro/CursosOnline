@@ -1,0 +1,19 @@
+<header class="public-header"><a routerLink="/catalogo" aria-label="EVA, catálogo">EVA</a><span>Formación continua</span></header>
+<main class="verification-page">
+  <header><p class="eyebrow">VERIFICACIÓN PÚBLICA</p><h1>Verificar certificado</h1><p>Comprueba su autenticidad sin iniciar sesión.</p></header>
+  <form (submit)="$event.preventDefault(); submit()">
+    <label for="certificate-code">Código de verificación</label>
+    <div class="search"><input id="certificate-code" name="codigo" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="Ej. 8F72A91C" [value]="code()" (input)="code.set($any($event.target).value.toUpperCase())" aria-describedby="code-help" /><button type="submit" [disabled]="loading()">Verificar</button></div>
+    <small id="code-help">Ocho caracteres: números del 0 al 9 y letras de la A a la F.</small>
+  </form>
+  @if (loading()) { <p role="status">Verificando certificado…</p> }
+  @else if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
+  @else if (item(); as certificate) {
+    @if (certificate.status === 'REVOKED') { <section class="notice error" role="status"><h2>Certificado anulado</h2><p>Código: {{ certificate.code }}</p><p>Este certificado ya no es válido.</p></section> }
+    @else {
+      <section class="result" role="status"><h2>Certificado válido</h2>
+        <dl><dt>Participante</dt><dd>{{ certificate.participantName }}</dd><dt>Curso</dt><dd>{{ certificate.courseName }}</dd><dt>Duración</dt><dd>{{ certificate.durationHours }} horas</dd><dt>Tipo</dt><dd>{{ type(certificate.type) }}</dd><dt>Fecha de emisión</dt><dd>{{ date(certificate.issuedAt) }}</dd><dt>Código</dt><dd>{{ certificate.code }}</dd></dl>
+      </section>
+    }
+  }
+</main>

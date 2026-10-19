@@ -30,7 +30,7 @@ describe('ProgressPage', () => {
       finalGrade: 82,
       minimumPassingScore: 70,
       requirements: { academicMet: true, attendanceMet: false, minimumAttendancePercent: 80 },
-      finalStatus: 'APROBADO'
+      finalStatus: 'APROBADO', certificateEligible: true
     }]);
 
     await fixture.whenStable();

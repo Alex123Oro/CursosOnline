@@ -24,7 +24,9 @@ export class InstructorAttendancePage {
   readonly loading = signal(false); readonly error = signal('');
   readonly rowState = signal<Record<string, RowState>>({});
   private readonly page = signal(0);
-  readonly filteredSessions = computed(() => this.sessions().filter(row => this.stateFilter() === 'ALL' || (this.stateFilter() === 'PENDING' ? row.date <= this.today() && !row.status : row.status === this.stateFilter())));
+  readonly filteredSessions = computed(() => this.sessions()
+    .filter(row => this.stateFilter() === 'ALL' || (this.stateFilter() === 'PENDING' ? row.date <= this.today() && !row.status : row.status === this.stateFilter()))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime) || Number(b.id) - Number(a.id)));
   readonly pageCount = computed(() => Math.max(1, Math.ceil(this.filteredSessions().length / 8)));
   readonly currentPage = computed(() => Math.min(this.page(), this.pageCount() - 1));
   readonly visibleSessions = computed(() => this.filteredSessions().slice(this.currentPage() * 8, (this.currentPage() + 1) * 8));
@@ -74,8 +76,15 @@ export class InstructorAttendancePage {
   setFilter(field: 'courseId' | 'from' | 'to', value: string) { this.cancel(); this[field].set(value); this.load(); }
   setStateFilter(value: string) { if (!['ALL','PRESENT','ABSENT','PENDING'].includes(value)) return; this.cancel(); this.stateFilter.set(value as StateFilter); this.load(); }
   changePage(delta: number) { this.page.set(Math.max(0, Math.min(this.currentPage() + delta, this.pageCount() - 1))); }
+  canMark(row: InstructorAttendanceRow) { return row.editable; }
+  dateWarning(row: InstructorAttendanceRow) {
+    if (row.date === this.today()) return '';
+    return row.date < this.today()
+      ? 'Advertencia: esta clase ya pasó. Estás registrando o corrigiendo asistencia fuera del día de la clase.'
+      : 'Advertencia: esta clase es futura. Estás registrando asistencia antes del día de la clase.';
+  }
   mark(row: InstructorAttendanceRow, status: AttendanceStatus) {
-    if (this.identity.currentUser()?.role !== 'ADMIN' || this.loading() || !row.editable || !this.sessions().some(session => session.id === row.id) || this.rowState()[row.id]?.phase === 'saving') return;
+    if (this.identity.currentUser()?.role !== 'ADMIN' || this.loading() || !this.canMark(row) || !this.sessions().some(session => session.id === row.id) || this.rowState()[row.id]?.phase === 'saving') return;
     this.rowState.update(rows => ({ ...rows, [row.id]: { phase: 'saving', target: status } }));
     this.active.add(this.api.save(this.instructorId(), row.id, status).subscribe({ next: saved => {
       this.sessions.update(rows => rows.map(session => session.id === saved.id ? saved : session));

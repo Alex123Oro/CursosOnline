@@ -1,0 +1,44 @@
+import {readFile,readdir} from 'node:fs/promises';
+import {join} from 'node:path';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';
+import pdfLib from '../../backend/node_modules/pdf-lib/cjs/index.js';
+const {PDFDocument,StandardFonts,rgb}=pdfLib;
+const links=join(process.env.LOCALAPPDATA,'ms-playwright','.links');
+const location=(await readFile(join(links,(await readdir(links))[0]),'utf8')).trim();
+const {chromium}=await import(pathToFileURL(join(location,'index.mjs')).href);
+const accounts=JSON.parse(await readFile(new URL('../../backend/.local/restored-test-credentials.json',import.meta.url),'utf8'));
+const account=accounts.users.find(user=>user.email==='admin@eva.local');
+const pdf=await PDFDocument.create();const font=await pdf.embedFont(StandardFonts.HelveticaBold);
+const sheet=pdf.addPage([842,595]);sheet.drawRectangle({x:0,y:0,width:842,height:595,color:rgb(.97,.96,.92)});
+sheet.drawRectangle({x:20,y:20,width:802,height:555,borderColor:rgb(.1,.4,.4),borderWidth:6});
+sheet.drawText('PLANTILLA INSTITUCIONAL',{x:180,y:440,size:30,font,color:rgb(.1,.4,.4)});pdf.addPage([842,595]);
+const buffer=Buffer.from(await pdf.save());
+const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1100}});const errors=[];
+page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
+try{
+ await page.goto('http://localhost:4200/iniciar-sesion');
+ await page.locator('input[type=email]').fill(account.email);await page.locator('input[type=password]').fill(account.password);
+ await page.locator('button[type=submit]').click();await page.waitForURL('**/cursos');
+ await page.goto('http://localhost:4200/plantillas-certificados');await page.locator('.template-list button').first().waitFor();
+ await page.getByRole('button',{name:'+ Nueva plantilla'}).click();
+ const input=page.locator('input[accept="application/pdf,.pdf"]');
+ await input.setInputFiles({name:'invalida.pdf',mimeType:'application/pdf',buffer:Buffer.from('not a PDF')});
+ await page.getByRole('alert').filter({hasText:'No se pudo importar el PDF'}).waitFor();
+ const preview=page.waitForResponse(response=>response.url().endsWith('/preview-image')&&response.request().postDataJSON()?.config?.backgroundName==='institucional.pdf');
+ preview.catch(()=>{});
+ await input.setInputFiles({name:'institucional.pdf',mimeType:'application/pdf',buffer});
+ await page.getByRole('status').filter({hasText:'solo la primera página'}).waitFor({timeout:60000});
+ const response=await preview;assert.equal(response.status(),200);const svg=await response.text();
+ assert(svg.includes('data:image/jpeg;base64,'));assert(!svg.includes('Se otorga el presente certificado a'));assert(svg.includes('Nombre del participante'));
+ await page.waitForFunction(()=>document.querySelector('.pdf-stage img')?.complete&&document.querySelector('.pdf-stage img')?.naturalWidth===842);
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar vista previa en PDF'}).click();
+ const file=await download;const chunks=[];for await(const chunk of await file.createReadStream())chunks.push(chunk);
+ const result=await PDFDocument.load(Buffer.concat(chunks));assert.equal(result.getPageCount(),1);
+ await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:fileURLToPath(new URL('../../docs/output/plantilla-pdf-importada.png',import.meta.url))});
+ await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.getByRole('button',{name:'Quitar PDF y usar diseño del editor'}).click();
+ await page.locator('select[formcontrolname=showTemplateText]').waitFor({state:'detached'});
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,invalidPdfRejected:true,multiplePagesHandled:true,importPreview:true,downloadPdf:true,removeBackground:true,mobile:true,errors}));
+}catch(error){console.error(error);process.exitCode=1;await page.screenshot({path:fileURLToPath(new URL('../../docs/output/plantilla-pdf-error.png',import.meta.url))});}
+finally{await browser.close();}
