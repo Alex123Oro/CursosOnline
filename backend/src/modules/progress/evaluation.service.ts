@@ -12,11 +12,11 @@ const courseForManager = async (courseId: number, user: RequestUser, db: Prisma.
   }
   const course = await db.course.findUnique({ where: { id: courseId }, select: { id: true, instructorId: true, status: true } });
   if (!course) throw new HttpError(404, 'Curso no encontrado.');
-  if (user.role === 'INSTRUCTOR' && course.instructorId !== user.id) {
-    const assignment = await db.courseInstructor.findUnique({
+  if (user.role === 'INSTRUCTOR') {
+    const assigned = course.instructorId === user.id || Boolean(await db.courseInstructor.findUnique({
       where: { courseId_instructorId: { courseId, instructorId: user.id } }, select: { id: true }
-    });
-    if (!assignment) throw new HttpError(403, 'No eres instructor asignado a este curso.');
+    }));
+    if (!assigned) throw new HttpError(403, 'No eres instructor asignado a este curso.');
   }
   return course;
 };

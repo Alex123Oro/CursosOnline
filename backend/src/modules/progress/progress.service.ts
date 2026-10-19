@@ -10,7 +10,7 @@ const round = (value: number) => Math.round(value * 100) / 100;
 const courseSelect = {
   id: true, code: true, name: true, instructorId: true, status: true,
   startDate: true, endDate: true, minimumPassingScore: true, minimumAttendancePercent: true,
-  sessions: { select: { id: true, date: true }, orderBy: { date: 'asc' } },
+  sessions: { select: { id: true, date: true, sessionNumber: true, startTime: true, durationMinutes: true }, orderBy: [{ date: 'asc' }, { startTime: 'asc' }] },
   evaluations: {
     select: { id: true, title: true, maxScore: true, weight: true,
       grades: { select: { enrollmentId: true, score: true, comment: true, gradedAt: true } } },
@@ -19,7 +19,7 @@ const courseSelect = {
 } satisfies Prisma.CourseSelect;
 const enrollmentInclude = {
   course: { select: courseSelect },
-  attendance: { select: { status: true, session: { select: { date: true } } } }
+  attendance: { select: { status: true, session: { select: { id: true, date: true } } } }
 } satisfies Prisma.EnrollmentInclude;
 type ProgressEnrollment = Prisma.EnrollmentGetPayload<{ include: typeof enrollmentInclude }>;
 
@@ -31,6 +31,13 @@ function compute(enrollment: ProgressEnrollment, today: string) {
     attendance.status === 'PRESENT' && (dateOnly(attendance.session.date) ?? '') <= today
   ).length;
   const attendancePercent = completedSessions.length ? round(presentSessions / completedSessions.length * 100) : null;
+  const attendanceBySession = new Map(enrollment.attendance.map(record => [record.session.id, record.status]));
+  const attendanceComplete = completedSessions.length > 0 && completedSessions.every(session => attendanceBySession.has(session.id));
+  const attendanceHistory = course.sessions.filter(session => (dateOnly(session.date) ?? '') <= today).map(session => ({
+    sessionId: String(session.id), sessionNumber: session.sessionNumber, date: dateOnly(session.date)!,
+    startTime: session.startTime, durationMinutes: session.durationMinutes,
+    status: attendanceBySession.get(session.id) === 'PRESENT' ? 'PRESENT' : attendanceBySession.get(session.id) === 'ABSENT' ? 'ABSENT' : null
+  }));
   const evaluations = course.evaluations.map(evaluation => {
     const grade = evaluation.grades.find(item => item.enrollmentId === enrollment.id);
     const score = grade ? Number(grade.score) : null;
@@ -49,7 +56,7 @@ function compute(enrollment: ProgressEnrollment, today: string) {
   const isFinished = Boolean(endDate && endDate < today);
   const allEvaluationsGraded = evaluations.length > 0 && graded.length === evaluations.length;
   const weightComplete = Math.abs(configuredWeight - 100) < 0.000001;
-  const finalGrade = enrollment.status === 'INSCRITO' && isFinished && allEvaluationsGraded && weightComplete &&
+  const finalGrade = enrollment.status === 'INSCRITO' && isFinished && allEvaluationsGraded && weightComplete && attendanceComplete &&
     attendancePercent !== null && completedSessions.length === course.sessions.length ? currentGrade : null;
   const minimumPassingScore = Number(course.minimumPassingScore);
   const minimumAttendancePercent = Number(course.minimumAttendancePercent ?? 80);
@@ -60,10 +67,10 @@ function compute(enrollment: ProgressEnrollment, today: string) {
     enrollmentId: String(enrollment.id), enrollmentStatus: enrollment.status,
     course: { id: String(course.id), code: course.code ?? '', name: course.name,
       startDate: dateOnly(course.startDate), endDate },
-    attendance: { presentSessions, completedSessions: completedSessions.length, percentage: attendancePercent },
+    attendance: { presentSessions, completedSessions: completedSessions.length, percentage: attendancePercent, sessions: attendanceHistory },
     evaluations, currentGrade, finalGrade, minimumPassingScore,
     requirements: { academicMet: finalGrade === null ? null : finalGrade >= minimumPassingScore,
-      attendanceMet: attendancePercent === null ? null : attendancePercent >= minimumAttendancePercent,
+      attendanceMet: attendancePercent === null || !attendanceComplete ? null : attendancePercent >= minimumAttendancePercent,
       minimumAttendancePercent },
     finalStatus, certificateEligible: finalStatus === 'APROBADO', weightComplete, isFinished
   };

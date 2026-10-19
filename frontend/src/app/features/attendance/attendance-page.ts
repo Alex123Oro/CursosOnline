@@ -20,11 +20,12 @@ export class AttendancePage {
   readonly sessionId = signal('');
   readonly selectedSession = computed(() => this.sessions().find(session => session.id === this.sessionId()) ?? null);
   readonly rowState = signal<Record<string, RowState>>({});
+  readonly draftStatuses = signal<Record<string, AttendanceStatus>>({});
   readonly anySaving = computed(() => Object.values(this.rowState()).some(row => row.phase === 'saving'));
   private readonly bulkIds = signal<string[]>([]);
   readonly bulkResult = computed(() => {
     const states = this.bulkIds().map(id => this.rowState()[id]);
-    return { total: states.length, saving: states.some(state => state?.phase === 'saving'),
+    return { total: states.length, pending: Object.keys(this.draftStatuses()).length, saving: states.some(state => state?.phase === 'saving'),
       saved: states.filter(state => state?.phase === 'saved').length,
       failed: states.filter(state => state?.phase === 'error').length };
   });
@@ -59,7 +60,7 @@ export class AttendancePage {
       });
     });
   }
-  private resetRequests() { this.active.unsubscribe(); this.active = new Subscription(); this.rowState.set({}); this.bulkIds.set([]); }
+  private resetRequests() { this.active.unsubscribe(); this.active = new Subscription(); this.rowState.set({}); this.bulkIds.set([]); this.draftStatuses.set({}); }
   private load(preferred = this.sessionId()) {
     this.loading.set(true); this.error.set('');
     this.active.add(this.api.list(this.courseId()).subscribe({
@@ -80,26 +81,59 @@ export class AttendancePage {
   }
   setSearch(value: string) { this.search.set(value); this.page.set(0); }
   changePage(delta: number) { this.page.set(Math.max(0, Math.min(this.currentPage() + delta, this.pageCount() - 1))); }
-  statusFor(student: AttendanceStudent) { return student.attendance.find(record => record.sessionId === this.sessionId())?.status ?? null; }
+  statusFor(student: AttendanceStudent) { return this.draftStatuses()[student.enrollmentId] ?? student.attendance.find(record => record.sessionId === this.sessionId())?.status ?? null; }
+  stageMark(student: AttendanceStudent, status: AttendanceStatus) {
+    if (!['ADMIN', 'INSTRUCTOR'].includes(this.identity.currentUser()?.role ?? '') || !this.course() || this.loading() || this.anySaving() || !this.selectedSession()?.editable || !this.students().some(row => row.enrollmentId === student.enrollmentId)) return;
+    const current = student.attendance.find(record => record.sessionId === this.sessionId())?.status ?? null;
+    this.draftStatuses.update(drafts => {
+      const next = { ...drafts };
+      if (current === status) delete next[student.enrollmentId]; else next[student.enrollmentId] = status;
+      return next;
+    });
+    this.rowState.update(states => { const next = { ...states }; delete next[student.enrollmentId]; return next; });
+    this.bulkIds.set(Object.keys(this.draftStatuses()));
+  }
   markAllPresent() {
     if (this.identity.currentUser()?.role !== 'INSTRUCTOR' || !this.course() || this.loading() || this.anySaving() || !this.selectedSession()?.editable) return;
-    const students = this.students().filter(student => this.statusFor(student) !== 'PRESENT');
-    this.bulkIds.set(students.map(student => student.enrollmentId));
-    for (const student of students) this.mark(student, 'PRESENT');
+    for (const student of this.students()) if (this.statusFor(student) !== 'PRESENT') this.stageMark(student, 'PRESENT');
+  }
+  markAllAbsent() {
+    if (this.identity.currentUser()?.role !== 'INSTRUCTOR' || !this.course() || this.loading() || this.anySaving() || !this.selectedSession()?.editable) return;
+    for (const student of this.students()) if (this.statusFor(student) !== 'ABSENT') this.stageMark(student, 'ABSENT');
   }
   mark(student: AttendanceStudent, status: AttendanceStatus) {
+    this.stageMark(student, status);
+  }
+  saveBulk() {
+    const user = this.identity.currentUser(); const session = this.selectedSession();
+    if (!user || !['ADMIN', 'INSTRUCTOR'].includes(user.role) || !session?.editable || this.loading() || this.anySaving()) return;
+    const drafts = this.draftStatuses(); const ids = Object.keys(drafts);
+    if (!ids.length) return;
+    this.bulkIds.set(ids);
+    for (const id of ids) {
+      const student = this.students().find(row => row.enrollmentId === id);
+      const status = drafts[id];
+      if (student && status) this.persistMark(student, status);
+    }
+  }
+  saveStudent(student: AttendanceStudent) {
+    const status = this.draftStatuses()[student.enrollmentId];
+    if (status) this.persistMark(student, status);
+  }
+  private persistMark(student: AttendanceStudent, status: AttendanceStatus) {
     const user = this.identity.currentUser();
     if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') || !this.course() || this.loading() || !this.selectedSession()?.editable || this.rowState()[student.enrollmentId]?.phase === 'saving') return;
     this.rowState.update(rows => ({ ...rows, [student.enrollmentId]: { phase: 'saving', target: status } }));
     this.active.add(this.api.save(this.courseId(), this.sessionId(), student.enrollmentId, status).subscribe({
       next: saved => {
         this.students.update(students => students.map(row => row.enrollmentId === saved.enrollmentId ? saved : row));
+        this.draftStatuses.update(drafts => { const next = { ...drafts }; delete next[student.enrollmentId]; return next; });
         this.rowState.update(rows => ({ ...rows, [student.enrollmentId]: { phase: 'saved', target: status } }));
       },
       error: error => { this.rowState.update(rows => ({ ...rows, [student.enrollmentId]: { phase: 'error', target: status, message: this.errorMessage(error) } })); }
     }));
   }
-  retry(student: AttendanceStudent) { const state = this.rowState()[student.enrollmentId]; if (state?.phase === 'error') this.mark(student, state.target); }
+  retry(student: AttendanceStudent) { const state = this.rowState()[student.enrollmentId]; if (state?.phase === 'error') this.persistMark(student, state.target); }
   formatDate(date: string) { return new Intl.DateTimeFormat('es-BO', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)); }
   private errorMessage(error: { error?: { message?: string } }) { return error.error?.message ?? 'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.'; }
 }

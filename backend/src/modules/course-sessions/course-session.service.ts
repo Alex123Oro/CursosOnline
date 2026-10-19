@@ -14,6 +14,7 @@ const courseSelect = {
   id: true,
   code: true,
   name: true,
+  content: true,
   instructor: true,
   instructorId: true,
   status: true,
@@ -29,6 +30,7 @@ const courseResponse = (course: SessionCourse) => ({
   id: String(course.id),
   code: course.code ?? '',
   name: course.name,
+  description: course.content ?? '',
   instructor: course.instructor ?? '',
   instructorId: course.instructorId == null ? null : String(course.instructorId),
   status: course.status,
@@ -122,18 +124,40 @@ async function withUnlockedSession<T>(
 export const courseSessionService = {
   async teachingCourses(user: RequestUser) {
     if (user.role !== 'INSTRUCTOR') throw new HttpError(403, 'Esta consulta corresponde a instructores.');
+    // Si Supabase aún no recibió la migración de asignaciones_instructores,
+    // se conservan las asignaciones principales de cursos.instructor_id.
+    const assignmentTable = await prisma.$queryRaw<{ tableName: string | null }[]>`
+      SELECT to_regclass('public.asignaciones_instructores')::text AS "tableName"
+    `;
+    const assignedCourseIds = assignmentTable[0]?.tableName
+      ? (await prisma.$queryRaw<{ courseId: number }[]>`
+          SELECT curso_id AS "courseId"
+          FROM public.asignaciones_instructores
+          WHERE instructor_id = ${user.id}
+        `).map(assignment => assignment.courseId)
+      : [];
     const courses = await prisma.course.findMany({
       where: {
         status: 'PUBLISHED',
         OR: [
           { instructorId: user.id },
-          { instructorAssignments: { some: { instructorId: user.id } } }
+          ...(assignedCourseIds.length ? [{ id: { in: assignedCourseIds } }] : [])
         ]
       },
-      select: courseSelect,
+      select: {
+        ...courseSelect,
+        _count: { select: { enrollments: { where: { status: 'INSCRITO' } }, sessions: true, evaluations: true } },
+        evaluations: { select: { id: true, weight: true } }
+      },
       orderBy: [{ name: 'asc' }, { id: 'asc' }]
     });
-    return courses.map(courseResponse);
+    return courses.map(course => ({
+      ...courseResponse(course),
+      participantCount: course._count?.enrollments ?? 0,
+      sessionCount: course._count?.sessions ?? 0,
+      evaluationCount: course._count?.evaluations ?? 0,
+      evaluationWeight: course.evaluations?.reduce((sum, evaluation) => sum + Number(evaluation.weight), 0) ?? 0
+    }));
   },
 
   async list(courseId: number, user: RequestUser) {

@@ -8,6 +8,10 @@ label { display:grid; flex:1; gap:8px; font-weight:600; }
 select, button { min-height:44px; border:1px solid #cadbd8; border-radius:8px; padding:8px 12px; font:inherit; background:#fff; color:inherit; }
 button { background:#087f78; color:white; cursor:pointer; }
 button:disabled { opacity:.55; cursor:default; }
+.page-actions,.row-actions,.confirm-delete { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.page-actions a { color:#087f78; }
+.secondary { background:#fff; color:#087f78; }
+.danger { background:#a33028; border-color:#a33028; }
 .assignments article { justify-content:space-between; align-items:center; }
 article div { display:grid; gap:6px; }
 small { color:#526d66; }

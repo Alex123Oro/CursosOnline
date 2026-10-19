@@ -6,7 +6,7 @@ export interface CourseProgress {
   enrollmentId: string;
   enrollmentStatus: 'PREINSCRITO' | 'INSCRITO';
   course: { id: string; code: string; name: string; startDate: string | null; endDate: string | null };
-  attendance: { presentSessions: number; completedSessions: number; percentage: number | null };
+  attendance: { presentSessions: number; completedSessions: number; percentage: number | null; sessions: { sessionId: string; sessionNumber: number; date: string; startTime: string; durationMinutes: number; status: 'PRESENT' | 'ABSENT' | null }[] };
   evaluations: { id: string; title: string; score: number | null; maxScore: number; weight: number; comment: string | null; gradedAt: string | null; percentage: number | null }[];
   currentGrade: number | null;
   finalGrade: number | null;

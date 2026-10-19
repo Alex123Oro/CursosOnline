@@ -3,7 +3,7 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionRoutes, teachingRoutes } from '../src/modules/course-sessions/course-session.routes.js';
 import { courseRoutes } from '../src/modules/courses/course.routes.js';
@@ -11,7 +11,7 @@ import { errorMiddleware } from '../src/shared/error.middleware.js';
 let server: Server; let base: string;
 const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-11-12') };
 const payload = { sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
-const record = { id: 3, courseId: 2, ...payload, date: new Date(payload.date), createdAt: new Date(), updatedAt: new Date() };
+const record = { id: 3, courseId: 2, ...payload, date: new Date(payload.date), createdAt: new Date(), updatedAt: new Date(), _count: { attendance: 0 }, instructorAttendance: null };
 describe('session HTTP contract and authorization', () => {
   it.each([['1', 403], ['8', 204], ['10', 403], ['', 401]])('deletion requires an assigned manager identity %s', async (id, status) => {
     const response = await fetch(`${base}/courses/2/sessions/3`, { method: 'DELETE', headers: id ? { Authorization: id ? `Bearer ${id}` : '' } : {} });
@@ -28,7 +28,7 @@ describe('session HTTP contract and authorization', () => {
     vi.resetAllMocks(); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
     mocks.user.findUnique.mockImplementation(({ where }) => ({ id: Number(where.authId), name: 'User', email: 'user@test', role: Number(where.authId) === 1 ? 'ADMIN' : Number(where.authId) === 10 ? 'PARTICIPANT' : 'INSTRUCTOR', participantTypeId: null }));
     mocks.course.findUnique.mockResolvedValue(course); mocks.course.findMany.mockResolvedValue([course]);
-    mocks.courseSession.findFirst.mockResolvedValue(null);
+    mocks.courseSession.findFirst.mockImplementation(({ where }) => where.date && where.date.toISOString().slice(0, 10) !== '2026-10-12' ? { id: 99 } : null);
     mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record);
   });
   it.each(['GET', 'POST', 'PUT'])('returns 401 to guests on %s', async method => {
