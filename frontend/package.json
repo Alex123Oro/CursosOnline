@@ -5,6 +5,9 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:deploy": "node scripts/build-deploy.mjs",
+    "start:render": "node server.mjs",
+    "test:server": "node --test server.test.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
