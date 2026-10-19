@@ -60,6 +60,27 @@ la URL `/api` del frontend de produccion funciona sin un proxy adicional.
 Conserva ambas carpetas al desplegar. Las rutas de Angular tambien se sirven
 desde `index.html` al recargar la pagina.
 
+## Actualizar una base existente con los cambios de Sprint 4
+
+En `backend`, ejecuta:
+
+```bash
+npm run build
+npm run academic:check
+npm run academic:apply
+```
+
+El arranque y la compilación regeneran automáticamente el cliente de Prisma.
+`academic:check` valida la migración y revierte la transacción; `academic:apply`
+la aplica. Ambos comprueban que los certificados y sus resultados conserven sus
+datos. La migración copia las asignaciones de instructores existentes y crea
+`resultados_academicos_curso` para recalcular resultados sin modificar
+`resultados_curso`, que pertenece a la emisión de certificados.
+
+Este script aplica únicamente la migración de gestión académica y se puede
+repetir. Úsalo para la base existente, cuyo historial de Prisma es anterior a
+estas tablas; no requiere reiniciar la base ni reproducir migraciones antiguas.
+
 ## Estructura
 
 ```text

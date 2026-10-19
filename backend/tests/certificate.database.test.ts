@@ -26,6 +26,8 @@ describe.skipIf(!container)('certificate SQL integration (isolated Docker only)'
     query(readFileSync(new URL('./fixtures/certificates.sql',import.meta.url),'utf8'));
     query(readFileSync(new URL('../prisma/migrations/20261016010000_certificates/migration.sql',import.meta.url),'utf8'));
     query(readFileSync(new URL('../prisma/migrations/20261016020000_certificate_participation/migration.sql',import.meta.url),'utf8'));
+    query('ALTER TABLE cursos ADD COLUMN instructor_id BIGINT REFERENCES usuarios(id); ALTER TABLE inscripciones ADD UNIQUE(id,curso_id); UPDATE cursos SET instructor_id=4 WHERE id=1;');
+    query(readFileSync(new URL('../prisma/migrations/20261018100000_add_academic_management/migration.sql',import.meta.url),'utf8'));
   },30000);
   it('uses the same calculated outcome in the roster and issuance', () => {
     const roster = JSON.parse(query('SELECT certificate_candidates(1);'));
@@ -83,5 +85,15 @@ describe.skipIf(!container)('certificate SQL integration (isolated Docker only)'
     expect(query('SELECT estado FROM resultados_curso WHERE inscripcion_id=12;')).toBe('reprobado');
     for (const id of [13,14,17]) expect(run(`SELECT emit_certificate_for_type(${id},'1234ABDD','https://example.test/verificar/1234ABDD',1,'participacion');`).status).not.toBe(0);
     expect(run("SET ROLE authenticated; SELECT certificate_candidates_for_type(1,'participacion');").status).not.toBe(0);
+  });
+  it('reapplies academic migration without replacing certificate results or duplicating assignments', () => {
+    const before = query('SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM resultados_curso r;');
+    const certificates = query('SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM certificados c;');
+    query(readFileSync(new URL('../prisma/migrations/20261018100000_add_academic_management/migration.sql',import.meta.url),'utf8'));
+    expect(query('SELECT count(*) FROM asignaciones_instructores WHERE curso_id=1 AND instructor_id=4;')).toBe('1');
+    query("INSERT INTO resultados_academicos_curso(curso_id,inscripcion_id,nota_final,porcentaje_asistencia,estado) VALUES(1,10,90,100,'aprobado'); UPDATE resultados_academicos_curso SET estado='pendiente',nota_final=NULL,porcentaje_asistencia=NULL;");
+    expect(query('SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM resultados_curso r;')).toBe(before);
+    expect(query('SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM certificados c;')).toBe(certificates);
+    expect(run('INSERT INTO resultados_academicos_curso(curso_id,inscripcion_id) VALUES(2,11);').status).not.toBe(0);
   });
 });

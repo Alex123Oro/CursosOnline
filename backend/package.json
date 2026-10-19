@@ -5,14 +5,18 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "predev": "prisma generate",
     "dev": "tsx watch src/index.ts",
+    "prebuild": "prisma generate",
     "build": "tsc",
     "prestart": "npm run build",
     "start": "node start.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
-    "audit:real": "node scripts/audit-real-environment.mjs"
+    "audit:real": "node scripts/audit-real-environment.mjs",
+    "academic:check": "node scripts/apply-academic-management.mjs",
+    "academic:apply": "node scripts/apply-academic-management.mjs --apply"
   },
   "keywords": [],
   "author": "",
