@@ -120,14 +120,14 @@
         <p>
           {{
             row.status === 'INSCRITO'
-              ? 'La inscripción ya está confirmada.'
+              ? 'La inscripción ya está confirmada. Las correcciones deben conservar un pago que cubra el monto final.'
               : 'Para confirmar, se requiere el pago completo o un importe final de 0 Bs. También se verifican los cupos.'
           }}
         </p>
         <div class="actions">
           <button
             class="secondary-btn"
-            [disabled]="isSaving() || row.finalAmount === 0"
+            [disabled]="isSaving() || (row.finalAmount === 0 && row.status !== 'INSCRITO')"
             [attr.aria-expanded]="action() === 'payment'"
             aria-controls="enrollment-action"
             (click)="open('payment')"

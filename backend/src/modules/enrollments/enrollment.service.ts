@@ -52,6 +52,29 @@ const toEnrollmentResponse = (enrollment: EnrollmentRecord) => ({
 const amountsFor = (basePrice: number, scholarshipPercent: number) =>
   calculateEnrollmentAmount(basePrice, scholarshipPercent);
 
+// Every financial write and confirmation uses the same lock order as preenrollment:
+// course -> enrollment. Values are read again only after acquiring both locks.
+async function withLockedEnrollment<T>(id: number,
+  write: (tx: Prisma.TransactionClient, enrollment: EnrollmentRecord) => Promise<T>) {
+  const initial = await prisma.enrollment.findUnique({ where: { id }, select: { courseId: true } });
+  if (!initial) throw new HttpError(404, 'Inscripcion no encontrada.');
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${initial.courseId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM inscripciones WHERE id = ${id} AND curso_id = ${initial.courseId} FOR UPDATE`;
+    const enrollment = await tx.enrollment.findUnique({ where: { id }, include: enrollmentInclude });
+    if (!enrollment) throw new HttpError(404, 'Inscripcion no encontrada.');
+    if (enrollment.courseId !== initial.courseId) throw new HttpError(409, 'La inscripción cambió. Recarga sus datos.');
+    return write(tx, enrollment);
+  });
+}
+
+function requireConfirmedFunding(enrollment: EnrollmentRecord, finalAmount: number,
+  paymentAmount = enrollment.payment ? toMoney(enrollment.payment.amount) : 0) {
+  if (enrollment.status === 'INSCRITO' && paymentAmount < finalAmount) {
+    throw new HttpError(409, 'La inscripción está confirmada. El pago debe cubrir el monto final para guardar este cambio.');
+  }
+}
+
 export const enrollmentService = {
   async courseSummaries() {
     const [courses, counts] = await Promise.all([
@@ -187,87 +210,61 @@ export const enrollmentService = {
   },
 
   async assignScholarship(id: number, scholarshipPercent: number, scholarshipReason: string) {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { id },
-      include: enrollmentInclude
-    });
+    return withLockedEnrollment(id, async (tx, enrollment) => {
+      if (enrollment.scholarshipActive) throw new HttpError(409, 'Ya existe una beca activa para este participante y curso. Desactívala antes de asignar otra.');
 
-    if (!enrollment) {
-      throw new HttpError(404, 'Inscripcion no encontrada.');
-    }
-    if (enrollment.scholarshipActive) throw new HttpError(409, 'Ya existe una beca activa para este participante y curso. Desactívala antes de asignar otra.');
+      const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), scholarshipPercent);
+      requireConfirmedFunding(enrollment, finalAmount);
 
-    const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), scholarshipPercent);
-
-    const updated = await prisma.enrollment.update({
-      where: { id },
-      data: {
-        scholarshipPercent,
-        scholarshipReason,
-        scholarshipActive: true,
-        benefitAmount,
-        finalAmount
-      },
-      include: enrollmentInclude
-    });
-
-    return toEnrollmentResponse(updated);
-  },
-
-  async deactivateScholarship(id: number) {
-    const enrollment = await prisma.enrollment.findUnique({ where: { id }, include: enrollmentInclude });
-    if (!enrollment) throw new HttpError(404, 'Inscripción no encontrada.');
-    if (!enrollment.scholarshipActive) throw new HttpError(400, 'La inscripción no tiene una beca activa.');
-    const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), 0);
-    const updated = await prisma.enrollment.update({ where: { id }, data: { scholarshipActive: false, benefitAmount, finalAmount }, include: enrollmentInclude });
-    return toEnrollmentResponse(updated);
-  },
-
-  async registerPayment(id: number, amount?: number) {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { id },
-      include: enrollmentInclude
-    });
-
-    if (!enrollment) {
-      throw new HttpError(404, 'Inscripcion no encontrada.');
-    }
-
-    const paymentAmount = amount ?? toMoney(enrollment.finalAmount);
-
-    const payment = await prisma.payment.upsert({
-      where: { enrollmentId: id },
-      create: { enrollmentId: id, amount: paymentAmount },
-      update: { amount: paymentAmount, registeredAt: new Date() }
-    });
-
-    const updated = await prisma.enrollment.findUniqueOrThrow({
-      where: { id },
-      include: enrollmentInclude
-    });
-
-    return {
-      ...toEnrollmentResponse(updated),
-      paymentAmount: toMoney(payment.amount)
-    };
-  },
-
-  async confirm(id: number) {
-    return prisma.$transaction(async tx => {
-      const enrollment = await tx.enrollment.findUnique({
+      const updated = await tx.enrollment.update({
         where: { id },
+        data: {
+          scholarshipPercent,
+          scholarshipReason,
+          scholarshipActive: true,
+          benefitAmount,
+          finalAmount
+        },
         include: enrollmentInclude
       });
 
-      if (!enrollment) {
-        throw new HttpError(404, 'Inscripcion no encontrada.');
-      }
+      return toEnrollmentResponse(updated);
+    });
+  },
 
+  async deactivateScholarship(id: number) {
+    return withLockedEnrollment(id, async (tx, enrollment) => {
+      if (!enrollment.scholarshipActive) throw new HttpError(400, 'La inscripción no tiene una beca activa.');
+      const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), 0);
+      requireConfirmedFunding(enrollment, finalAmount);
+      const updated = await tx.enrollment.update({ where: { id }, data: { scholarshipActive: false, benefitAmount, finalAmount }, include: enrollmentInclude });
+      return toEnrollmentResponse(updated);
+    });
+  },
+
+  async registerPayment(id: number, amount?: number) {
+    return withLockedEnrollment(id, async (tx, enrollment) => {
+      const paymentAmount = amount ?? toMoney(enrollment.finalAmount);
+      requireConfirmedFunding(enrollment, toMoney(enrollment.finalAmount), paymentAmount);
+
+      const payment = await tx.payment.upsert({
+        where: { enrollmentId: id },
+        create: { enrollmentId: id, amount: paymentAmount },
+        update: { amount: paymentAmount, registeredAt: new Date() }
+      });
+
+      return {
+        ...toEnrollmentResponse({ ...enrollment, payment }),
+        paymentAmount: toMoney(payment.amount)
+      };
+    });
+  },
+
+  async confirm(id: number) {
+    return withLockedEnrollment(id, async (tx, enrollment) => {
       if (enrollment.status !== 'PREINSCRITO') {
         throw new HttpError(400, 'El participante no se encuentra preinscrito.');
       }
-
-      await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${enrollment.courseId} FOR UPDATE`;
 
       const capacity = enrollment.course.capacity ?? 0;
       const inscribed = await tx.enrollment.count({
