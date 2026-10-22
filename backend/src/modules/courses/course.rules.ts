@@ -1,5 +1,6 @@
 ﻿import { z } from 'zod';
 import { HttpError } from '../../shared/http-error.js';
+import { boliviaToday } from '../attendance/attendance.rules.js';
 
 const requiredText = (field: string, minLength = 1) =>
   z
@@ -34,7 +35,7 @@ export const toDateOnly = (value: Date | string) => {
   return value.toISOString().slice(0, 10);
 };
 
-export const todayDateOnly = () => toDateOnly(new Date());
+export const todayDateOnly = () => boliviaToday();
 
 export const isPreinscriptionOpen = (startDate?: string | Date | null, endDate?: string | Date | null, today = todayDateOnly()) => {
   if (!startDate || !endDate) {

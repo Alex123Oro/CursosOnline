@@ -6,6 +6,7 @@ import { finalize, of, switchMap } from 'rxjs';
 import { Course, CoursePayload, CourseService, ParticipantTypeOption } from '../../../core/course.service';
 import { InstructorAttendanceService, InstructorOption } from '../../../core/instructor-attendance.service';
 import { CourseForm } from '../course-form/course-form';
+import { boliviaDateOnly } from '../../../core/business-date';
 import { CourseList } from '../course-list/course-list';
 
 type FormMode = 'create' | 'edit';
@@ -34,7 +35,7 @@ export class CoursesPage {
 
   readonly courses = signal<Course[]>([]);
   // Match the date-only rule used by the preinscription API.
-  private readonly today = signal(new Date().toISOString().slice(0, 10));
+  private readonly today = signal(boliviaDateOnly());
   readonly publishedCount = computed(() => this.courses().filter(course => course.status === 'PUBLISHED').length);
   readonly draftCount = computed(() => this.courses().filter(course => course.status === 'DRAFT').length);
   readonly openPreinscriptionCount = computed(() => this.courses().filter(course =>
@@ -53,7 +54,7 @@ export class CoursesPage {
 
   constructor() {
     if (!this.isFormPage) {
-      const clock = window.setInterval(() => this.today.set(new Date().toISOString().slice(0, 10)), 60_000);
+      const clock = window.setInterval(() => this.today.set(boliviaDateOnly()), 60_000);
       inject(DestroyRef).onDestroy(() => window.clearInterval(clock));
     }
     if (this.isCreatePage) this.isFormOpen.set(true);
