@@ -3,7 +3,7 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { count: vi.fn(), delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionRoutes, teachingRoutes } from '../src/modules/course-sessions/course-session.routes.js';
 import { courseRoutes } from '../src/modules/courses/course.routes.js';
@@ -26,10 +26,10 @@ describe('session HTTP contract and authorization', () => {
   afterAll(() => new Promise<void>((resolve, reject) => { server.close(error => error ? reject(error) : resolve()); server.closeAllConnections(); }));
   beforeEach(() => {
     vi.resetAllMocks(); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
-    mocks.user.findUnique.mockImplementation(({ where }) => ({ id: Number(where.authId), name: 'User', email: 'user@test', role: Number(where.authId) === 1 ? 'ADMIN' : Number(where.authId) === 10 ? 'PARTICIPANT' : 'INSTRUCTOR', participantTypeId: null }));
+    mocks.user.findUnique.mockImplementation(({ where }) => ({ id: Number(where.authId), active: true, name: 'User', email: 'user@test', role: Number(where.authId) === 1 ? 'ADMIN' : Number(where.authId) === 10 ? 'PARTICIPANT' : 'INSTRUCTOR', participantTypeId: null }));
     mocks.course.findUnique.mockResolvedValue(course); mocks.course.findMany.mockResolvedValue([course]);
     mocks.courseSession.findFirst.mockImplementation(({ where }) => where.date && where.date.toISOString().slice(0, 10) !== '2026-10-12' ? { id: 99 } : null);
-    mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record);
+    mocks.courseSession.count.mockResolvedValue(2); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record);
   });
   it.each(['GET', 'POST', 'PUT'])('returns 401 to guests on %s', async method => {
     const response = await fetch(`${base}/courses/2/sessions${method === 'PUT' ? '/3' : ''}`, { method, ...(method !== 'GET' ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}) });
@@ -89,7 +89,7 @@ describe('session HTTP contract and authorization', () => {
     const headers = { Authorization: 'Bearer 1', 'Content-Type': 'application/json' };
     const draft = { ...course, status: 'DRAFT', schedule: null, capacity: 20,
       preinscriptionStart: new Date('2026-09-01'), preinscriptionEnd: new Date('2026-09-30'),
-      sessions: [] as typeof record[], prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() };
+      sessions: [] as typeof record[], prices: [{ participantTypeId: 1, participantType: { name: 'Estudiante' }, basePrice: 100 }], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() };
     mocks.course.findUnique.mockImplementation(async () => draft);
     mocks.course.update.mockImplementation(async ({ data }) => Object.assign(draft, data));
     expect((await fetch(`${base}/courses/2/sessions`, { headers })).status).toBe(200);

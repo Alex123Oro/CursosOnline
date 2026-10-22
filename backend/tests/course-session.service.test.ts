@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
-const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), course: { findUnique: vi.fn(), findMany: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), course: { findUnique: vi.fn(), findMany: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, courseSession: { count: vi.fn(), delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionService } from '../src/modules/course-sessions/course-session.service.js';
 
@@ -10,6 +10,11 @@ const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', ins
 const input = { sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
 const record = { id: 3, courseId: 2, ...input, date: new Date(input.date), createdAt: new Date('2026-10-01'), updatedAt: new Date('2026-10-01'), _count: { attendance: 0 }, instructorAttendance: null };
 describe('course session service', () => {
+  it('does not remove the last real class of a published course',async () => {
+    mocks.courseSession.count.mockResolvedValue(1);
+    await expect(courseSessionService.remove(2,3,instructor)).rejects.toMatchObject({ statusCode:409 });
+    expect(mocks.courseSession.delete).not.toHaveBeenCalled();
+  });
   it('deletes only the session in the requested course', async () => {
     mocks.course.findUnique.mockResolvedValue(course);
     await courseSessionService.remove(2, 3, instructor);
@@ -24,7 +29,7 @@ describe('course session service', () => {
     mocks.courseSession.delete.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('restricted', { code: String(code), clientVersion: '6' }));
     await expect(courseSessionService.remove(2, 3, instructor)).rejects.toMatchObject({ statusCode });
   });
-  beforeEach(() => { vi.resetAllMocks(); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.findFirst.mockResolvedValue(null); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record); });
+  beforeEach(() => { vi.resetAllMocks(); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]); mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.count.mockResolvedValue(2); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.findFirst.mockResolvedValue(null); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record); });
   it('creates an out-of-period session with a warning and string identifiers', async () => {
     const result = await courseSessionService.create(2, input, instructor);
     expect(result).toMatchObject({ id: '3', courseId: '2', date: input.date, endTime: '21:00' });

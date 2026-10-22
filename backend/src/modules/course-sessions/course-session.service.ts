@@ -104,7 +104,7 @@ async function withUnlockedSession<T>(
 ): Promise<T> {
   return prisma.$transaction(async tx => {
     // Se mantiene el orden de bloqueo curso -> sesión para reducir conflictos.
-    await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR UPDATE`;
     const course = await authorizedCourse(courseId, user, tx);
     if (user.role === 'ADMIN' && course.status !== 'DRAFT') {
       throw new HttpError(403, 'Solo un instructor asignado puede editar sesiones de cursos publicados.');
@@ -232,9 +232,12 @@ export const courseSessionService = {
 
   async remove(courseId: number, sessionId: number, user: RequestUser) {
     try {
-      await withUnlockedSession(courseId, sessionId, user, tx =>
-        tx.courseSession.delete({ where: { id: sessionId, courseId } })
-      );
+      await withUnlockedSession(courseId, sessionId, user, async (tx, course) => {
+        if (course.status === 'PUBLISHED' && await tx.courseSession.count({ where: { courseId } }) <= 1) {
+          throw new HttpError(409, 'Un curso publicado debe conservar al menos una clase.');
+        }
+        return tx.courseSession.delete({ where: { id: sessionId, courseId } });
+      });
     } catch (error) { return handleError(error); }
   }
 };

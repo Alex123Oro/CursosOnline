@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { findUnique, update } = vi.hoisted(() => ({
+const { findUnique, update, transaction, queryRaw } = vi.hoisted(() => ({
+  transaction: vi.fn(), queryRaw: vi.fn(),
   findUnique: vi.fn(),
   update: vi.fn()
 }));
 
 vi.mock('../src/config/prisma.js', () => ({
-  prisma: { course: { findUnique, update } }
+  prisma: { $transaction: transaction, course: { findUnique, update } }
 }));
 
 import { courseService } from '../src/modules/courses/course.service.js';
@@ -24,7 +25,10 @@ const input = courseInputSchema.parse({
 });
 
 describe('course updates', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    transaction.mockImplementation(callback => callback({ $queryRaw: queryRaw, course: { findUnique, update } }));
+  });
 
   it.each(['startDate', 'endDate'] as const)('rejects removing %s from a published course', async field => {
     findUnique.mockResolvedValue({ status: 'PUBLISHED' });
@@ -35,7 +39,9 @@ describe('course updates', () => {
   });
 
   it.each(['DRAFT', 'PUBLISHED'])('preserves %s when saving valid data', async status => {
-    findUnique.mockResolvedValue({ status });
+    findUnique.mockResolvedValue({ status, instructor: input.instructor, schedule: input.schedule,
+      _count: { enrollments: 0 }, sessions: [{ date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 60 }],
+      prices: [{ basePrice: 100 }] });
     const edited = status === 'DRAFT'
       ? input
       : { ...input, startDate: '2026-10-01', endDate: '2026-11-01', capacity: 20, preinscriptionStart: '2026-09-01', preinscriptionEnd: '2026-09-30' };
@@ -63,7 +69,7 @@ describe('course updates', () => {
     expect(update).not.toHaveBeenCalled();
   });
   it('persists and returns the minimum enrollment', async () => {
-    findUnique.mockResolvedValue({ id: 7, status: 'DRAFT', instructorId: null });
+    findUnique.mockResolvedValue({ id: 7, status: 'DRAFT', instructorId: null, _count: { enrollments: 0 } });
     update.mockResolvedValue({ ...input, id: 7, minimumEnrollment: 5, capacity: 20, status: 'DRAFT', code: null,
       preinscriptionStart: null, preinscriptionEnd: null, prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() });
     await expect(courseService.update(7, { ...input, minimumEnrollment: 5, capacity: 20 })).resolves.toMatchObject({ minimumEnrollment: 5 });
