@@ -70,6 +70,7 @@ model User {
   name              String            @map("nombre_completo")
   email             String            @unique @map("correo")
   role              UserRole          @map("rol")
+  active            Boolean?          @default(true) @map("activo")
   sis               String?           @unique @map("codigo_sis")
   degree            InstructorDegree? @map("grado")
   phone             String?           @map("telefono")

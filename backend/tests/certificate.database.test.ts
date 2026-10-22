@@ -28,6 +28,7 @@ describe.skipIf(!container)('certificate SQL integration (isolated Docker only)'
     query(readFileSync(new URL('../prisma/migrations/20261016020000_certificate_participation/migration.sql',import.meta.url),'utf8'));
     query('ALTER TABLE cursos ADD COLUMN instructor_id BIGINT REFERENCES usuarios(id); ALTER TABLE inscripciones ADD UNIQUE(id,curso_id); UPDATE cursos SET instructor_id=4 WHERE id=1;');
     query(readFileSync(new URL('../prisma/migrations/20261018100000_add_academic_management/migration.sql',import.meta.url),'utf8'));
+    query(readFileSync(new URL('../prisma/migrations/20261022100000_security_and_academic_rules/migration.sql',import.meta.url),'utf8'));
   },30000);
   it('uses the same calculated outcome in the roster and issuance', () => {
     const roster = JSON.parse(query('SELECT certificate_candidates(1);'));
@@ -95,5 +96,61 @@ describe.skipIf(!container)('certificate SQL integration (isolated Docker only)'
     expect(query('SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM resultados_curso r;')).toBe(before);
     expect(query('SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM certificados c;')).toBe(certificates);
     expect(run('INSERT INTO resultados_academicos_curso(curso_id,inscripcion_id) VALUES(2,11);').status).not.toBe(0);
+  });
+
+  it.each(['anon','authenticated'])('blocks direct data reads and writes for %s', role => {
+    for (const table of ['inscripciones','pagos','precios_curso','tipos_participante']) {
+      expect(run(`SET ROLE ${role}; SELECT * FROM public.${table};`).status).not.toBe(0);
+      expect(run(`SET ROLE ${role}; DELETE FROM public.${table} WHERE false;`).status).not.toBe(0);
+    }
+    expect(query(`SELECT count(*) FROM pg_class c WHERE c.relnamespace='public'::regnamespace
+      AND c.relname IN ('inscripciones','pagos','precios_curso','tipos_participante') AND c.relrowsecurity;`)).toBe('4');
+    expect(query(`SET ROLE service_role; SELECT count(*) FROM public.inscripciones;`)).not.toBe('0');
+  });
+
+  it('requires weights of exactly 100 for both typed and legacy approval checks', () => {
+    const pending=query(`BEGIN; UPDATE evaluaciones SET ponderacion=20 WHERE curso_id=1;
+      SELECT approval_status FROM certificate_assessment_for_type(1,'aprobacion') WHERE enrollment_id=16;
+      SELECT approval_status FROM certificate_assessment(1) WHERE enrollment_id=16; ROLLBACK;`);
+    expect(pending.split('\n')).toEqual(['PENDIENTE','PENDIENTE']);
+    expect(run(`BEGIN; UPDATE evaluaciones SET ponderacion=20 WHERE curso_id=1;
+      SELECT emit_certificate_for_type(16,'99AA0001','https://example.test/verificar/99AA0001',1,'aprobacion'); ROLLBACK;`).status).not.toBe(0);
+  });
+
+  it('keeps approval and participation pending when one of five attendance marks is missing', () => {
+    const result=query(`BEGIN; DELETE FROM asistencias_participantes WHERE inscripcion_id=16 AND sesion_id=15;
+      SELECT approval_status FROM certificate_assessment_for_type(1,'aprobacion') WHERE enrollment_id=16;
+      SELECT approval_status FROM certificate_assessment_for_type(1,'participacion') WHERE enrollment_id=16; ROLLBACK;`);
+    expect(result.split('\n')).toEqual(['PENDIENTE','PENDIENTE']);
+    expect(run(`BEGIN; DELETE FROM asistencias_participantes WHERE inscripcion_id=16 AND sesion_id=15;
+      SELECT emit_certificate_for_type(16,'99AA0002','https://example.test/verificar/99AA0002',1,'participacion'); ROLLBACK;`).status).not.toBe(0);
+  });
+
+  it('permits a completed attendance record with four present and one explicitly absent', () => {
+    expect(query(`BEGIN; UPDATE asistencias_participantes SET estado='ausente' WHERE inscripcion_id=16 AND sesion_id=15;
+      SELECT approval_status FROM certificate_assessment_for_type(1,'aprobacion') WHERE enrollment_id=16; ROLLBACK;`)).toBe('APROBADO');
+  });
+
+  it('rounds the final weighted score only once, consistently with participant progress', () => {
+    expect(query(`BEGIN;
+      UPDATE evaluaciones SET ponderacion=50,puntaje_maximo=3 WHERE id=1;
+      UPDATE calificaciones SET nota=2 WHERE evaluacion_id=1 AND inscripcion_id=16;
+      INSERT INTO evaluaciones(id,curso_id,nombre,ponderacion,puntaje_maximo) VALUES(1001,1,'Otra evaluación',50,100);
+      INSERT INTO calificaciones(evaluacion_id,inscripcion_id,nota) VALUES(1001,16,73.32);
+      SELECT final_grade::text||'/'||approval_status FROM certificate_assessment_for_type(1,'aprobacion')
+        WHERE enrollment_id=16; ROLLBACK;`)).toBe('69.99/REPROBADO');
+  });
+
+  it.each(['false','NULL'])('refuses issuance by an administrator whose active state is %s', active => {
+    expect(run(`BEGIN; UPDATE usuarios SET activo=${active} WHERE id=1;
+      SELECT emit_certificate(16,'99AA0003','https://example.test/verificar/99AA0003',1); ROLLBACK;`).status).not.toBe(0);
+  });
+
+  it('reapplies the priority migration without changing certificates or their results', () => {
+    const before=query('SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM certificados c;');
+    const results=query('SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM resultados_curso r;');
+    query(readFileSync(new URL('../prisma/migrations/20261022100000_security_and_academic_rules/migration.sql',import.meta.url),'utf8'));
+    expect(query('SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM certificados c;')).toBe(before);
+    expect(query('SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM resultados_curso r;')).toBe(results);
   });
 });

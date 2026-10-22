@@ -51,7 +51,7 @@ function compute(enrollment: ProgressEnrollment, today: string) {
   const weightTotal = graded.reduce((sum, evaluation) => sum + evaluation.weight, 0);
   const configuredWeight = evaluations.reduce((sum, evaluation) => sum + evaluation.weight, 0);
   const currentGrade = weightTotal ? round(graded.reduce((sum, evaluation) =>
-    sum + (evaluation.percentage ?? 0) * evaluation.weight, 0) / weightTotal) : null;
+    sum + (evaluation.score! / evaluation.maxScore * 100) * evaluation.weight, 0) / weightTotal) : null;
   const endDate = dateOnly(course.endDate);
   const isFinished = Boolean(endDate && endDate < today);
   const allEvaluationsGraded = evaluations.length > 0 && graded.length === evaluations.length;
