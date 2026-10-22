@@ -55,6 +55,7 @@ describe('course-scoped enrollment browsing', () => {
     db.$transaction.mockImplementation((callback) => callback(db));
     db.user.findUnique.mockImplementation(({ where }) => ({
       id: Number(where.authId),
+      active: true,
       role: Number(where.authId) === 1 ? 'ADMIN' : 'INSTRUCTOR',
     }));
     db.course.findUnique.mockResolvedValue({ id: 7 });

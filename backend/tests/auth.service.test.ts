@@ -37,6 +37,7 @@ describe('Supabase authentication', () => {
       name: 'Luis',
       email: 'luis@example.test',
       role: 'PARTICIPANT',
+      active: true,
       participantTypeId: 2,
       participantType: { name: 'Estudiante' }
     });
@@ -63,7 +64,7 @@ describe('Supabase authentication', () => {
       user: { id: 'luis-auth-id', email: 'luis@eva.local' }
     }), { status: 200 })));
     findUnique.mockResolvedValue({ id: 5, name: 'Luis', email: 'luis@eva.local',
-      role: 'PARTICIPANT', participantTypeId: 2, participantType: { name: 'Estudiante' } });
+      role: 'PARTICIPANT', active: true, participantTypeId: 2, participantType: { name: 'Estudiante' } });
 
     await expect(authService.login('luis@eva.local', 'participante123@')).resolves.toMatchObject({
       accessToken: 'real-luis-token', user: { role: 'PARTICIPANT' }
@@ -110,5 +111,28 @@ describe('Supabase authentication', () => {
     })));
 
     await expect(verifyAccessToken('access-token')).resolves.toMatchObject({ id: 'auth-id' });
+  });
+
+  it.each([false, null, undefined])('allows a valid local profile with active=%s on login', async active => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      access_token: 'token', user: { id: 'auth-id' }
+    }))));
+    findUnique.mockResolvedValue({
+      id: 5, name: 'Luis', email: 'luis@example.test', role: 'PARTICIPANT', active,
+      participantTypeId: 2, participantType: { name: 'Estudiante' }
+    });
+    await expect(authService.login('luis@example.test', 'password')).resolves.toMatchObject({
+      accessToken: 'token', user: { id: '5', role: 'PARTICIPANT' }
+    });
+  });
+
+  it.each([429, 500, 503])('keeps upstream status %s distinct from an invalid session', async status => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status })));
+    await expect(verifyAccessToken('token')).rejects.toMatchObject({ statusCode: 503 });
+  });
+
+  it('reports an auth network failure as unavailable, not invalid credentials', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await expect(verifyAccessToken('token')).rejects.toMatchObject({ statusCode: 503 });
   });
 });

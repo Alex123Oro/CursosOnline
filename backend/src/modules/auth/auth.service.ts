@@ -75,11 +75,15 @@ export const authService = {
 };
 
 export const verifyAccessToken = async (token: string): Promise<SupabaseUser | null> => {
-  if (!env.supabaseUrl || !apiKey()) return null;
+  if (!env.supabaseUrl || !apiKey()) throw new HttpError(503, 'La autenticación no está configurada.');
+  let response: Response;
   try {
-    const response = await fetch(authUrl('user'), { headers: authHeaders(token), signal: AbortSignal.timeout(15000) });
-    return response.ok ? await response.json() as SupabaseUser : null;
+    response = await fetch(authUrl('user'), { headers: authHeaders(token), signal: AbortSignal.timeout(15000) });
   } catch {
-    return null;
+    throw new HttpError(503, 'No se pudo validar la sesión. Inténtalo nuevamente.');
   }
+  if (response.status === 401 || response.status === 403) return null;
+  if (!response.ok) throw new HttpError(503, 'No se pudo validar la sesión. Inténtalo nuevamente.');
+  try { return await response.json() as SupabaseUser; }
+  catch { throw new HttpError(503, 'No se pudo validar la sesión. Inténtalo nuevamente.'); }
 };
