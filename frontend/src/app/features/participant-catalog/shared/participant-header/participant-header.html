@@ -5,7 +5,7 @@
     <span class="catalog-header-label">{{ label() }}</span>
     @if (session.accessToken()) {
       <span class="catalog-header-label">{{ session.currentUser()?.name }}</span>
-      @if (session.currentUser()?.role === 'PARTICIPANT') { <a class="session-action" routerLink="/mi-progreso">Mi progreso</a><a class="session-action" routerLink="/mis-certificados">Mis certificados</a> }
+      @if (session.currentUser()?.role === 'PARTICIPANT') { <a class="session-action" routerLink="/mis-cursos">Mi campus</a><a class="session-action" routerLink="/mis-certificados">Mis certificados</a> }
       @if (session.currentUser()?.role === 'ADMIN' || session.currentUser()?.role === 'INSTRUCTOR') { <a class="session-action" routerLink="/cursos">Volver a cursos</a> }
       <button class="session-action" type="button" (click)="logout()">Cerrar sesión</button>
     } @else {

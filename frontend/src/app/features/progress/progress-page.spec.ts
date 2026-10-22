@@ -48,6 +48,9 @@ describe('ProgressPage', () => {
     expect(content).toContain('No cumple la asistencia mínima');
     expect(content).toContain('asistencia mínima 80%');
     expect(content).toContain('Requisito de asistencia: No cumplido');
+    expect(Array.from(fixture.nativeElement.querySelectorAll('.summary-card strong'),
+      (element: unknown) => (element as HTMLElement).textContent?.trim())).toEqual(['1', '1', '0', '0']);
+    expect(fixture.nativeElement.querySelector('.course-links a')?.getAttribute('href')).toBe('/catalogo/4');
   });
 
   it('shows an empty state when the participant has no enrollments', async () => {
@@ -56,5 +59,38 @@ describe('ProgressPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Aún no tienes inscripciones');
+    expect(fixture.nativeElement.querySelector('.primary-link')?.getAttribute('href')).toBe('/catalogo');
+  });
+
+  it('distinguishes pending enrollment and missing marks from a zero grade or attendance', async () => {
+    http.expectOne(`${environment.apiBaseUrl}/progress/me`).flush([{
+      enrollmentId: '13', enrollmentStatus: 'PREINSCRITO',
+      course: { id: '5', code: 'EVA-05', name: 'Próximo curso', startDate: null, endDate: null },
+      attendance: { presentSessions: 0, completedSessions: 0, percentage: null, sessions: [] },
+      evaluations: [], currentGrade: null, finalGrade: null, minimumPassingScore: 70,
+      requirements: { academicMet: null, attendanceMet: null, minimumAttendancePercent: 80 },
+      finalStatus: null, certificateEligible: false
+    }]);
+    await fixture.whenStable(); fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    expect(Array.from(page.querySelectorAll('.summary-card strong'), element => element.textContent?.trim())).toEqual(['1', '0', '1', '0']);
+    expect(page.textContent).toContain('Sin sesiones realizadas');
+    expect(page.textContent).toContain('Requisito académico: Pendiente');
+    expect(page.textContent).toContain('Requisito de asistencia: Pendiente');
+    expect(page.querySelector('progress')).toBeNull();
+    expect(page.querySelector('.course-links a[href="/mis-certificados"]')).toBeNull();
+  });
+
+  it('shows a retry action instead of empty or stale totals after a load failure', async () => {
+    http.expectOne(`${environment.apiBaseUrl}/progress/me`).flush({ message: 'Servicio temporalmente no disponible' }, { status: 503, statusText: 'Unavailable' });
+    await fixture.whenStable(); fixture.detectChanges();
+    const page: HTMLElement = fixture.nativeElement;
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Servicio temporalmente no disponible');
+    expect(page.querySelector('.summary-grid')).toBeNull();
+    page.querySelector<HTMLButtonElement>('[role="alert"] button')!.click();
+    http.expectOne(`${environment.apiBaseUrl}/progress/me`).flush([]);
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.textContent).toContain('Aún no tienes inscripciones');
   });
 });

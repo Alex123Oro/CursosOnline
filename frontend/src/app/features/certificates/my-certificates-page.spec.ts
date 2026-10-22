@@ -26,11 +26,13 @@ describe('MyCertificatesPage', () => {
     http.expectOne(`${environment.apiBaseUrl}/certificates/me`).flush([certificateFixture]); await fixture.whenStable(); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('PostgreSQL'); expect(fixture.nativeElement.textContent).toContain('8F72A91C');
     expect(fixture.nativeElement.textContent).toContain('Vigente'); expect(fixture.nativeElement.textContent).toContain('Descargar PDF');
+    expect(fixture.nativeElement.querySelector('.achievement-total strong')?.textContent).toBe('1');
     expect(fixture.nativeElement.querySelector('a[href="/mis-certificados/7"]')).toBeTruthy();
   });
   it('shows revoked records but hides download', async () => {
     http.expectOne(`${environment.apiBaseUrl}/certificates/me`).flush([{ ...certificateFixture,status: 'REVOKED' }]); await fixture.whenStable(); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Anulado'); expect(fixture.nativeElement.textContent).not.toContain('Descargar PDF');
+    expect(fixture.nativeElement.querySelector('.achievement-total strong')?.textContent).toBe('0');
   });
   it('clears private records when the identity changes', async () => {
     http.expectOne(`${environment.apiBaseUrl}/certificates/me`).flush([certificateFixture]); await fixture.whenStable(); fixture.detectChanges();

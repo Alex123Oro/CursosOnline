@@ -10,7 +10,7 @@ import { isCertificateVerificationRoute } from './core/public-request';
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrls: ['./app.scss', './participant-shell.scss']
 })
 export class App {
   private readonly router = inject(Router);

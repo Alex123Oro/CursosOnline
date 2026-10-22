@@ -24,7 +24,7 @@ describe('Profile navigation', () => {
     TestBed.inject(SessionNavigationService); TestBed.tick();
     expect(navigateByUrl).not.toHaveBeenCalled();
     selectFixtureUser(session, '8'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
-    selectFixtureUser(session, '9'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/catalogo');
+    selectFixtureUser(session, '9'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/mis-cursos');
     selectFixtureUser(session, '1'); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/cursos');
     session.endSessionLocally(); TestBed.tick(); expect(navigateByUrl).toHaveBeenLastCalledWith('/iniciar-sesion');
     http.verify(); clearFixtureSession();

@@ -1,16 +1,17 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Certificate, CertificateService } from '../../core/certificate.service';
 import { SessionService } from '../../core/session.service';
 import { CertificateActions } from './certificate-actions';
 import { certificateDate } from './certificate-presentation';
 
-@Component({ selector: 'app-my-certificates-page', imports: [RouterLink, CertificateActions], templateUrl: './my-certificates-page.html', styleUrl: './my-certificates-page.scss' })
+@Component({ selector: 'app-my-certificates-page', imports: [RouterLink, CertificateActions], templateUrl: './my-certificates-page.html', styleUrls: ['./certificate-gallery.scss', './my-certificates-page.scss'] })
 export class MyCertificatesPage {
   private readonly api = inject(CertificateService);
   private readonly session = inject(SessionService);
   private readonly retryCount = signal(0);
   readonly items = signal<Certificate[]>([]);
+  readonly validCount = computed(() => this.items().filter(item => item.status === 'VALID').length);
   readonly loading = signal(false);
   readonly error = signal('');
   readonly date = certificateDate;

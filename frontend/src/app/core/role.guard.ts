@@ -4,7 +4,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { filter, map, take } from 'rxjs';
 import { SessionService, UserRole } from './session.service';
 
-export const profileHome = (role?: UserRole) => role === 'ADMIN' || role === 'INSTRUCTOR' ? '/cursos' : '/catalogo';
+export const profileHome = (role?: UserRole) => role === 'ADMIN' || role === 'INSTRUCTOR' ? '/cursos' : role === 'PARTICIPANT' ? '/mis-cursos' : '/catalogo';
 
 export const roleGuard = (roles: UserRole[]): CanActivateFn => () => {
   const session = inject(SessionService);
