@@ -5,12 +5,16 @@ import { calculateEnrollmentAmount } from '../../shared/enrollment-amount.js';
 import { HttpError } from '../../shared/http-error.js';
 import { isPreinscriptionOpen } from '../courses/course.rules.js';
 import type { EnrollmentQuery } from './enrollment-query.js';
+import { randomUUID } from 'node:crypto';
+import { activeEnrollmentStatuses, expireDueReservations } from './enrollment-lifecycle.js';
 
 const enrollmentInclude = {
   course: { select: { id: true, name: true, code: true, capacity: true } },
   participant: { select: { id: true, name: true, email: true } },
   participantType: { select: { id: true, name: true } },
-  payment: { select: { id: true, amount: true, registeredAt: true } }
+  payment: { select: { id: true, amount: true, registeredAt: true } },
+  paymentMovements: { include: { recordedBy: { select: { name: true } } }, orderBy: [{ registeredAt: 'desc' }, { id: 'desc' }] },
+  events: { include: { recordedBy: { select: { name: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] }
 } satisfies Prisma.EnrollmentInclude;
 
 type EnrollmentRecord = Prisma.EnrollmentGetPayload<{ include: typeof enrollmentInclude }>;
@@ -39,14 +43,20 @@ const toEnrollmentResponse = (enrollment: EnrollmentRecord) => ({
   paymentRegisteredAt: enrollment.payment?.registeredAt.toISOString() ?? null,
   paymentStatus: toMoney(enrollment.finalAmount) <= 0
     ? 'NO_REQUIERE'
-    : !enrollment.payment
+    : !enrollment.payment || Number(enrollment.payment.amount) <= 0
       ? 'PENDIENTE'
       : toMoney(enrollment.payment.amount) >= toMoney(enrollment.finalAmount)
         ? 'PAGADO'
         : 'PARCIAL',
   createdAt: enrollment.createdAt.toISOString(),
   updatedAt: enrollment.updatedAt.toISOString(),
-  confirmedAt: enrollment.confirmedAt?.toISOString() ?? null
+  confirmedAt: enrollment.confirmedAt?.toISOString() ?? null,
+  closedAt: enrollment.closedAt?.toISOString() ?? null,
+  closureReason: enrollment.closureReason ?? null,
+  paymentMovements: (enrollment.paymentMovements ?? []).map(m => ({ id: String(m.id), kind: m.kind, amount: Number(m.amount), reason: m.reason,
+    reference: m.reference, recordedBy: m.recordedBy?.name ?? 'Registro anterior', registeredAt: m.registeredAt.toISOString() })),
+  history: (enrollment.events ?? []).map(e => ({ id: String(e.id), status: e.status, reason: e.reason,
+    recordedBy: e.recordedBy?.name ?? 'Sistema', createdAt: e.createdAt.toISOString() }))
 });
 
 const amountsFor = (basePrice: number, scholarshipPercent: number) =>
@@ -76,6 +86,19 @@ function requireConfirmedFunding(enrollment: EnrollmentRecord, finalAmount: numb
 }
 
 export const enrollmentService = {
+  async mine(user: RequestUser) {
+    return (await prisma.enrollment.findMany({ where: { participantId: user.id }, include: enrollmentInclude, orderBy: { createdAt: 'desc' } })).map(toEnrollmentResponse);
+  },
+  async expire() { return { expired: await expireDueReservations() }; },
+  async close(id: number, status: 'CANCELADO' | 'RECHAZADO', reason: string, actor: RequestUser) {
+    return withLockedEnrollment(id, async (tx, enrollment) => {
+      if (actor.role !== 'ADMIN' && (actor.role !== 'PARTICIPANT' || enrollment.participantId !== actor.id || status !== 'CANCELADO')) throw new HttpError(403, 'No tienes permisos para cambiar esta preinscripción.');
+      if (enrollment.status !== 'PREINSCRITO') throw new HttpError(409, 'Solo se pueden cerrar preinscripciones activas.');
+      if (Number(enrollment.payment?.amount ?? 0) > 0) throw new HttpError(409, 'La reserva tiene pagos. Administración debe gestionar la devolución antes de liberar el cupo.');
+      return toEnrollmentResponse(await tx.enrollment.update({ where: { id }, data: { status, closedAt: new Date(), closureReason: reason,
+        events: { create: { status, reason, recordedById: actor.id } } }, include: enrollmentInclude }));
+    });
+  },
   async courseSummaries() {
     const [courses, counts] = await Promise.all([
       prisma.course.findMany({ select: { id: true, name: true, code: true, status: true, capacity: true }, orderBy: [{ name: 'asc' }, { id: 'asc' }] }),
@@ -83,7 +106,8 @@ export const enrollmentService = {
     ]);
     const totals = new Map(counts.map(item => [`${item.courseId}/${item.status}`, item._count._all]));
     return courses.map(course => ({ ...course, id: String(course.id), code: course.code ?? '',
-      preenrolledCount: totals.get(`${course.id}/PREINSCRITO`) ?? 0, enrolledCount: totals.get(`${course.id}/INSCRITO`) ?? 0 }));
+      preenrolledCount: totals.get(`${course.id}/PREINSCRITO`) ?? 0, enrolledCount: totals.get(`${course.id}/INSCRITO`) ?? 0,
+      closedCounts: Object.fromEntries(['CANCELADO', 'RECHAZADO', 'CADUCADO'].map(status => [status, totals.get(`${course.id}/${status}`) ?? 0])) }));
   },
   async detail(id: number) {
     const enrollment = await prisma.enrollment.findUnique({ where: { id }, include: enrollmentInclude });
@@ -149,7 +173,7 @@ export const enrollmentService = {
         throw new HttpError(400, 'No existen cupos disponibles para este curso.');
       }
 
-      const occupied = await tx.enrollment.count({ where: { courseId } });
+      const occupied = await tx.enrollment.count({ where: { courseId, status: { in: [...activeEnrollmentStatuses] } } });
       if (occupied >= course.capacity) {
         throw new HttpError(400, 'No existen cupos disponibles para este curso.');
       }
@@ -163,7 +187,7 @@ export const enrollmentService = {
         }
       });
 
-      if (existing) {
+      if (existing && !['CANCELADO', 'CADUCADO'].includes(existing.status)) {
         throw new HttpError(409, 'Ya estas preinscrito en este curso.');
       }
 
@@ -184,19 +208,20 @@ export const enrollmentService = {
       const { benefitAmount, finalAmount } = amountsFor(basePrice, 0);
 
       try {
-        const enrollment = await tx.enrollment.create({
-          data: {
+        const data = {
             courseId,
             participantId: user.id,
             participantTypeId,
-            status: 'PREINSCRITO',
+            status: 'PREINSCRITO' as const,
             basePrice,
             scholarshipPercent: 0,
             benefitAmount,
-            finalAmount
-          },
-          include: enrollmentInclude
-        });
+            finalAmount, scholarshipActive: false, scholarshipReason: null, closedAt: null, closureReason: null,
+            events: { create: { status: 'PREINSCRITO' as const, reason: existing ? 'El participante volvió a solicitar una reserva.' : 'Preinscripción del participante.', recordedById: user.id } }
+        };
+        const enrollment = existing
+          ? await tx.enrollment.update({ where: { id: existing.id }, data, include: enrollmentInclude })
+          : await tx.enrollment.create({ data, include: enrollmentInclude });
 
         return toEnrollmentResponse(enrollment);
       } catch (error) {
@@ -211,6 +236,7 @@ export const enrollmentService = {
 
   async assignScholarship(id: number, scholarshipPercent: number, scholarshipReason: string) {
     return withLockedEnrollment(id, async (tx, enrollment) => {
+      if (!activeEnrollmentStatuses.includes(enrollment.status as 'PREINSCRITO' | 'INSCRITO')) throw new HttpError(409, 'La inscripción está cerrada.');
       if (enrollment.scholarshipActive) throw new HttpError(409, 'Ya existe una beca activa para este participante y curso. Desactívala antes de asignar otra.');
 
       const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), scholarshipPercent);
@@ -234,6 +260,7 @@ export const enrollmentService = {
 
   async deactivateScholarship(id: number) {
     return withLockedEnrollment(id, async (tx, enrollment) => {
+      if (!activeEnrollmentStatuses.includes(enrollment.status as 'PREINSCRITO' | 'INSCRITO')) throw new HttpError(409, 'La inscripción está cerrada.');
       if (!enrollment.scholarshipActive) throw new HttpError(400, 'La inscripción no tiene una beca activa.');
       const { benefitAmount, finalAmount } = amountsFor(toMoney(enrollment.basePrice), 0);
       requireConfirmedFunding(enrollment, finalAmount);
@@ -242,25 +269,40 @@ export const enrollmentService = {
     });
   },
 
-  async registerPayment(id: number, amount?: number) {
-    return withLockedEnrollment(id, async (tx, enrollment) => {
-      const paymentAmount = amount ?? toMoney(enrollment.finalAmount);
-      requireConfirmedFunding(enrollment, toMoney(enrollment.finalAmount), paymentAmount);
+  async registerPayment(id: number, amount?: number, actorId?: number, requestId: string = randomUUID(), reason = 'Abono registrado por administración', reference?: string) {
+    return this.movement(id, { kind: 'ABONO', amount, reason, reference, requestId }, actorId);
+  },
 
-      const payment = await tx.payment.upsert({
+  async movement(id: number, input: { kind: 'ABONO' | 'DEVOLUCION' | 'AJUSTE'; amount?: number | undefined; reason: string; reference?: string | undefined; requestId: string }, actorId?: number) {
+    return withLockedEnrollment(id, async (tx, enrollment) => {
+      if (!activeEnrollmentStatuses.includes(enrollment.status as 'PREINSCRITO' | 'INSCRITO')) throw new HttpError(409, 'No se pueden registrar movimientos en una inscripción cerrada.');
+      const currentAmount = Number(enrollment.payment?.amount ?? 0);
+      const existing = await tx.paymentMovement.findUnique({ where: { requestId: input.requestId } });
+      if (existing) {
+        const requestedDelta = input.kind === 'DEVOLUCION' ? -Number(input.amount) : input.amount;
+        if (existing.enrollmentId !== id || existing.kind !== input.kind || (input.amount !== undefined && Number(existing.amount) !== requestedDelta) || existing.reason !== input.reason || (existing.reference ?? '') !== (input.reference ?? '') || existing.recordedById !== (actorId ?? null)) throw new HttpError(409, 'La solicitud de pago ya fue utilizada con otros datos.');
+        return toEnrollmentResponse(enrollment);
+      }
+      const value = input.amount ?? Math.max(0, Number(enrollment.finalAmount) - currentAmount);
+      if (!Number.isFinite(value) || value === 0 || Math.abs(value) > 99999999.99 || (input.kind !== 'AJUSTE' && value < 0) || Math.abs(value * 100 - Math.round(value * 100)) > 0.00001) throw new HttpError(400, 'Ingresa un importe válido con hasta dos decimales.');
+      const delta = input.kind === 'DEVOLUCION' ? -value : value;
+      const paymentAmount = Math.round((currentAmount + delta) * 100) / 100;
+      if (paymentAmount < 0) throw new HttpError(400, 'La devolución supera el total registrado.');
+      if (paymentAmount > 99999999.99) throw new HttpError(400, 'El saldo supera el importe permitido.');
+      requireConfirmedFunding(enrollment, toMoney(enrollment.finalAmount), paymentAmount);
+      await tx.paymentMovement.create({ data: { enrollmentId: id, kind: input.kind, amount: delta, reason: input.reason,
+        reference: input.reference ?? null, requestId: input.requestId, recordedById: actorId ?? null } });
+      await tx.payment.upsert({
         where: { enrollmentId: id },
         create: { enrollmentId: id, amount: paymentAmount },
         update: { amount: paymentAmount, registeredAt: new Date() }
       });
 
-      return {
-        ...toEnrollmentResponse({ ...enrollment, payment }),
-        paymentAmount: toMoney(payment.amount)
-      };
+      return toEnrollmentResponse(await tx.enrollment.findUniqueOrThrow({ where: { id }, include: enrollmentInclude }));
     });
   },
 
-  async confirm(id: number) {
+  async confirm(id: number, actorId?: number) {
     return withLockedEnrollment(id, async (tx, enrollment) => {
       if (enrollment.status !== 'PREINSCRITO') {
         throw new HttpError(400, 'El participante no se encuentra preinscrito.');
@@ -294,7 +336,7 @@ export const enrollmentService = {
 
       const updated = await tx.enrollment.update({
         where: { id },
-        data: { status: 'INSCRITO', confirmedAt: new Date() },
+        data: { status: 'INSCRITO', confirmedAt: new Date(), events: { create: { status: 'INSCRITO', reason: 'Confirmación administrativa con financiamiento completo.', recordedById: actorId ?? null } } },
         include: enrollmentInclude
       });
 

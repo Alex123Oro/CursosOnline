@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../src/config/prisma.js', () => {
   const tx = {
+    $queryRaw: async () => [],
     course: { findUnique: mocks.courseFindUnique },
     courseInstructor: { findUnique: mocks.assignmentFindUnique },
     courseEvaluation: { findMany: mocks.evaluationFindMany, aggregate: mocks.evaluationAggregate, create: mocks.evaluationCreate, findFirst: mocks.evaluationFindFirst },
@@ -35,6 +36,7 @@ describe('evaluation management', () => {
     mocks.courseFindUnique.mockResolvedValue({ id: 4, instructorId: 8 });
     mocks.evaluationAggregate.mockResolvedValue({ _sum: { weight: 0 } });
     mocks.transaction.mockImplementation((work: (tx: unknown) => unknown) => work({
+      $queryRaw: async () => [],
       course: { findUnique: mocks.courseFindUnique },
       courseInstructor: { findUnique: mocks.assignmentFindUnique },
       courseEvaluation: { findMany: mocks.evaluationFindMany, aggregate: mocks.evaluationAggregate, create: mocks.evaluationCreate, findFirst: mocks.evaluationFindFirst },

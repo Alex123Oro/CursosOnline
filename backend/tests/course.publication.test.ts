@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const db=vi.hoisted(() => ({ $transaction:vi.fn(),$queryRaw:vi.fn(),
+const db=vi.hoisted(() => ({ courseResult: { updateMany: vi.fn() }, $transaction:vi.fn(),$queryRaw:vi.fn(),user:{findUnique:vi.fn()},
   course:{ findUnique:vi.fn(),create:vi.fn(),update:vi.fn() } }));
 vi.mock('../src/config/prisma.js',() => ({ prisma:db }));
 import { courseService } from '../src/modules/courses/course.service.js';
@@ -8,7 +8,7 @@ import { courseInputSchema } from '../src/modules/courses/course.rules.js';
 const input=courseInputSchema.parse({ name:'Curso preparado',content:'Contenido del curso preparado',durationHours:10,
   instructor:'Docente',schedule:'Lunes 18:00',approvalCriteria:'Nota y asistencia',capacity:20,
   startDate:'2026-11-01',endDate:'2026-11-30',preinscriptionStart:'2026-10-01',preinscriptionEnd:'2026-10-31' });
-const ready={ ...input,id:7,code:'CURSO',status:'DRAFT',instructorId:null,minimumEnrollment:1,
+const ready={ ...input,id:7,code:'CURSO',status:'DRAFT',instructorId:8,minimumEnrollment:1,
   startDate:new Date(input.startDate!),endDate:new Date(input.endDate!),
   preinscriptionStart:new Date(input.preinscriptionStart!),preinscriptionEnd:new Date(input.preinscriptionEnd!),
   sessions:[{ date:new Date('2026-11-02'),startTime:'18:00',durationMinutes:60 }],
@@ -17,7 +17,7 @@ const ready={ ...input,id:7,code:'CURSO',status:'DRAFT',instructorId:null,minimu
 
 describe('publication cannot be bypassed by other course writes',() => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.resetAllMocks(); db.user.findUnique.mockResolvedValue({id:8,role:"INSTRUCTOR"}); db.$queryRaw.mockResolvedValue([]);
     db.$transaction.mockImplementation(callback => callback(db));
     db.course.findUnique.mockResolvedValue(ready);
     db.course.update.mockResolvedValue({ ...ready,status:'PUBLISHED' });

@@ -35,6 +35,15 @@ const toCertificate = (raw: unknown): Certificate => {
 };
 
 export const certificateService = {
+  async revoke(id: string, actorId: string, reason: string) { return toCertificate(await certificateRepository.revoke(id, actorId, reason)); },
+  async reissue(id: string, actorId: string, reason: string, type: Certificate['type'], templateId?: string): Promise<Certificate> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = randomBytes(4).toString('hex').toUpperCase();
+      try { return toCertificate(await certificateRepository.reissue(id, code, certificateLink(code), actorId, reason, type, templateId)); }
+      catch (error) { if (!(error instanceof CertificateCodeCollision)) throw error; }
+    }
+    throw new HttpError(409, 'No se pudo generar un código único. Inténtalo nuevamente.');
+  },
   courses: () => certificateRepository.courses(),
   roster: (courseId: string, type: Certificate['type'] = 'aprobacion') => certificateRepository.roster(courseId, type),
   async issue(enrollmentId: string, actorId: string, type: Certificate['type'] = 'aprobacion', templateId?: string): Promise<Certificate> {

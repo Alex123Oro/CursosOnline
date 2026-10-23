@@ -97,6 +97,7 @@ export const instructorService = {
     await assertInstructor(instructorId);
     try {
       return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR UPDATE`;
         const course = await tx.course.findUnique({ where: { id: courseId }, select: { id: true, instructorId: true } });
         if (!course) throw new HttpError(404, 'Curso no encontrado.');
         const assignment = await tx.courseInstructor.create({
@@ -118,8 +119,11 @@ export const instructorService = {
 
   async changeAssignment(assignmentId: number, instructorId: number) {
     await assertInstructor(instructorId);
+    const initial = await prisma.courseInstructor.findUnique({ where: { id: assignmentId } });
+    if (!initial) throw new HttpError(404, 'Asignación no encontrada.');
     try {
       return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${initial.courseId} FOR UPDATE`;
         const existing = await tx.courseInstructor.findUnique({ where: { id: assignmentId } });
         if (!existing) throw new HttpError(404, 'Asignación no encontrada.');
         const updated = await tx.courseInstructor.update({
@@ -146,16 +150,22 @@ export const instructorService = {
   },
 
   async removeAssignment(assignmentId: number) {
+    const initial = await prisma.courseInstructor.findUnique({ where: { id: assignmentId } });
+    if (!initial) throw new HttpError(404, 'Asignación no encontrada.');
     return prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${initial.courseId} FOR UPDATE`;
       const existing = await tx.courseInstructor.findUnique({ where: { id: assignmentId } });
       if (!existing) throw new HttpError(404, 'Asignación no encontrada.');
+      const course = await tx.course.findUnique({ where: { id: existing.courseId }, select: { instructorId: true, status: true } });
+      const replacement = await tx.courseInstructor.findFirst({
+        where: { courseId: existing.courseId, id: { not: assignmentId } }, orderBy: [{ assignedAt: 'asc' }, { id: 'asc' }],
+        include: { instructor: { select: { name: true } } }
+      });
+      if (course?.status === 'PUBLISHED' && !replacement && (!course.instructorId || course.instructorId === existing.instructorId)) {
+        throw new HttpError(409, 'No puedes quitar al último instructor de un curso publicado. Asigna un reemplazo primero.');
+      }
       await tx.courseInstructor.delete({ where: { id: assignmentId } });
-      const course = await tx.course.findUnique({ where: { id: existing.courseId }, select: { instructorId: true } });
       if (course?.instructorId === existing.instructorId) {
-        const replacement = await tx.courseInstructor.findFirst({
-          where: { courseId: existing.courseId }, orderBy: [{ assignedAt: 'asc' }, { id: 'asc' }],
-          include: { instructor: { select: { name: true } } }
-        });
         await tx.course.update({ where: { id: existing.courseId }, data: {
           instructorId: replacement?.instructorId ?? null, instructor: replacement?.instructor.name ?? null
         } });

@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import type { RequestUser } from '../../shared/auth.js';
 import { HttpError } from '../../shared/http-error.js';
+import { ensureAcademicEditable } from '../../shared/academic-integrity.js';
 
 type EvaluationInput = { title: string; maxScore: number; weight: number };
 type GradeInput = { score: number; comment?: string | undefined };
@@ -58,7 +59,9 @@ export const evaluationService = {
   async create(courseId: number, input: EvaluationInput, user: RequestUser) {
     try {
       return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id=${courseId} FOR SHARE`;
         await courseForManager(courseId, user, tx);
+        await ensureAcademicEditable(tx, courseId);
         const aggregate = await tx.courseEvaluation.aggregate({ where: { courseId }, _sum: { weight: true } });
         if (Number(aggregate._sum.weight ?? 0) + input.weight > 100.000001) {
           throw new HttpError(400, 'La suma de ponderaciones no puede superar el 100 %.');
@@ -71,7 +74,9 @@ export const evaluationService = {
   async update(courseId: number, evaluationId: number, input: EvaluationInput, user: RequestUser) {
     try {
       return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id=${courseId} FOR SHARE`;
         await courseForManager(courseId, user, tx);
+        await ensureAcademicEditable(tx, courseId);
         const existing = await tx.courseEvaluation.findFirst({ where: { id: evaluationId, courseId } });
         if (!existing) throw new HttpError(404, 'Evaluación no encontrada en este curso.');
         const grades = await tx.evaluationGrade.findMany({ where: { evaluationId }, select: { score: true } });
@@ -91,7 +96,9 @@ export const evaluationService = {
   async remove(courseId: number, evaluationId: number, user: RequestUser) {
     try {
       await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id=${courseId} FOR SHARE`;
         await courseForManager(courseId, user, tx);
+        await ensureAcademicEditable(tx, courseId);
         const existing = await tx.courseEvaluation.findFirst({ where: { id: evaluationId, courseId } });
         if (!existing) throw new HttpError(404, 'Evaluación no encontrada en este curso.');
         if (await tx.evaluationGrade.count({ where: { evaluationId } })) {
@@ -105,7 +112,9 @@ export const evaluationService = {
   async recordGrade(courseId: number, evaluationId: number, enrollmentId: number, input: GradeInput, user: RequestUser) {
     try {
       return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id=${courseId} FOR SHARE`;
         await courseForManager(courseId, user, tx);
+        await ensureAcademicEditable(tx, courseId, enrollmentId);
         const evaluation = await tx.courseEvaluation.findFirst({ where: { id: evaluationId, courseId }, select: { id: true, maxScore: true } });
         if (!evaluation) throw new HttpError(404, 'Evaluación no encontrada en este curso.');
         const enrollment = await tx.enrollment.findFirst({ where: { id: enrollmentId, courseId }, select: { status: true } });

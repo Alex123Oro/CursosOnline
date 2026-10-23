@@ -3,6 +3,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
+  revoke: vi.fn(), reissue: vi.fn(),
   auth: { getUser: vi.fn() }, from: vi.fn(), select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn(),
   issue: vi.fn(), verify: vi.fn(), mine: vi.fn(), owned: vi.fn(), downloadable: vi.fn(), roster: vi.fn(), courses: vi.fn(), bulk: vi.fn(), generate: vi.fn()
 }));
@@ -17,6 +18,15 @@ import { HttpError } from '../src/shared/http-error.js';
 let server: Server; let base: string;
 const privateCertificate = { id: '7', code: '8F72A91C', courseName: 'Programación básica', status: 'VALID' };
 describe('certificate HTTP contract and Bearer authorization', () => {
+  it.each(['revoke','reissue'])('requires an administrator and a reason for %s', async operation => {
+    const send = (reason: string) => fetch(`${base}/certificates/7/${operation}`,{method:'POST',headers:{Authorization:'Bearer valid','Content-Type':'application/json'},body:JSON.stringify({reason,...(operation === 'reissue'?{type:'aprobacion'}:{})})});
+    expect((await send('Corrección académica')).status).toBe(403);
+    mocks.maybeSingle.mockResolvedValue({data:{id:1,rol:'administrador',activo:true},error:null});
+    expect((await send('  ')).status).toBe(400);
+    mocks[operation].mockResolvedValue(privateCertificate);
+    expect((await send('Corrección académica')).status).toBe(operation === 'revoke'?200:201);
+    expect(mocks[operation]).toHaveBeenCalledWith('7','1','Corrección académica',...(operation==='reissue'?['aprobacion',undefined]:[]));
+  });
   beforeAll(async () => {
     const app = express(); app.use(express.json()); app.use('/api/certificates',certificateRoutes); app.use('/api/courses',courseCertificateRoutes); app.use(errorMiddleware);
     server = await new Promise<Server>(resolve => { const listener = app.listen(0,'127.0.0.1', () => resolve(listener)); });

@@ -81,7 +81,7 @@ describe('participant progress', () => {
       finalStatus: 'NO_CUMPLE_ASISTENCIA', certificateEligible: false,
       requirements: { academicMet: true, attendanceMet: false, minimumAttendancePercent: 80 }
     });
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { participantId: 9 } }));
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { participantId: 9, status: {in:["PREINSCRITO","INSCRITO"]} } }));
   });
 
   it('marks certificate eligibility only when grade and attendance thresholds are met', async () => {

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../config/prisma.js';
 
 import { HttpError } from '../../shared/http-error.js';
+import { ensureAcademicEditable, invalidateAcademicResults } from '../../shared/academic-integrity.js';
 
 import { canPublishCourse, type CourseInput } from './course.rules.js';
 
@@ -52,7 +53,7 @@ const courseSelect = {
 
   prices: { select: { participantTypeId: true, basePrice: true, participantType: { select: { name: true } } } },
 
-  _count: { select: { enrollments: true } },
+  _count: { select: { enrollments: { where: { status: { in: ['PREINSCRITO', 'INSCRITO'] } } } } },
 
   enrollments: { where: { status: 'INSCRITO' }, select: { status: true } },
 
@@ -67,6 +68,9 @@ const courseSelect = {
 type CourseRecord = Prisma.CourseGetPayload<{ select: typeof courseSelect }>;
 
 const assertPublicationReady = (course: CourseRecord, input?: CourseInput) => {
+  if (input?.instructorId === null || !(input?.instructorId ?? course.instructorId)) {
+    throw new HttpError(400, 'Asigna una cuenta de instructor antes de publicar el curso.');
+  }
   canPublishCourse({
     instructor: input?.instructor ?? course.instructor,
     schedule: course.sessions.length ? summarizeSessions(course.sessions) : input?.schedule ?? course.schedule,
@@ -341,7 +345,7 @@ export const courseService = {
 
     });
 
-    return { ...response, enrollment: enrollment ? {
+    return { ...response, enrollment: enrollment && !['CANCELADO', 'CADUCADO'].includes(enrollment.status) ? {
 
       status: enrollment.status,
 
@@ -477,6 +481,10 @@ export const courseService = {
         }
 
         const data = toCourseData(input);
+        const academicChange = (input.startDate ?? null) !== (existing.startDate?.toISOString().slice(0, 10) ?? null)
+          || (input.endDate ?? null) !== (existing.endDate?.toISOString().slice(0, 10) ?? null)
+          || input.durationHours !== existing.durationHours;
+        if (academicChange) { await ensureAcademicEditable(tx, id); await invalidateAcademicResults(tx, id); }
 
         if (input.instructorId === undefined && existing.instructorId != null) {
 
@@ -565,9 +573,16 @@ export const courseService = {
 
     try {
 
-      const course = await prisma.course.update({ where: { id }, data: { status: 'DRAFT' }, select: courseSelect });
-
-      return toCourseResponse(course);
+      return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${id} FOR UPDATE`;
+        const existing = await tx.course.findUnique({ where: { id }, select: { id: true } });
+        if (!existing) throw new HttpError(404, 'Curso no encontrado.');
+        if (await tx.enrollment.count({ where: { courseId: id, status: { in: ['PREINSCRITO', 'INSCRITO'] } } })) {
+          throw new HttpError(409, 'El curso tiene reservas o inscritos. No se puede devolver a borrador mientras estén activos.');
+        }
+        const course = await tx.course.update({ where: { id }, data: { status: 'DRAFT' }, select: courseSelect });
+        return toCourseResponse(course);
+      });
 
     } catch (error) {
 
@@ -609,6 +624,8 @@ export const courseService = {
 
 
       assertPublicationReady(existing);
+      const instructor = await tx.user.findUnique({ where: { id: existing.instructorId! }, select: { role: true } });
+      if (instructor?.role !== 'INSTRUCTOR') throw new HttpError(400, 'La cuenta asignada no es un instructor válido.');
 
 
 

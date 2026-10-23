@@ -7,7 +7,7 @@ const { findUnique, update, transaction, queryRaw } = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/config/prisma.js', () => ({
-  prisma: { $transaction: transaction, course: { findUnique, update } }
+  prisma: { $transaction: transaction, user: { findUnique: async () => ({id:8,name:"Ana Lopez",role:"INSTRUCTOR"}) }, courseResult: { updateMany: async () => ({ count: 0 }) }, course: { findUnique, update } }
 }));
 
 import { courseService } from '../src/modules/courses/course.service.js';
@@ -26,8 +26,8 @@ const input = courseInputSchema.parse({
 
 describe('course updates', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-    transaction.mockImplementation(callback => callback({ $queryRaw: queryRaw, course: { findUnique, update } }));
+    vi.resetAllMocks(); queryRaw.mockResolvedValue([]);
+    transaction.mockImplementation(callback => callback({ $queryRaw: queryRaw, user: { findUnique: async () => ({id:8,name:'Ana Lopez',role:'INSTRUCTOR'}) }, courseResult: { updateMany: async () => ({count:0}) }, course: { findUnique, update } }));
   });
 
   it.each(['startDate', 'endDate'] as const)('rejects removing %s from a published course', async field => {
@@ -39,7 +39,7 @@ describe('course updates', () => {
   });
 
   it.each(['DRAFT', 'PUBLISHED'])('preserves %s when saving valid data', async status => {
-    findUnique.mockResolvedValue({ status, instructor: input.instructor, schedule: input.schedule,
+    findUnique.mockResolvedValue({ status, instructorId: 8, instructor: input.instructor, schedule: input.schedule,
       _count: { enrollments: 0 }, sessions: [{ date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 60 }],
       prices: [{ basePrice: 100 }] });
     const edited = status === 'DRAFT'

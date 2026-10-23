@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
+  courseResult: { updateMany: vi.fn() },
   $transaction: vi.fn(), $queryRaw: vi.fn(), courseInstructor: { findUnique: vi.fn() },
   course: { findUnique: vi.fn() },
   courseSession: { create: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() }
@@ -12,11 +13,11 @@ const user = { id: 8, name: 'Carla', email: 'test', role: 'INSTRUCTOR' as const,
 const course = { id: 2, code: 'PG', name: 'PostgreSQL', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-10-20') };
 describe('weekly session scheduling', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.resetAllMocks(); mocks.$queryRaw.mockResolvedValue([]);
     mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
     mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue([]);
     mocks.courseSession.findFirst.mockImplementation(({ where }) => where.date && where.date.toISOString().slice(0, 10) !== '2026-10-12' ? { id: 99 } : null);
-    mocks.courseSession.create.mockResolvedValue({ id: 4, courseId: 2, sessionNumber: 1, date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 90, createdAt: new Date(), updatedAt: new Date(), _count: { attendance: 0 }, instructorAttendance: null });
+    mocks.courseSession.create.mockResolvedValue({ id: 4, courseId: 2, sessionNumber: 1, date: new Date('2026-10-12'), startTime: '18:00', durationMinutes: 90, createdAt: new Date(), updatedAt: new Date(), _count: { attendance: 0 }, instructorAttendance: [] });
   });
   it('includes both boundaries and selected weekdays in chronological order', () => {
     expect(recurrenceDates(recurrenceInputSchema.parse(input))).toEqual(['2026-10-12', '2026-10-14', '2026-10-19', '2026-10-21']);

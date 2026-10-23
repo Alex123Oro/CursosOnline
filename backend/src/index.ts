@@ -7,6 +7,7 @@ import { enrollmentRoutes } from './modules/enrollments/enrollment.routes.js';
 import { participantTypeRoutes } from './modules/participant-types/participant-type.routes.js';
 import { sessionRoutes } from './modules/session/session.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { startReservationExpiry } from './modules/enrollments/enrollment-lifecycle.js';
 import { progressRoutes } from './modules/progress/progress.routes.js';
 import { evaluationRoutes } from './modules/progress/evaluation.routes.js';
 import { courseSessionRoutes, teachingRoutes } from './modules/course-sessions/course-session.routes.js';
@@ -68,5 +69,6 @@ app.get('/api/supabase/health', async (_request, response) => {
 app.use(errorMiddleware);
 
 app.listen(port, () => {
+  startReservationExpiry();
 	console.log(`Backend escuchando en http://localhost:${port}`);
 });

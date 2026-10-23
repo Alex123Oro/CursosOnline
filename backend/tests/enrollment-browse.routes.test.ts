@@ -113,6 +113,7 @@ describe('course-scoped enrollment browsing', () => {
         status: 'DRAFT',
         preenrolledCount: 4,
         enrolledCount: 2,
+        closedCounts: { CANCELADO: 0, RECHAZADO: 0, CADUCADO: 0 },
       },
     ]);
     expect(db.enrollment.findMany).not.toHaveBeenCalled();
