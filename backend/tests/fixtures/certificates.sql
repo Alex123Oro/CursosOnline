@@ -42,13 +42,14 @@ GRANT ALL ON public.inscripciones,public.pagos,public.precios_curso,public.tipos
 
 INSERT INTO usuarios VALUES (1,'Administración de prueba','administrador',true),(2,'Ana Álvarez','participante',true),
   (3,'Otra participante','participante',true),(4,'Instructor de prueba','instructor',true);
-INSERT INTO cursos VALUES (1,'PostgreSQL','PG-01',40,40,70,80,current_date-1),
-  (2,'Nota insuficiente','PG-02',20,20,70,80,current_date-1),
-  (3,'Asistencia insuficiente','PG-03',20,20,70,80,current_date-1),
-  (4,'Curso futuro','PG-04',20,20,70,80,current_date+10);
+-- Keep synthetic dates aligned with the business calendar even after midnight UTC.
+INSERT INTO cursos VALUES (1,'PostgreSQL','PG-01',40,40,70,80,(now() AT TIME ZONE 'America/La_Paz')::date-1),
+  (2,'Nota insuficiente','PG-02',20,20,70,80,(now() AT TIME ZONE 'America/La_Paz')::date-1),
+  (3,'Asistencia insuficiente','PG-03',20,20,70,80,(now() AT TIME ZONE 'America/La_Paz')::date-1),
+  (4,'Curso futuro','PG-04',20,20,70,80,(now() AT TIME ZONE 'America/La_Paz')::date+10);
 INSERT INTO inscripciones VALUES (10,1,2,'inscrito'),(11,1,3,'inscrito'),(12,2,2,'inscrito'),(13,3,2,'inscrito'),
   (14,4,2,'inscrito'),(15,1,2,'inscrito'),(16,1,2,'inscrito'),(17,1,2,'preinscrito');
-INSERT INTO sesiones SELECT c.id*10+n,c.id,current_date-6+n FROM cursos c CROSS JOIN generate_series(1,5) n;
+INSERT INTO sesiones SELECT c.id*10+n,c.id,(now() AT TIME ZONE 'America/La_Paz')::date-6+n FROM cursos c CROSS JOIN generate_series(1,5) n;
 INSERT INTO evaluaciones(id,curso_id,nombre,ponderacion) SELECT id,id,'Evaluación final',100 FROM cursos;
 INSERT INTO calificaciones(evaluacion_id,inscripcion_id,nota) VALUES (1,10,80),(2,12,60),(3,13,90),(4,14,90),(1,15,90),(1,16,90),(1,17,90);
 INSERT INTO asistencias_participantes(sesion_id,inscripcion_id,estado)
