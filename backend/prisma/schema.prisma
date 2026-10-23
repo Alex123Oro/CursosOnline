@@ -75,6 +75,8 @@ model User {
   degree            InstructorDegree? @map("grado")
   phone             String?           @map("telefono")
   participantTypeId Int?              @map("tipo_participante_id")
+  publicRegistration Boolean         @default(false) @map("registro_publico")
+  emailVerifiedAt   DateTime?         @map("correo_verificado_en") @db.Timestamptz(6)
 
   participantType ParticipantType? @relation(fields: [participantTypeId], references: [id])
 

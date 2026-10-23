@@ -18,7 +18,9 @@
     "academic:check": "node scripts/apply-academic-management.mjs",
     "academic:apply": "node scripts/apply-academic-management.mjs --apply",
     "corrections:check": "node scripts/apply-priority-corrections.mjs",
-    "corrections:apply": "node scripts/apply-priority-corrections.mjs --apply"
+    "corrections:apply": "node scripts/apply-priority-corrections.mjs --apply",
+    "registration:check": "node scripts/apply-participant-registration.mjs",
+    "registration:apply": "node scripts/apply-participant-registration.mjs --apply"
   },
   "keywords": [],
   "author": "",

@@ -2,7 +2,7 @@ import { prisma } from '../../config/prisma.js';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../shared/http-error.js';
 
-type SupabaseUser = { id: string; email?: string };
+type SupabaseUser = { id: string; email?: string; email_confirmed_at?: string | null };
 type SupabaseSession = {
   access_token: string;
   refresh_token: string;
@@ -60,11 +60,20 @@ export const authService = {
 
     if (!response.ok) {
       if (response.status >= 500 || response.status === 429) throw new HttpError(503, 'El servicio de autenticacion no esta disponible.');
+      const failure = await response.json().catch(() => ({})) as { code?: string };
+      if (failure.code === 'email_not_confirmed') throw new HttpError(403, 'Confirma tu correo antes de iniciar sesión. Puedes reenviar el enlace desde Crear cuenta.');
       throw new HttpError(401, 'Correo o contraseña incorrectos.');
     }
     const session = await response.json() as SupabaseSession;
     const user = await accountFor(session.user);
     return { accessToken: session.access_token, refreshToken: session.refresh_token, expiresAt: session.expires_at ?? null, user };
+  },
+
+  async confirmEmail(token: string) {
+    const identity = await verifyAccessToken(token);
+    if (!identity) throw new HttpError(401, 'El enlace no es válido o ha vencido. Solicita uno nuevo.');
+    if (!identity.email_confirmed_at) throw new HttpError(403, 'Primero debes confirmar tu correo electrónico.');
+    return { accessToken: token, refreshToken: '', expiresAt: null, user: await accountFor(identity) };
   },
 
   async logout(token: string) {

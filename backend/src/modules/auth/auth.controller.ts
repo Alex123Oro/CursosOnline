@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { HttpError } from '../../shared/http-error.js';
 import { authService } from './auth.service.js';
+import { registrationService } from './registration.service.js';
 
 const credentialsSchema = z.object({
   email: z.string().trim().email('Ingresa un correo valido.'),
@@ -15,6 +16,19 @@ const bearerToken = (request: Request) => {
 };
 
 export const authController = {
+  async register(request: Request, response: Response) {
+    response.status(202).json(await registrationService.register(request.body));
+  },
+
+  async resend(request: Request, response: Response) {
+    response.status(202).json(await registrationService.resend(request.body));
+  },
+
+  async confirmEmail(request: Request, response: Response) {
+    response.setHeader('Cache-Control', 'no-store');
+    response.json(await authService.confirmEmail(bearerToken(request)));
+  },
+
   async login(request: Request, response: Response) {
     const credentials = credentialsSchema.parse(request.body);
     response.json(await authService.login(credentials.email, credentials.password));

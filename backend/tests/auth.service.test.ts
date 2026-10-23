@@ -15,6 +15,23 @@ describe('Supabase authentication', () => {
     findUnique.mockReset();
   });
 
+  it('does not complete email confirmation with an unconfirmed identity', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'auth-id', email_confirmed_at: null }))));
+    await expect(authService.confirmEmail('token')).rejects.toMatchObject({ statusCode: 403 });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it('completes confirmation using the verified identity and stored category', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 'auth-id', email_confirmed_at: '2026-10-22T10:00:00Z' }))));
+    findUnique.mockResolvedValue({ id: 5, name: 'Ana', email: 'ana@est.umss.edu', role: 'PARTICIPANT', participantTypeId: 1, participantType: { name: 'Estudiante' } });
+    await expect(authService.confirmEmail('verified-token')).resolves.toMatchObject({ accessToken: 'verified-token', user: { role: 'PARTICIPANT', participantTypeId: '1' } });
+  });
+
+  it('explains an unconfirmed login without treating it as a bad password', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'email_not_confirmed' }), { status: 400 })));
+    await expect(authService.login('ana@est.umss.edu', 'password')).rejects.toMatchObject({ statusCode: 403, message: expect.stringContaining('Confirma tu correo') });
+  });
+
   it('rejects invalid credentials', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 400 })));
 
