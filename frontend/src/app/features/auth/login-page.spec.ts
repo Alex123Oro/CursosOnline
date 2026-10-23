@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { SessionService } from '../../core/session.service';
 import { LoginPage } from './login-page';
@@ -40,5 +40,14 @@ describe('LoginPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Correo o contraseña incorrectos.');
+  });
+  it.each(['/catalogo/69','https://example.test','//example.test','/usuarios'])('retains only a safe selected course: %s', async returnTo => {
+    vi.spyOn(TestBed.inject(ActivatedRoute).snapshot, 'queryParamMap', 'get').mockReturnValue(convertToParamMap({returnTo}));
+    const page = TestBed.createComponent(LoginPage);
+    login.mockReturnValue(of({id:'9',role:'PARTICIPANT'}));
+    const navigate = vi.spyOn(TestBed.inject(Router),'navigateByUrl').mockResolvedValue(true);
+    page.componentInstance.form.setValue({email:'ana@example.test',password:'correct-password'});
+    page.componentInstance.submit(); await page.whenStable();
+    expect(navigate).toHaveBeenCalledWith(returnTo==='/catalogo/69'?returnTo:'/mis-cursos');
   });
 });

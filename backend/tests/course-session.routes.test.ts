@@ -3,7 +3,7 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ enrollment: { count: vi.fn() }, courseResult: { updateMany: vi.fn() }, $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, course: { findUnique: vi.fn(), findMany: vi.fn(), update: vi.fn() }, courseSession: { count: vi.fn(), delete: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), createManyAndReturn: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseSessionRoutes, teachingRoutes } from '../src/modules/course-sessions/course-session.routes.js';
 import { courseRoutes } from '../src/modules/courses/course.routes.js';
@@ -11,7 +11,7 @@ import { errorMiddleware } from '../src/shared/error.middleware.js';
 let server: Server; let base: string;
 const course = { id: 2, name: 'PostgreSQL', code: 'PG', instructor: 'Carla', instructorId: 8, status: 'PUBLISHED', startDate: new Date('2026-10-12'), endDate: new Date('2026-11-12') };
 const payload = { sessionNumber: 1, date: '2026-10-11', startTime: '19:00', durationMinutes: 120 };
-const record = { id: 3, courseId: 2, ...payload, date: new Date(payload.date), createdAt: new Date(), updatedAt: new Date(), _count: { attendance: 0 }, instructorAttendance: null };
+const record = { id: 3, courseId: 2, ...payload, date: new Date(payload.date), createdAt: new Date(), updatedAt: new Date(), _count: { attendance: 0 }, instructorAttendance: [] };
 describe('session HTTP contract and authorization', () => {
   it.each([['1', 403], ['8', 204], ['10', 403], ['', 401]])('deletion requires an assigned manager identity %s', async (id, status) => {
     const response = await fetch(`${base}/courses/2/sessions/3`, { method: 'DELETE', headers: id ? { Authorization: id ? `Bearer ${id}` : '' } : {} });
@@ -25,11 +25,11 @@ describe('session HTTP contract and authorization', () => {
   });
   afterAll(() => new Promise<void>((resolve, reject) => { server.close(error => error ? reject(error) : resolve()); server.closeAllConnections(); }));
   beforeEach(() => {
-    vi.resetAllMocks(); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
-    mocks.user.findUnique.mockImplementation(({ where }) => ({ id: Number(where.authId), name: 'User', email: 'user@test', role: Number(where.authId) === 1 ? 'ADMIN' : Number(where.authId) === 10 ? 'PARTICIPANT' : 'INSTRUCTOR', participantTypeId: null }));
+    vi.resetAllMocks(); mocks.$queryRaw.mockResolvedValue([]); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
+    mocks.user.findUnique.mockImplementation(({ where }) => ({ id: Number(where.authId), active: true, name: 'User', email: 'user@test', role: Number(where.authId) === 1 ? 'ADMIN' : Number(where.authId) === 10 ? 'PARTICIPANT' : 'INSTRUCTOR', participantTypeId: null }));
     mocks.course.findUnique.mockResolvedValue(course); mocks.course.findMany.mockResolvedValue([course]);
     mocks.courseSession.findFirst.mockImplementation(({ where }) => where.date && where.date.toISOString().slice(0, 10) !== '2026-10-12' ? { id: 99 } : null);
-    mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record);
+    mocks.courseSession.count.mockResolvedValue(2); mocks.courseSession.findMany.mockResolvedValue([record]); mocks.courseSession.create.mockResolvedValue(record); mocks.courseSession.findUnique.mockResolvedValue(record); mocks.courseSession.update.mockResolvedValue(record);
   });
   it.each(['GET', 'POST', 'PUT'])('returns 401 to guests on %s', async method => {
     const response = await fetch(`${base}/courses/2/sessions${method === 'PUT' ? '/3' : ''}`, { method, ...(method !== 'GET' ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) } : {}) });
@@ -70,7 +70,7 @@ describe('session HTTP contract and authorization', () => {
     expect(response.status).toBe(status); expect(mocks.courseSession.createManyAndReturn).not.toHaveBeenCalled();
   });
   it.each(['PRESENT', 'ABSENT'])('returns 409 to an instructor changing a marked session (%s)', async status => {
-    mocks.courseSession.findUnique.mockResolvedValue({ ...record, instructorAttendance: { status } });
+    mocks.courseSession.findUnique.mockResolvedValue({ ...record, instructorAttendance: [{ status }] });
     for (const method of ['PUT', 'DELETE']) {
       const response = await fetch(`${base}/courses/2/sessions/3`, { method, headers: { Authorization: 'Bearer 8', 'Content-Type': 'application/json' }, ...(method === 'PUT' ? { body: JSON.stringify(payload) } : {}) });
       expect(response.status).toBe(409);
@@ -89,7 +89,7 @@ describe('session HTTP contract and authorization', () => {
     const headers = { Authorization: 'Bearer 1', 'Content-Type': 'application/json' };
     const draft = { ...course, status: 'DRAFT', schedule: null, capacity: 20,
       preinscriptionStart: new Date('2026-09-01'), preinscriptionEnd: new Date('2026-09-30'),
-      sessions: [] as typeof record[], prices: [], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() };
+      sessions: [] as typeof record[], prices: [{ participantTypeId: 1, participantType: { name: 'Estudiante' }, basePrice: 100 }], _count: { enrollments: 0 }, createdAt: new Date(), updatedAt: new Date() };
     mocks.course.findUnique.mockImplementation(async () => draft);
     mocks.course.update.mockImplementation(async ({ data }) => Object.assign(draft, data));
     expect((await fetch(`${base}/courses/2/sessions`, { headers })).status).toBe(200);
@@ -110,18 +110,18 @@ describe('session HTTP contract and authorization', () => {
     const response = await fetch(`${base}/courses/2/sessions/schedule`, { method: 'POST', headers: { Authorization: 'Bearer 8', 'Content-Type': 'application/json' }, body: JSON.stringify({ startDate: '2026-10-12', endDate: '2026-02-30', weekdays: [1], startTime: '18:00', durationMinutes: 90 }) });
     expect(response.status).toBe(400); expect(mocks.courseSession.createManyAndReturn).not.toHaveBeenCalled();
   });
-  it('returns a published course to draft without deleting its classes or enrollments, and allows publishing again', async () => {
+  it('refuses returning a published course to draft while reservations or enrollments remain', async () => {
     const existing = { ...course, capacity: 20, schedule: null, sessions: [record],
       preinscriptionStart: new Date('2026-09-01'), preinscriptionEnd: new Date('2026-09-30'),
       prices: [{ participantTypeId: 1, participantType: { name: 'Estudiante' }, basePrice: 100 }],
       enrollments: [{ status: 'INSCRITO' }], _count: { enrollments: 2 }, createdAt: new Date(), updatedAt: new Date() };
     mocks.course.findUnique.mockResolvedValue(existing);
+    mocks.enrollment.count.mockResolvedValue(2);
     mocks.course.update.mockImplementation(async ({ data }) => Object.assign(existing, data));
     const headers = { Authorization: 'Bearer 1' };
     const draft = await fetch(`${base}/courses/2/unpublish`, { method: 'PATCH', headers });
-    expect(draft.status).toBe(200);
-    expect(await draft.json()).toMatchObject({ status: 'DRAFT', occupiedSlots: 2, enrolledCount: 1, prices: [{ basePrice: 100 }] });
-    expect(mocks.course.update.mock.calls[0][0].data).toEqual({ status: 'DRAFT' });
+    expect(draft.status).toBe(409);
+    expect(mocks.course.update).not.toHaveBeenCalled();
     expect(mocks.courseSession.delete).not.toHaveBeenCalled();
     const published = await fetch(`${base}/courses/2/publish`, { method: 'PATCH', headers });
     expect(published.status).toBe(200);

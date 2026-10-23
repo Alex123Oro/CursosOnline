@@ -15,6 +15,7 @@ export const env = {
   supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
   supabaseSecretKey: process.env.SUPABASE_SECRET_KEY,
   publicAppUrl: process.env.PUBLIC_APP_URL,
+  authEmailRedirectUrl: process.env.AUTH_EMAIL_REDIRECT_URL,
   pdfSigningPath: process.env.PDF_SIGNING_P12_PATH,
   pdfSigningPassword: process.env.PDF_SIGNING_P12_PASSWORD,
   pdfSigningDemo: process.env.PDF_SIGNING_DEMO === 'true',

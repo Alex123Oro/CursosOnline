@@ -54,9 +54,10 @@
         @if (!session.ready()) {
           <p class="enrolment-note" role="status">Verificando la sesión...</p>
         } @else if (!isParticipant()) {
-          <p class="enrolment-note" role="status">Inicia sesión como participante antes de continuar con la preinscripción.</p>@if (!session.currentUser()) { <a class="return-link sign-in-action" routerLink="/iniciar-sesion">Iniciar sesión</a> }
+          <p class="enrolment-note" role="status">Inicia sesión como participante antes de continuar con la preinscripción.</p>@if (!session.currentUser()) { <a class="return-link sign-in-action" routerLink="/iniciar-sesion" [queryParams]="{ returnTo: '/catalogo/' + courseId() }">Iniciar sesión</a> }
         } @else if (course.enrollment) {
-          <p class="enrolment-note">Ya estás {{ course.enrollment.status === 'INSCRITO' ? 'inscrito' : 'preinscrito' }} en este curso.</p>
+          <p class="enrolment-note">{{ course.enrollment.status === 'RECHAZADO' ? 'Tu solicitud fue rechazada. Contacta a administración para consultar el motivo.' : course.enrollment.status === 'INSCRITO' ? 'Ya estás inscrito en este curso.' : 'Ya estás preinscrito en este curso.' }}</p>
+          <a routerLink="/mis-inscripciones">Ver mi inscripción y gestionar reserva</a>
           @if (course.enrollment.confirmedAt) { <p class="enrolment-note">Inscripción confirmada el {{ formatDate(course.enrollment.confirmedAt.slice(0, 10)) }}.</p> }
         } @else if (noSlots(course)) {
           <p class="enrolment-note">No existen cupos disponibles para este curso.</p>

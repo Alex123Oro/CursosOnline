@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { canPublishCourse, courseInputSchema } from '../src/modules/courses/course.rules.js';
+import { isPreinscriptionOpen } from '../src/modules/courses/course.rules.js';
+import { vi } from 'vitest';
 
 describe('course rules (HU-01)', () => {
   it('validates minimum enrollment against the course capacity', () => {
@@ -40,6 +42,15 @@ describe('course rules (HU-01)', () => {
 });
 
 describe('course rules (HU-02)', () => {
+  it('keeps enrollment open until midnight in Bolivia, not midnight UTC', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-23T01:00:00Z'));
+      expect(isPreinscriptionOpen('2026-10-22','2026-10-22')).toBe(true);
+      vi.setSystemTime(new Date('2026-10-23T04:00:00Z'));
+      expect(isPreinscriptionOpen('2026-10-22','2026-10-22')).toBe(false);
+    } finally { vi.useRealTimers(); }
+  });
   it('permite publicar cuando el curso tiene instructor, horario y fechas completas', () => {
     expect(() => canPublishCourse({
       instructor: 'Ana Lopez',

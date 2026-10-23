@@ -68,15 +68,18 @@ const includeRecord = {
 };
 
 const tx = {
+  paymentMovement: { findUnique: async () => null, create: async () => ({}) },
   $queryRaw: queryRaw,
   course: { findUnique: courseFindUnique },
   enrollment: {
     findUnique: enrollmentFindUnique,
+    findUniqueOrThrow: async () => ({ ...await enrollmentFindUnique(), payment: await paymentUpsert.mock.results.at(-1)?.value }),
     count: enrollmentCount,
     create: enrollmentCreate,
     update: enrollmentUpdate
   },
-  coursePrice: { findUnique: coursePriceFindUnique }
+  coursePrice: { findUnique: coursePriceFindUnique },
+  payment: { upsert: paymentUpsert }
 };
 
 describe('calculo economico', () => {
@@ -152,6 +155,7 @@ describe('confirmacion de inscripcion', () => {
     enrollmentUpdate.mockImplementation(async ({ data }: { data: { status?: string; confirmedAt?: Date; scholarshipActive?: boolean; benefitAmount?: number; finalAmount?: number; scholarshipPercent?: number; scholarshipReason?: string } }) => ({
       ...includeRecord,
       ...data,
+      events: [],
       payment: includeRecord.payment
     }));
   });
@@ -235,5 +239,40 @@ describe('confirmacion de inscripcion', () => {
     const result = await enrollmentService.deactivateScholarship(10);
     expect(result).toMatchObject({ scholarshipPercent: 50, scholarshipReason: 'Apoyo socioeconómico', scholarshipActive: false, benefitAmount: 0, finalAmount: 500 });
     expect(enrollmentUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: { scholarshipActive: false, benefitAmount: 0, finalAmount: 500 } }));
+  });
+
+  it('rechaza un abono de importe cero', async () => {
+    enrollmentFindUnique.mockResolvedValue({ ...includeRecord, status: 'INSCRITO',
+      payment: { id: 1, amount: 500, registeredAt: new Date() } });
+    await expect(enrollmentService.registerPayment(10, 0)).rejects.toMatchObject({ statusCode: 400 });
+    expect(paymentUpsert).not.toHaveBeenCalled();
+  });
+
+  it('rechaza quitar una beca de un inscrito si su pago no cubre el nuevo importe', async () => {
+    enrollmentFindUnique.mockResolvedValue({ ...includeRecord, status: 'INSCRITO', scholarshipActive: true,
+      scholarshipPercent: 100, finalAmount: 0 });
+    await expect(enrollmentService.deactivateScholarship(10)).rejects.toMatchObject({ statusCode: 409 });
+    expect(enrollmentUpdate).not.toHaveBeenCalled();
+  });
+
+  it('registra un abono de un inscrito si sigue cubriendo el monto final', async () => {
+    enrollmentFindUnique.mockResolvedValue({ ...includeRecord, status: 'INSCRITO' });
+    paymentUpsert.mockResolvedValue({ id: 1, amount: 550, registeredAt: new Date() });
+    await expect(enrollmentService.registerPayment(10, 550)).resolves.toMatchObject({ status: 'INSCRITO', paymentStatus: 'PAGADO', paymentAmount: 550 });
+    expect(paymentUpsert).toHaveBeenCalledWith(expect.objectContaining({update:expect.objectContaining({amount:550})}));
+  });
+
+  it('relee la inscripción después de bloquearla y rechaza una segunda confirmación', async () => {
+    enrollmentFindUnique.mockResolvedValueOnce({ courseId: 7 }).mockResolvedValueOnce({ ...includeRecord, status: 'INSCRITO' });
+    await expect(enrollmentService.confirm(10)).rejects.toMatchObject({ statusCode: 400 });
+    expect(enrollmentUpdate).not.toHaveBeenCalled();
+    expect(queryRaw).toHaveBeenCalledTimes(2);
+  });
+
+  it('usa el importe actualizado dentro del bloqueo para confirmar', async () => {
+    enrollmentFindUnique.mockResolvedValueOnce({ courseId: 7 }).mockResolvedValueOnce({ ...includeRecord,
+      payment: { id: 1, amount: 250, registeredAt: new Date() } });
+    await expect(enrollmentService.confirm(10)).rejects.toMatchObject({ statusCode: 400 });
+    expect(enrollmentUpdate).not.toHaveBeenCalled();
   });
 });

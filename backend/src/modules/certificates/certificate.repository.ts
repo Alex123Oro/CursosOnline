@@ -26,6 +26,19 @@ const fields = 'id,codigo_verificacion,tipo,fecha_emision,estado,datos_emision,a
 const ownedFields = `${fields},resultados_curso!inner(inscripciones!inner(participante_id))`;
 
 export const certificateRepository = {
+  async revoke(id: string, actorId: string, reason: string) {
+    const { data, error } = await getServerSupabase().rpc('revoke_certificate', { p_certificate_id: id, p_actor_id: actorId, p_reason: reason });
+    if (error?.code === 'P0409') throw new HttpError(409, 'El certificado ya fue anulado. Recarga la lista.');
+    if (error) certificateDataError(error);
+    return data;
+  },
+  async reissue(id: string, code: string, url: string, actorId: string, reason: string, type: Certificate['type'], templateId?: string) {
+    const { data, error } = await getServerSupabase().rpc('reissue_certificate', { p_certificate_id: id, p_code: code, p_public_url: url,
+      p_actor_id: actorId, p_reason: reason, p_type: type, p_template_id: templateId ?? null });
+    if (error?.code === 'P0409') throw new HttpError(409, 'Anula el certificado vigente antes de reemitir y utiliza la última versión del historial.');
+    if (error) certificateDataError(error);
+    return data;
+  },
   async courses() {
     const { data, error } = await getServerSupabase().from('cursos').select('id,nombre,codigo').order('nombre');
     if (error) certificateDataError(error);

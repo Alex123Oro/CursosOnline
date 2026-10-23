@@ -1,0 +1,64 @@
+.welcome-banner {
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 340px;
+  padding: 32px 38px;
+  border-radius: 20px;
+  background: #10065e;
+  color: #fff;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(90deg, #10075ee6 0%, #10075eb3 35%, #10075e00 68%);
+  }
+
+  h2 {
+    margin: 12px 0;
+    font-size: clamp(25px, 2.5vw, 34px);
+    line-height: 1.25;
+    letter-spacing: -.04em;
+    text-wrap: balance;
+  }
+
+  p { max-width: 360px; color: #e4e4fa; font-size: 12px; }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 25px;
+    min-height: 44px;
+    margin-top: 22px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: #dceab7;
+    color: #204c35;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+}
+
+.welcome-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.welcome-copy { position: relative; z-index: 2; max-width: 52%; }
+.banner-label { color: #baf5f2; font-size: 9px; font-weight: 700; letter-spacing: .14em; }
+
+@media (max-width: 1000px) { .welcome-copy { max-width: 65%; } }
+
+@media (max-width: 560px) {
+  .welcome-banner {
+    min-height: 320px;
+    padding: 27px 23px;
+
+    &::before { background: linear-gradient(90deg, #10075ef0 0%, #10075ed9 55%, #10075e70 100%); }
+    h2 { max-width: 300px; font-size: 27px; }
+    p { max-width: 260px; }
+  }
+
+  .welcome-image { object-position: 66% center; }
+  .welcome-copy { max-width: 100%; }
+}

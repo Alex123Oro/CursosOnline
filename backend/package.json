@@ -16,7 +16,13 @@
     "prisma:seed": "prisma db seed",
     "audit:real": "node scripts/audit-real-environment.mjs",
     "academic:check": "node scripts/apply-academic-management.mjs",
-    "academic:apply": "node scripts/apply-academic-management.mjs --apply"
+    "academic:apply": "node scripts/apply-academic-management.mjs --apply",
+    "corrections:check": "node scripts/apply-priority-corrections.mjs",
+    "corrections:apply": "node scripts/apply-priority-corrections.mjs --apply",
+    "registration:check": "node scripts/apply-participant-registration.mjs",
+    "registration:apply": "node scripts/apply-participant-registration.mjs --apply",
+    "flows:check": "node scripts/apply-flow-corrections.mjs",
+    "flows:apply": "node scripts/apply-flow-corrections.mjs --apply"
   },
   "keywords": [],
   "author": "",

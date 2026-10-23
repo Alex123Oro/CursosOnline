@@ -3,8 +3,19 @@ import { certificateUser } from './certificate.auth.js';
 import { certificateBulkSchema, certificateCodeSchema, certificateIdSchema, certificateInputSchema, certificateTypeSchema } from './certificate.rules.js';
 import { certificateService } from './certificate.service.js';
 import { certificatePdfService } from './certificate-pdf.service.js';
+import { z } from 'zod';
+const correctionSchema = z.object({ reason: z.string().trim().min(5).max(500) }).strict();
+const reissueSchema = z.object({ reason: z.string().trim().min(5).max(500), type: certificateTypeSchema,
+  templateId: certificateIdSchema.optional() }).strict();
 
 export const certificateController = {
+  async revoke(request: Request, response: Response) {
+    response.json(await certificateService.revoke(certificateIdSchema.parse(request.params.id), certificateUser(request).id, correctionSchema.parse(request.body).reason));
+  },
+  async reissue(request: Request, response: Response) {
+    const input = reissueSchema.parse(request.body);
+    response.status(201).json(await certificateService.reissue(certificateIdSchema.parse(request.params.id), certificateUser(request).id, input.reason, input.type, input.templateId));
+  },
   async courses(_request: Request, response: Response) { response.json(await certificateService.courses()); },
   async roster(request: Request, response: Response) {
     response.json(await certificateService.roster(certificateIdSchema.parse(request.params.courseId), certificateTypeSchema.parse(request.query.type ?? 'aprobacion')));

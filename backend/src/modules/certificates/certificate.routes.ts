@@ -13,6 +13,8 @@ certificateRoutes.get('/me', requireCertificateRole('PARTICIPANT'), asyncHandler
 certificateRoutes.get('/me/:id/pdf', requireCertificateRole('PARTICIPANT'), asyncHandler(controller.download));
 certificateRoutes.get('/me/:id', requireCertificateRole('PARTICIPANT'), asyncHandler(controller.detail));
 certificateRoutes.post('/', requireCertificateRole('ADMIN'), asyncHandler(controller.issue));
+certificateRoutes.post('/:id/revoke', requireCertificateRole('ADMIN'), asyncHandler(controller.revoke));
+certificateRoutes.post('/:id/reissue', requireCertificateRole('ADMIN'), asyncHandler(controller.reissue));
 
 export const courseCertificateRoutes = Router();
 courseCertificateRoutes.get('/:courseId/certificates', requireCertificateRole('ADMIN'), asyncHandler(controller.roster));

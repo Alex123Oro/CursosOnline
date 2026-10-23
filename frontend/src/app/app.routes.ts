@@ -15,6 +15,7 @@ import { LoginPage } from './features/auth/login-page';
 import { ProgressPage } from './features/progress/progress-page';
 
 export const routes: Routes = [
+  { path: 'mis-inscripciones', loadComponent: () => import('./features/enrollments/my-enrollments-page').then(m => m.MyEnrollmentsPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mis inscripciones | EVA' },
   { path: 'plantillas-certificados', loadComponent: () => import('./features/certificates/certificate-templates-page').then(m => m.CertificateTemplatesPage), canActivate: [roleGuard(['ADMIN'])], canDeactivate: [async (component: import('./features/certificates/certificate-templates-page').CertificateTemplatesPage) => component.canLeave()], title: 'Plantillas de certificados | EVA' },
   { path: 'verificar', loadComponent: () => import('./features/certificates/certificate-verification-page').then(m => m.CertificateVerificationPage), title: 'Verificar certificado | EVA' },
   { path: 'verificar/:codigo', loadComponent: () => import('./features/certificates/certificate-verification-page').then(m => m.CertificateVerificationPage), title: 'Verificar certificado | EVA' },
@@ -22,6 +23,8 @@ export const routes: Routes = [
   { path: 'mis-certificados', loadComponent: () => import('./features/certificates/my-certificates-page').then(m => m.MyCertificatesPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mis certificados | EVA' },
   { path: 'mis-certificados/:id', loadComponent: () => import('./features/certificates/certificate-detail-page').then(m => m.CertificateDetailPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Detalle del certificado | EVA' },
   { path: 'iniciar-sesion', component: LoginPage, title: 'Iniciar sesión | EVA' },
+  { path: 'registrarse', loadComponent: () => import('./features/auth/register-page').then(m => m.RegisterPage), title: 'Crear cuenta | EVA' },
+  { path: 'confirmar-correo', loadComponent: () => import('./features/auth/confirm-email-page').then(m => m.ConfirmEmailPage), title: 'Confirmar correo | EVA' },
   { path: 'mi-progreso', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], data: { view: 'all' }, title: 'Mi progreso | EVA' },
   { path: 'mis-cursos', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], data: { view: 'courses' }, title: 'Mis cursos | EVA' },
   { path: 'mi-asistencia', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], data: { view: 'attendance' }, title: 'Mi asistencia | EVA' },

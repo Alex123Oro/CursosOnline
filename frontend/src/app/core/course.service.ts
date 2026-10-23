@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export type CourseStatus = 'DRAFT' | 'PUBLISHED';
-export type EnrollmentStatus = 'PREINSCRITO' | 'INSCRITO';
+export type EnrollmentStatus = 'PREINSCRITO' | 'INSCRITO' | 'CANCELADO' | 'RECHAZADO' | 'CADUCADO';
 
 export interface CoursePrice {
   participantTypeId: string;

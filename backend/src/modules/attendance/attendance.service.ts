@@ -1,5 +1,6 @@
 import { Prisma, type AttendanceStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
+import { ensureAcademicEditable, invalidateAcademicResults } from '../../shared/academic-integrity.js';
 import { HttpError } from '../../shared/http-error.js';
 import type { RequestUser } from '../../shared/auth.js';
 import { endTime } from '../course-sessions/course-session.rules.js';
@@ -119,12 +120,15 @@ export const attendanceService = {
         throw new HttpError(400, 'Solo se puede registrar asistencia de alumnos oficialmente inscritos.');
       }
 
+      await ensureAcademicEditable(tx, courseId, enrollmentId);
+
       const saved = await tx.attendance.upsert({
         where: { sessionId_enrollmentId: { sessionId, enrollmentId } },
         create: { courseId, sessionId, enrollmentId, status, recordedById: user.id },
         update: { status, recordedById: user.id },
         select: { sessionId: true, status: true, updatedAt: true }
       });
+      await invalidateAcademicResults(tx, courseId, enrollmentId);
       const sessions = await tx.courseSession.findMany({
         where: { courseId }, select: { id: true, date: true }
       });

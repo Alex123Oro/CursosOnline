@@ -1,15 +1,16 @@
-<section class="certificates-page">
-  <header><p class="eyebrow">PARTICIPANTE / FORMACIÓN</p><h1>Mis certificados</h1><p>Consulta, descarga y comparte tu formación acreditada.</p></header>
-  @if (loading()) { <p role="status">Cargando certificados…</p> }
-  @else if (error()) { <div role="alert" class="error"><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }
-  @else if (!items().length) { <p class="notice" role="status">Aún no tienes certificados</p> }
+<section class="certificates-page" aria-labelledby="certificates-title">
+  <header class="page-heading"><div><p class="eyebrow">MI CAMPUS · MIS LOGROS</p><h1 id="certificates-title">Mis certificados</h1><p>Lo que aprendiste, ahora forma parte de tu historia.</p></div><a class="back-to-learning" routerLink="/mis-cursos">Volver a mi formación <span aria-hidden="true">↗</span></a></header>
+  <section class="achievement-banner" aria-label="Tu formación acreditada"><span class="award-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5 29 8l6 1 2 6 3 5-3 5-2 6-6 1-5 3-5-3-6-1-2-6-3-5 3-5 2-6 6-1 5-3Z"/><path d="m17 20 5 5 10-10m-17 17-3 12 12-5 12 5-3-12"/></svg></span><div><p class="eyebrow">CADA LOGRO CUENTA</p><h2>Tu esfuerzo tiene su lugar.</h2><p>Consulta, descarga y comparte tu formación acreditada.</p></div>@if (!loading() && !error()) { <div class="achievement-total"><strong>{{ validCount() }}</strong><span>{{ validCount() === 1 ? 'certificado vigente' : 'certificados vigentes' }}</span></div> }</section>
+  @if (loading()) { <p class="notice" role="status" aria-busy="true">Cargando certificados…</p> }
+  @else if (error()) { <div role="alert" class="notice error"><h2>No pudimos cargar tus certificados</h2><p>{{ error() }}</p><button type="button" (click)="retry()">Reintentar</button></div> }
+  @else if (!items().length) { <div class="empty-state" role="status"><span aria-hidden="true">✧</span><h2>Aún no tienes certificados</h2><p>Cuando se emita un certificado a tu nombre, lo encontrarás aquí para consultarlo y compartirlo.</p><a routerLink="/mis-resultados">Consultar mis resultados <span aria-hidden="true">→</span></a></div> }
   @else {
+    <div class="list-heading"><h2>Mi formación acreditada</h2><span>{{ items().length }} {{ items().length === 1 ? 'documento' : 'documentos' }}</span></div>
     <ul class="certificate-list">
       @for (item of items(); track item.id) {
-        <li>
-          <div class="heading"><h2><a [routerLink]="['/mis-certificados', item.id]">{{ item.courseName }}</a></h2><span class="badge" [class.revoked]="item.status === 'REVOKED'">{{ item.status === 'VALID' ? 'Vigente' : 'Anulado' }}</span></div>
-          <p>Emitido el {{ date(item.issuedAt) }}</p><p>Código: <strong>{{ item.code }}</strong></p>
-          <app-certificate-actions [certificate]="item" />
+        <li [class.revoked-card]="item.status === 'REVOKED'">
+          <div class="certificate-art" aria-hidden="true"><span>EVA / FORMACIÓN CONTINUA</span><div class="document-lines"><span>Certificado</span><i></i><i></i><i></i></div><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="m9 13-2 9 5-3 5 3-2-9m-5-5 2 2 3-3"/></svg></div>
+          <div class="certificate-content"><div class="heading"><span class="document-label">{{ item.type === 'aprobacion' ? 'APROBACIÓN' : 'PARTICIPACIÓN' }}</span><span class="badge" [class.revoked]="item.status === 'REVOKED'">{{ item.status === 'VALID' ? 'Vigente' : 'Anulado' }}</span></div><h2><a [routerLink]="['/mis-certificados', item.id]">{{ item.courseName }}</a></h2><p class="issue-date">Emitido el {{ date(item.issuedAt) }}</p><p class="certificate-code">Código de verificación <strong>{{ item.code }}</strong></p><app-certificate-actions [certificate]="item" /><a class="detail-link" [routerLink]="['/mis-certificados', item.id]">Ver detalle <span aria-hidden="true">→</span></a></div>
         </li>
       }
     </ul>

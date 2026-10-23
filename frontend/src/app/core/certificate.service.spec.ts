@@ -1,5 +1,6 @@
+import { throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { CertificateService } from './certificate.service';
@@ -13,7 +14,7 @@ describe('CertificateService and public HTTP interception', () => {
   beforeEach(() => {
     endSessionLocally.mockReset();
     TestBed.configureTestingModule({ providers: [provideRouter([]),provideHttpClient(withInterceptors([sessionInterceptor])),provideHttpClientTesting(),
-      { provide: SessionService, useValue: { accessToken: () => 'token', userId: () => '9', endSessionLocally } }] });
+      { provide: SessionService, useValue: { accessToken: () => 'token', userId: () => '9', renewSession: () => throwError(() => new HttpErrorResponse({status:401})), endSessionLocally } }] });
   });
   afterEach(() => TestBed.inject(HttpTestingController).verify());
   it('keeps public verification open if a separate authenticated request expires', () => {

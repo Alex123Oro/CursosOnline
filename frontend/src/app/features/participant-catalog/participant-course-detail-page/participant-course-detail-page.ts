@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Course, CourseService } from '../../../core/course.service';
 import { SessionService } from '../../../core/session.service';
+import { boliviaDateOnly } from '../../../core/business-date';
 import { ParticipantHeader } from '../shared/participant-header/participant-header';
 import { groupCourseSchedule, shortCourseDate } from '../shared/course-presentation';
 
@@ -63,14 +64,14 @@ export class ParticipantCourseDetailPage {
 
   periodClosed(course: Course) {
     if (!course.preinscriptionStart || !course.preinscriptionEnd) return true;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = boliviaDateOnly();
     return today < course.preinscriptionStart || today > course.preinscriptionEnd;
   }
 
   // HU4: Distinguish a future registration window from one that has ended.
   preinscriptionNotStarted(course: Course) {
     if (!course.preinscriptionStart) return false;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = boliviaDateOnly();
     return today < course.preinscriptionStart;
   }
 

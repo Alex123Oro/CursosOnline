@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../config/prisma.js';
 
 import { HttpError } from '../../shared/http-error.js';
+import { ensureAcademicEditable, invalidateAcademicResults } from '../../shared/academic-integrity.js';
 
 import { canPublishCourse, type CourseInput } from './course.rules.js';
 
@@ -52,7 +53,7 @@ const courseSelect = {
 
   prices: { select: { participantTypeId: true, basePrice: true, participantType: { select: { name: true } } } },
 
-  _count: { select: { enrollments: true } },
+  _count: { select: { enrollments: { where: { status: { in: ['PREINSCRITO', 'INSCRITO'] } } } } },
 
   enrollments: { where: { status: 'INSCRITO' }, select: { status: true } },
 
@@ -66,6 +67,22 @@ const courseSelect = {
 
 type CourseRecord = Prisma.CourseGetPayload<{ select: typeof courseSelect }>;
 
+const assertPublicationReady = (course: CourseRecord, input?: CourseInput) => {
+  if (input?.instructorId === null || !(input?.instructorId ?? course.instructorId)) {
+    throw new HttpError(400, 'Asigna una cuenta de instructor antes de publicar el curso.');
+  }
+  canPublishCourse({
+    instructor: input?.instructor ?? course.instructor,
+    schedule: course.sessions.length ? summarizeSessions(course.sessions) : input?.schedule ?? course.schedule,
+    startDate: input ? input.startDate ?? null : course.startDate?.toISOString().slice(0, 10) ?? null,
+    endDate: input ? input.endDate ?? null : course.endDate?.toISOString().slice(0, 10) ?? null,
+    capacity: input ? input.capacity : course.capacity,
+    preinscriptionStart: input ? input.preinscriptionStart ?? null : course.preinscriptionStart?.toISOString().slice(0, 10) ?? null,
+    preinscriptionEnd: input ? input.preinscriptionEnd ?? null : course.preinscriptionEnd?.toISOString().slice(0, 10) ?? null
+  });
+  if (!course.sessions.length) throw new HttpError(400, 'Programa al menos una clase antes de publicar el curso.');
+  if (!course.prices.length) throw new HttpError(400, 'Configura al menos un precio por categoría antes de publicar el curso.');
+};
 
 
 // The connected Supabase schema stores sessions in `sesiones`; older Prisma
@@ -92,7 +109,7 @@ async function readCatalogCourses(where: Prisma.CourseWhereInput) {
 
   }
 
-  const table = tables.modern ? Prisma.sql`public.sesiones_curso` : Prisma.sql`public.sesiones`;
+  const table = tables.legacy ? Prisma.sql`public.sesiones` : Prisma.sql`public.sesiones_curso`;
 
   const sessions = await prisma.$queryRaw<{
 
@@ -328,7 +345,7 @@ export const courseService = {
 
     });
 
-    return { ...response, enrollment: enrollment ? {
+    return { ...response, enrollment: enrollment && !['CANCELADO', 'CADUCADO'].includes(enrollment.status) ? {
 
       status: enrollment.status,
 
@@ -353,6 +370,9 @@ export const courseService = {
   async create(input: CourseInput) {
 
     try {
+      if (input.status === 'PUBLISHED') {
+        throw new HttpError(400, 'El curso debe crearse en borrador. Completa su preparación y utiliza la acción Publicar.');
+      }
 
       const selectedInstructor = input.instructorId ? await prisma.user.findUnique({
 
@@ -429,88 +449,101 @@ export const courseService = {
   async update(id: number, input: CourseInput) {
 
     try {
+      return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${id} FOR UPDATE`;
+        const existing = await tx.course.findUnique({
 
-      const existing = await prisma.course.findUnique({
+          where: { id },
 
-        where: { id },
-
-        select: { id: true, status: true, instructorId: true, minimumEnrollment: true }
-
-      });
-
-      if (!existing) throw new HttpError(404, 'Curso no encontrado.');
-
-      if (input.capacity != null && (input.minimumEnrollment ?? existing.minimumEnrollment ?? 1) > input.capacity) {
-
-        throw new HttpError(400, 'El mínimo de inscritos no puede superar la capacidad del curso.');
-
-      }
-
-      if (existing.status === 'PUBLISHED' && (!input.startDate || !input.endDate)) {
-
-        throw new HttpError(400, 'Un curso publicado debe conservar sus fechas de inicio y fin.');
-
-      }
-
-      const data = toCourseData(input);
-
-      if (input.instructorId === undefined && existing.instructorId != null) {
-
-        const assignedInstructor = await prisma.user.findUnique({
-
-          where: { id: existing.instructorId },
-
-          select: { id: true, name: true, role: true }
+          select: courseSelect
 
         });
 
-        if (assignedInstructor?.role === 'INSTRUCTOR') {
+        if (!existing) throw new HttpError(404, 'Curso no encontrado.');
+        if (input.status !== undefined && input.status !== existing.status) {
+          throw new HttpError(400, 'Utiliza las acciones Publicar o Volver a borrador para cambiar el estado del curso.');
+        }
 
-          data.instructorId = assignedInstructor.id;
+        if (input.capacity != null && (input.minimumEnrollment ?? existing.minimumEnrollment ?? 1) > input.capacity) {
 
-          data.instructor = assignedInstructor.name;
-
-        } else {
-
-          data.instructorId = existing.instructorId;
+          throw new HttpError(400, 'El mínimo de inscritos no puede superar la capacidad del curso.');
 
         }
 
-      } else if (input.instructorId) {
+        if (existing.status === 'PUBLISHED' && (!input.startDate || !input.endDate)) {
 
-        const selectedInstructor = await prisma.user.findUnique({
+          throw new HttpError(400, 'Un curso publicado debe conservar sus fechas de inicio y fin.');
 
-          where: { id: input.instructorId },
+        }
+        if (existing.status === 'PUBLISHED') assertPublicationReady(existing, input);
+        if (input.capacity != null && input.capacity < existing._count.enrollments) {
+          throw new HttpError(409, 'La capacidad no puede ser menor al número de plazas ya reservadas.');
+        }
 
-          select: { id: true, name: true, role: true }
+        const data = toCourseData(input);
+        const academicChange = (input.startDate ?? null) !== (existing.startDate?.toISOString().slice(0, 10) ?? null)
+          || (input.endDate ?? null) !== (existing.endDate?.toISOString().slice(0, 10) ?? null)
+          || input.durationHours !== existing.durationHours;
+        if (academicChange) { await ensureAcademicEditable(tx, id); await invalidateAcademicResults(tx, id); }
+
+        if (input.instructorId === undefined && existing.instructorId != null) {
+
+          const assignedInstructor = await tx.user.findUnique({
+
+            where: { id: existing.instructorId },
+
+            select: { id: true, name: true, role: true }
+
+          });
+
+          if (assignedInstructor?.role === 'INSTRUCTOR') {
+
+            data.instructorId = assignedInstructor.id;
+
+            data.instructor = assignedInstructor.name;
+
+          } else {
+
+            data.instructorId = existing.instructorId;
+
+          }
+
+        } else if (input.instructorId) {
+
+          const selectedInstructor = await tx.user.findUnique({
+
+            where: { id: input.instructorId },
+
+            select: { id: true, name: true, role: true }
+
+          });
+
+          if (!selectedInstructor || selectedInstructor.role !== 'INSTRUCTOR') {
+
+            throw new HttpError(400, 'El usuario seleccionado no es un instructor valido.');
+
+          }
+
+          data.instructorId = selectedInstructor.id;
+
+          data.instructor = selectedInstructor.name;
+
+        }
+
+        const course = await tx.course.update({
+
+          where: { id },
+
+          data,
+
+          select: courseSelect
 
         });
 
-        if (!selectedInstructor || selectedInstructor.role !== 'INSTRUCTOR') {
 
-          throw new HttpError(400, 'El usuario seleccionado no es un instructor valido.');
 
-        }
-
-        data.instructorId = selectedInstructor.id;
-
-        data.instructor = selectedInstructor.name;
-
-      }
-
-      const course = await prisma.course.update({
-
-        where: { id },
-
-        data,
-
-        select: courseSelect
-
+        return toCourseResponse(course);
       });
-
-
-
-      return toCourseResponse(course);
 
     } catch (error) {
 
@@ -540,9 +573,16 @@ export const courseService = {
 
     try {
 
-      const course = await prisma.course.update({ where: { id }, data: { status: 'DRAFT' }, select: courseSelect });
-
-      return toCourseResponse(course);
+      return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${id} FOR UPDATE`;
+        const existing = await tx.course.findUnique({ where: { id }, select: { id: true } });
+        if (!existing) throw new HttpError(404, 'Curso no encontrado.');
+        if (await tx.enrollment.count({ where: { courseId: id, status: { in: ['PREINSCRITO', 'INSCRITO'] } } })) {
+          throw new HttpError(409, 'El curso tiene reservas o inscritos. No se puede devolver a borrador mientras estén activos.');
+        }
+        const course = await tx.course.update({ where: { id }, data: { status: 'DRAFT' }, select: courseSelect });
+        return toCourseResponse(course);
+      });
 
     } catch (error) {
 
@@ -563,52 +603,11 @@ export const courseService = {
   /** Publica un curso solo si cumple con la información mínima requerida. */
 
   async publish(id: number) {
-
-    const existing = await prisma.course.findUnique({
-
-      where: { id },
-
-      select: courseSelect
-
-    });
-
-
-
-    if (!existing) {
-
-      throw new HttpError(404, 'Curso no encontrado.');
-
-    }
-
-
-
-    canPublishCourse({
-
-      instructor: existing.instructor,
-
-      schedule: toCourseResponse(existing).schedule,
-
-      startDate: existing.startDate ? existing.startDate.toISOString().slice(0, 10) : null,
-
-      endDate: existing.endDate ? existing.endDate.toISOString().slice(0, 10) : null,
-
-      capacity: existing.capacity,
-
-      preinscriptionStart: existing.preinscriptionStart ? existing.preinscriptionStart.toISOString().slice(0, 10) : null,
-
-      preinscriptionEnd: existing.preinscriptionEnd ? existing.preinscriptionEnd.toISOString().slice(0, 10) : null
-
-    });
-
-
-
-    try {
-
-      const course = await prisma.course.update({
+    return prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${id} FOR UPDATE`;
+      const existing = await tx.course.findUnique({
 
         where: { id },
-
-        data: { status: 'PUBLISHED' },
 
         select: courseSelect
 
@@ -616,11 +615,7 @@ export const courseService = {
 
 
 
-      return toCourseResponse(course);
-
-    } catch (error) {
-
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (!existing) {
 
         throw new HttpError(404, 'Curso no encontrado.');
 
@@ -628,9 +623,42 @@ export const courseService = {
 
 
 
-      throw error;
+      assertPublicationReady(existing);
+      const instructor = await tx.user.findUnique({ where: { id: existing.instructorId! }, select: { role: true } });
+      if (instructor?.role !== 'INSTRUCTOR') throw new HttpError(400, 'La cuenta asignada no es un instructor válido.');
 
-    }
+
+
+      try {
+
+        const course = await tx.course.update({
+
+          where: { id },
+
+          data: { status: 'PUBLISHED' },
+
+          select: courseSelect
+
+        });
+
+
+
+        return toCourseResponse(course);
+
+      } catch (error) {
+
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+
+          throw new HttpError(404, 'Curso no encontrado.');
+
+        }
+
+
+
+        throw error;
+
+      }
+    });
 
   }
 

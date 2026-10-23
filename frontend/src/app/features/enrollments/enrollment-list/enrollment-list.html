@@ -68,7 +68,7 @@
         } @empty {
           <tr>
             <td class="empty" [attr.colspan]="status() === 'INSCRITO' ? 6 : 5">
-              No hay {{ status() === 'INSCRITO' ? 'inscritos' : 'preinscritos' }} que coincidan en
+              No hay {{ labels[status()] }} que coincidan en
               este curso.
             </td>
           </tr>

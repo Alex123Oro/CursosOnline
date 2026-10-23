@@ -2,6 +2,7 @@ import { Prisma, type CourseSession, type AttendanceStatus } from '@prisma/clien
 import { prisma } from '../../config/prisma.js';
 import type { RequestUser } from '../../shared/auth.js';
 import { HttpError } from '../../shared/http-error.js';
+import { ensureAcademicEditable, invalidateAcademicResults } from '../../shared/academic-integrity.js';
 import {
   endTime,
   periodWarning,
@@ -44,7 +45,7 @@ const sessionInclude = {
 } satisfies Prisma.CourseSessionInclude;
 
 type ManagedSession = CourseSession & {
-  instructorAttendance?: { status: AttendanceStatus } | null;
+  instructorAttendance?: { status: AttendanceStatus }[];
   _count?: { attendance: number };
 };
 
@@ -53,8 +54,8 @@ const sessionResponse = (session: ManagedSession, course: SessionCourse) => ({
   courseId: String(session.courseId),
   date: dateOnly(session.date)!,
   sessionNumber: session.sessionNumber,
-  locked: Boolean(session.instructorAttendance) || (session._count?.attendance ?? 0) > 0,
-  instructorAttendanceStatus: session.instructorAttendance?.status ?? null,
+  locked: (session.instructorAttendance?.length ?? 0) > 0 || (session._count?.attendance ?? 0) > 0,
+  instructorAttendanceStatus: session.instructorAttendance?.[0]?.status ?? null,
   startTime: session.startTime,
   durationMinutes: session.durationMinutes,
   endTime: endTime(session.startTime, session.durationMinutes),
@@ -104,7 +105,7 @@ async function withUnlockedSession<T>(
 ): Promise<T> {
   return prisma.$transaction(async tx => {
     // Se mantiene el orden de bloqueo curso -> sesión para reducir conflictos.
-    await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR UPDATE`;
     const course = await authorizedCourse(courseId, user, tx);
     if (user.role === 'ADMIN' && course.status !== 'DRAFT') {
       throw new HttpError(403, 'Solo un instructor asignado puede editar sesiones de cursos publicados.');
@@ -114,10 +115,13 @@ async function withUnlockedSession<T>(
     await tx.$queryRaw`SELECT id FROM sesiones WHERE id = ${sessionId} AND curso_id = ${courseId} FOR UPDATE`;
     const session = await tx.courseSession.findUnique({ where: { id: sessionId }, include: sessionInclude });
     if (!session || session.courseId !== courseId) throw new HttpError(404, 'Sesión no encontrada en este curso.');
-    if (session.instructorAttendance || session._count.attendance > 0) {
+    if (session.instructorAttendance.length || session._count.attendance > 0) {
       throw new HttpError(409, 'La sesión ya tiene asistencias registradas y no se puede modificar ni eliminar.');
     }
-    return write(tx, course);
+    await ensureAcademicEditable(tx, courseId);
+    const result = await write(tx, course);
+    await invalidateAcademicResults(tx, courseId);
+    return result;
   });
 }
 
@@ -173,11 +177,14 @@ export const courseSessionService = {
   async create(courseId: number, input: SessionInput, user: RequestUser) {
     try {
       return await prisma.$transaction(async tx => {
+        await tx.$queryRaw`SELECT id FROM cursos WHERE id=${courseId} FOR UPDATE`;
         const course = await authorizedCourse(courseId, user, tx);
+        await ensureAcademicEditable(tx, courseId);
         const session = await tx.courseSession.create({
           data: { ...input, date: new Date(input.date), courseId },
           include: sessionInclude
         });
+        await invalidateAcademicResults(tx, courseId);
         return sessionResponse(session, course);
       });
     } catch (error) { return handleError(error); }
@@ -190,6 +197,7 @@ export const courseSessionService = {
         // Serializa programaciones concurrentes del mismo curso.
         await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${courseId} FOR UPDATE`;
         const course = await authorizedCourse(courseId, user, tx);
+        await ensureAcademicEditable(tx, courseId);
         const last = await tx.courseSession.findFirst({
           where: { courseId }, orderBy: { sessionNumber: 'desc' }, select: { sessionNumber: true }
         });
@@ -208,6 +216,7 @@ export const courseSessionService = {
           createdCount++;
         }
 
+        if (createdCount) await invalidateAcademicResults(tx, courseId);
         const sessions = await tx.courseSession.findMany({
           where: { courseId }, include: sessionInclude,
           orderBy: [{ date: 'asc' }, { startTime: 'asc' }, { id: 'asc' }]
@@ -232,9 +241,12 @@ export const courseSessionService = {
 
   async remove(courseId: number, sessionId: number, user: RequestUser) {
     try {
-      await withUnlockedSession(courseId, sessionId, user, tx =>
-        tx.courseSession.delete({ where: { id: sessionId, courseId } })
-      );
+      await withUnlockedSession(courseId, sessionId, user, async (tx, course) => {
+        if (course.status === 'PUBLISHED' && await tx.courseSession.count({ where: { courseId } }) <= 1) {
+          throw new HttpError(409, 'Un curso publicado debe conservar al menos una clase.');
+        }
+        return tx.courseSession.delete({ where: { id: sessionId, courseId } });
+      });
     } catch (error) { return handleError(error); }
   }
 };

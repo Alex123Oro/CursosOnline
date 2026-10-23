@@ -55,6 +55,7 @@ describe('course-scoped enrollment browsing', () => {
     db.$transaction.mockImplementation((callback) => callback(db));
     db.user.findUnique.mockImplementation(({ where }) => ({
       id: Number(where.authId),
+      active: true,
       role: Number(where.authId) === 1 ? 'ADMIN' : 'INSTRUCTOR',
     }));
     db.course.findUnique.mockResolvedValue({ id: 7 });
@@ -112,6 +113,7 @@ describe('course-scoped enrollment browsing', () => {
         status: 'DRAFT',
         preenrolledCount: 4,
         enrolledCount: 2,
+        closedCounts: { CANCELADO: 0, RECHAZADO: 0, CADUCADO: 0 },
       },
     ]);
     expect(db.enrollment.findMany).not.toHaveBeenCalled();

@@ -5,7 +5,7 @@ import { instructorAttendanceService } from '../src/modules/instructor-attendanc
 import { instructorAttendanceFilters } from '../src/modules/instructor-attendance/instructor-attendance.rules.js';
 const admin = { id: 1, role: 'ADMIN' as const, name: 'Admin', email: '', participantTypeId: null };
 const course = { id: 2, name: 'Curso', code: 'CUR', instructorId: 8, status: 'PUBLISHED' };
-const session = { id: 3, courseId: 2, date: new Date('2026-10-06'), startTime: '15:00', durationMinutes: 60, course, instructorAttendance: null };
+const session = { id: 3, courseId: 2, date: new Date('2026-10-06'), startTime: '15:00', durationMinutes: 60, course, instructorAttendance: [] };
 const record = { instructorId: 8, status: 'ABSENT', updatedAt: new Date('2026-10-06'), recordedById: 1 };
 describe('instructor attendance', () => {
   beforeEach(() => {
@@ -29,39 +29,41 @@ describe('instructor attendance', () => {
     expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { OR: [{ role: 'INSTRUCTOR' }, { teachingAttendance: { some: {} } }, { courseAssignments: { some: {} } }] } }));
   });
   it('separates future sessions from eligible summary without percentages', async () => {
-    db.courseSession.findMany.mockResolvedValue([{ ...session, instructorAttendance: record }, { ...session, id: 4 }, { ...session, id: 5, date: new Date('2026-10-07') }]);
+    db.courseSession.findMany.mockResolvedValue([{ ...session, instructorAttendance: [record] }, { ...session, id: 4 }, { ...session, id: 5, date: new Date('2026-10-07') }]);
     const result = await instructorAttendanceService.list(8, {}, admin);
     expect(result.summary).toEqual({ present: 0, absent: 1, pending: 1 });
     expect(result.sessions[2].editable).toBe(false); expect(result).not.toHaveProperty('percentage');
   });
   it('retains saved summary but blocks corrections while the course has no assigned user', async () => {
-    db.courseSession.findMany.mockResolvedValue([{...session,course:{...course,instructorId:null},instructorAttendance:record}]);
+    db.courseSession.findMany.mockResolvedValue([{...session,course:{...course,instructorId:null},instructorAttendance: [record]}]);
     const result=await instructorAttendanceService.list(8,{},admin);
     expect(result.summary.absent).toBe(1); expect(result.sessions[0].editable).toBe(false);
     expect(result.sessions[0].blockedReason).toContain('asignado');
   });
   it('queries own records and unmarked currently assigned sessions with inclusive filters', async () => {
     await instructorAttendanceService.list(8, { courseId: 2, from: '2026-10-01', to: '2026-10-06' }, admin);
-    expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ courseId: 2, date: { gte: new Date('2026-10-01'), lte: new Date('2026-10-06') }, OR: [{ instructorAttendance: { is: { instructorId: 8 } } }, { instructorAttendance: { is: null }, course: { instructorId: 8 } }, { instructorAttendance: { is: null }, course: { instructorAssignments: { some: { instructorId: 8 } } } }] }) }));
+    expect(db.courseSession.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ courseId: 2, date: { gte: new Date('2026-10-01'), lte: new Date('2026-10-06') }, OR: [{ instructorAttendance: { some: { instructorId: 8 } } }, { course: { instructorId: 8 } }, { course: { instructorAssignments: { some: { instructorId: 8 } } } }] }) }));
   });
   it('creates one record with original instructor and administrator', async () => {
     expect(await instructorAttendanceService.save(8, 3, 'PRESENT', admin)).toMatchObject({ status: 'PRESENT' });
-    expect(db.instructorAttendance.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { sessionId: 3 }, create: expect.objectContaining({ instructorId: 8, courseId: 2, recordedById: 1 }), update: { status: 'PRESENT', recordedById: 1 } }));
+    expect(db.instructorAttendance.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { sessionId_instructorId: {sessionId:3,instructorId:8} }, create: expect.objectContaining({ instructorId: 8, courseId: 2, recordedById: 1 }), update: { status: 'PRESENT', recordedById: 1 } }));
   });
   it('corrects the original instructor after course reassignment', async () => {
     db.course.findUnique.mockResolvedValue({ ...course, instructorId: 9 });
-    db.courseSession.findUnique.mockResolvedValue({ ...session, instructorAttendance: record });
+    db.courseSession.findUnique.mockResolvedValue({ ...session, instructorAttendance: [record] });
     await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).resolves.toMatchObject({ status: 'PRESENT' });
   });
-  it('prevents transferring a saved record to the newly assigned instructor', async () => {
+  it('allows the newly assigned instructor to create their own attendance record', async () => {
     db.course.findUnique.mockResolvedValue({ ...course, instructorId: 9 });
-    db.courseSession.findUnique.mockResolvedValue({ ...session, instructorAttendance: record });
-    await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 409 });
+    db.courseSession.findUnique.mockResolvedValue({ ...session, instructorAttendance: [record] });
+    db.courseSession.findUnique.mockResolvedValue({ ...session, instructorAttendance: [] });
+    await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).resolves.toMatchObject({ status: 'PRESENT' });
+    expect(db.instructorAttendance.upsert).toHaveBeenCalledWith(expect.objectContaining({where:{sessionId_instructorId:{sessionId:3,instructorId:9}}}));
   });
   it('rejects another instructor on the first mark', async () => { await expect(instructorAttendanceService.save(9, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 400 }); });
   it('rejects future sessions', async () => { db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-07') }); await expect(instructorAttendanceService.save(8, 3, 'PRESENT', admin)).rejects.toMatchObject({ statusCode: 400 }); });
   it.each(['PRESENT', 'ABSENT'] as const)('allows recording or correcting past sessions (%s)', async status => {
-    db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-05'), instructorAttendance: record });
+    db.courseSession.findUnique.mockResolvedValue({ ...session, date: new Date('2026-10-05'), instructorAttendance: [record] });
     await expect(instructorAttendanceService.save(8, 3, status, admin)).resolves.toMatchObject({ status });
     expect(db.instructorAttendance.upsert).toHaveBeenCalled();
   });

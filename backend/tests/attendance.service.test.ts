@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ course: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, courseSession: { findMany: vi.fn(), findUnique: vi.fn() }, enrollment: { findMany: vi.fn(), findUnique: vi.fn() }, attendance: { upsert: vi.fn() }, $queryRaw: vi.fn(), $transaction: vi.fn() }));
+const mocks = vi.hoisted(() => ({ courseResult: { updateMany: vi.fn() }, course: { findUnique: vi.fn() }, courseInstructor: { findUnique: vi.fn() }, courseSession: { findMany: vi.fn(), findUnique: vi.fn() }, enrollment: { findMany: vi.fn(), findUnique: vi.fn() }, attendance: { upsert: vi.fn() }, $queryRaw: vi.fn(), $transaction: vi.fn() }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { attendanceService } from '../src/modules/attendance/attendance.service.js';
 import { attendanceInputSchema, boliviaToday } from '../src/modules/attendance/attendance.rules.js';
@@ -11,7 +11,7 @@ const records = [1, 2, 3, 4].map(sessionId => ({ sessionId, status: sessionId ==
 const enrollment = { id: 3, courseId: 2, status: 'INSCRITO', participantId: 10, participant: { name: 'Luis' }, attendance: records };
 describe('participant attendance', () => {
   beforeEach(() => {
-    vi.resetAllMocks(); vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-07T02:00:00Z'));
+    vi.resetAllMocks(); mocks.$queryRaw.mockResolvedValue([]); vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-07T02:00:00Z'));
     mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.$queryRaw.mockResolvedValue([]);
     mocks.course.findUnique.mockResolvedValue(course); mocks.courseSession.findMany.mockResolvedValue(sessions); mocks.courseSession.findUnique.mockResolvedValue(sessions[0]);
     mocks.courseInstructor.findUnique.mockResolvedValue(null);

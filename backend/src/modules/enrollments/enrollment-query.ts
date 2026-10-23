@@ -6,7 +6,7 @@ const positiveId = z
   .refine(Number.isSafeInteger);
 export const enrollmentQuerySchema = z.object({
   courseId: positiveId,
-  status: z.enum(['PREINSCRITO', 'INSCRITO']),
+  status: z.enum(['PREINSCRITO', 'INSCRITO', 'CANCELADO', 'RECHAZADO', 'CADUCADO']),
   page: positiveId.optional().default(1),
   search: z.string().trim().max(100).optional().default(''),
 });

@@ -1,0 +1,16 @@
+.registration-panel { box-sizing: border-box; width: min(100%, 540px); }
+.login-brand { margin-bottom: 24px; }
+.kind-options { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
+legend { margin-bottom: 10px; color: #34483d; font-weight: 600; }
+.kind-option { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid #d6e0d9; border-radius: 6px; cursor: pointer; }
+.kind-option:has(input:checked) { border-color: #126d59; background: #eff9f3; }
+.kind-option input { min-height: auto; width: 18px; height: 18px; accent-color: #126d59; }
+.kind-option small { display: block; margin-top: 4px; color: #627269; font-weight: 400; }
+.category-note { margin: 0; padding: 12px; border-radius: 6px; background: #f2f6f3; color: #486052; font-size: var(--eva-font-helper); line-height: 1.6; }
+.account-link { color: #627269; font-size: var(--eva-font-helper); }
+a { color: #176852; }
+.resend-panel { margin-top: 22px; padding-top: 18px; border-top: 1px solid #d6e0d9; }
+summary { color: #176852; cursor: pointer; font-size: var(--eva-font-helper); }
+.resend-panel form { margin-top: 18px; }
+.confirmation-note { color: #176852; line-height: 1.6; }
+.primary-link { display: block; margin-top: 20px; padding: 13px; border-radius: 4px; background: #126d59; color: white; text-align: center; text-decoration: none; }

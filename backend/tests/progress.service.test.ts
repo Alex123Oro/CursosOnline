@@ -8,6 +8,39 @@ import { progressService } from '../src/modules/progress/progress.service.js';
 describe('participant progress', () => {
   beforeEach(() => findMany.mockReset());
 
+  const completeEnrollment = () => ({
+    id:16,status:'INSCRITO',course:{ id:1,code:'CASE',name:'Curso',startDate:null,endDate:new Date('2020-01-31'),
+      minimumPassingScore:70,minimumAttendancePercent:80,
+      sessions:[1,2,3,4,5].map(id => ({ id,date:new Date('2020-01-05'),sessionNumber:id,startTime:'18:00',durationMinutes:60 })),
+      evaluations:[{ id:1,title:'Examen',maxScore:100,weight:100,
+        grades:[{ enrollmentId:16,score:90,comment:null,gradedAt:new Date() }] }]
+    },attendance:[1,2,3,4,5].map(id => ({ status:'PRESENT',session:{ id,date:new Date('2020-01-05') } }))
+  });
+
+  it('matches the certificate rule for incomplete weights',async () => {
+    const row=completeEnrollment(); row.course.evaluations[0]!.weight=20;
+    findMany.mockResolvedValue([row]);
+    expect((await progressService.listForParticipant(9))[0]).toMatchObject({ finalStatus:null,certificateEligible:false });
+  });
+
+  it('matches the certificate rule for four present and one missing attendance mark',async () => {
+    const row=completeEnrollment(); row.attendance.pop();
+    findMany.mockResolvedValue([row]);
+    expect((await progressService.listForParticipant(9))[0]).toMatchObject({
+      attendance:{ percentage:80 },finalStatus:null,certificateEligible:false
+    });
+  });
+
+  it('does not round each evaluation before calculating the final score',async () => {
+    const row=completeEnrollment();
+    row.course.evaluations=[
+      { id:1,title:'Primera',maxScore:3,weight:50,grades:[{ enrollmentId:16,score:2,comment:null,gradedAt:new Date() }] },
+      { id:2,title:'Segunda',maxScore:100,weight:50,grades:[{ enrollmentId:16,score:73.32,comment:null,gradedAt:new Date() }] }
+    ];
+    findMany.mockResolvedValue([row]);
+    expect((await progressService.listForParticipant(9))[0]).toMatchObject({ finalGrade:69.99,finalStatus:'REPROBADO',certificateEligible:false });
+  });
+
   it('returns attendance, graded evaluations and final outcome after course completion', async () => {
     findMany.mockResolvedValue([{
       id: 12,
@@ -48,7 +81,7 @@ describe('participant progress', () => {
       finalStatus: 'NO_CUMPLE_ASISTENCIA', certificateEligible: false,
       requirements: { academicMet: true, attendanceMet: false, minimumAttendancePercent: 80 }
     });
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { participantId: 9 } }));
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { participantId: 9, status: {in:["PREINSCRITO","INSCRITO"]} } }));
   });
 
   it('marks certificate eligibility only when grade and attendance thresholds are met', async () => {

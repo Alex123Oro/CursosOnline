@@ -9,6 +9,7 @@ import { EnrollmentStatus } from '../../../core/course.service';
   styleUrl: './enrollment-list.scss',
 })
 export class EnrollmentList {
+  readonly labels = { PREINSCRITO: 'preinscritos', INSCRITO: 'inscritos', CANCELADO: 'solicitudes canceladas', RECHAZADO: 'solicitudes rechazadas', CADUCADO: 'reservas caducadas' };
   readonly enrollments = input<Enrollment[]>([]);
   readonly loading = input(false);
   readonly status = input<EnrollmentStatus>('PREINSCRITO');

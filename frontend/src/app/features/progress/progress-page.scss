@@ -1,125 +1,28 @@
-.progress-page {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 36px 42px;
-}
-
-.progress-list {
-  display: grid;
-  gap: 18px;
-}
-
-.progress-item {
-  padding: 20px 0;
-  border-top: 1px solid #d9e2dc;
-}
-
-.course-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.course-code,
-.course-dates,
-.muted {
-  color: #68796f;
-  font-size: var(--eva-font-label);
-}
-
-.course-heading h2 {
-  margin: 4px 0;
-  color: #1c3025;
-  font-size: var(--eva-font-section);
-}
-
-.course-dates {
-  margin: 0;
-}
-
-.status {
-  padding: 5px 9px;
-  border-radius: 4px;
-  background: #e5f3ed;
-  color: #17634a;
-  font-size: var(--eva-font-helper);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.attendance,
-.evaluations {
-  margin-top: 20px;
-}
-
-.attendance > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #384c40;
-  font-size: var(--eva-font-body);
-}
-
-progress {
-  display: block;
-  width: 100%;
-  height: 9px;
-  margin: 9px 0 5px;
-  accent-color: #178067;
-}
-
-.attendance small {
-  color: #68796f;
-}
-
-.evaluations h3 {
-  margin: 0 0 8px;
-  color: #284236;
-  font-size: 15px;
-}
-
-.evaluations ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.evaluations li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px 14px;
-  padding: 9px 0;
-  border-top: 1px solid #edf1ee;
-  color: #34483c;
-  font-size: var(--eva-font-label);
-}
-
-.evaluations li small {
-  grid-column: 1 / -1;
-  color: #68796f;
-}
-
-.grade-summary,
-.final-result {
-  margin: 13px 0 0;
-  color: #34483c;
-  font-size: var(--eva-font-body);
-}
-
-.final-result.passed { color: #17634a; }
-.final-result.failed,
-.progress-message.error { color: #a33028; }
-
-.progress-message {
-  padding: 18px 0;
-  border-top: 1px solid #d9e2dc;
-  color: #52645a;
-}
-
-@media (max-width: 680px) {
-  .progress-page { padding: 24px 18px; }
-  .course-heading { flex-direction: column; }
-}
-h1 { font-size: var(--eva-font-title); letter-spacing: -.03em; }
-@media (max-width: 600px) { h1 { font-size: var(--eva-font-title-mobile); } }
+:host { display: block; color: #183e38; }
+* { box-sizing: border-box; }
+.progress-page { max-width: 1440px; margin: auto; padding: 34px 40px 56px; }
+svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+h1,h2,h3,p { margin: 0; }
+.page-header,.section-heading,.metric-heading,.course-links { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.page-header { margin-bottom: 26px; }
+.eyebrow { margin-bottom: 7px; color: #54766c; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+h1 { font-size: clamp(27px,3vw,36px); line-height: 1.2; letter-spacing: -.045em; }
+.subtitle { margin-top: 10px; color: #63766e; font-size: 13px; }
+.refresh,.primary-link { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 16px; border: 1px solid #d5e2dc; border-radius: 10px; color: #31574b; background: #fff; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; }
+.refresh:disabled { opacity: .55; cursor: wait; }
+.summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; margin: 22px 0 28px; }
+.summary-card { display: flex; align-items: center; gap: 12px; padding: 19px 16px; border: 1px solid #e1e7df; border-radius: 13px; background: #fff; div { display: grid; gap: 3px; } div > span { color: #697c72; font-size: 11px; } strong { font-size: 27px; line-height: 1.3; letter-spacing: -.04em; } }
+.summary-icon { display: grid; place-items: center; width: 40px; height: 44px; flex-shrink: 0; border-radius: 11px; background: #edf1e7; color: #5a6d39; font-size: 23px; &.mint { background: #e6f4ed; color: #238166; } &.amber { background: #fbf1dc; color: #936b25; } &.lilac { background: #f0edfa; color: #7960a3; } }
+.learning-tabs { display: flex; gap: 24px; overflow-x: auto; margin-bottom: 28px; border-bottom: 1px solid #dce3da; a { flex-shrink: 0; padding: 0 2px 14px; border-bottom: 3px solid transparent; color: #6d7c71; font-size: 12px; font-weight: 600; text-decoration: none; &.selected { border-color: #18745b; color: #17684f; font-weight: 800; } } }
+.section-heading { margin-bottom: 18px; h2 { font-size: 20px; letter-spacing: -.03em; } > span { font-size: 12px; color: #64766c; white-space: nowrap; } }
+.progress-message,.loading-state { padding: 50px 24px; border: 1px solid #e0e7dc; border-radius: 16px; text-align: center; background: #fff; h2 { margin: 14px 0 8px; font-size: 22px; } p { max-width: 420px; margin: 0 auto 20px; color: #6d7d71; font-size: 13px; } }
+.message-icon { display: inline-grid; place-items: center; width: 55px; height: 55px; border-radius: 16px; background: #edf2e1; color: #55743c; font-size: 28px; }
+.primary-link { background: #1a7056; color: #fff; border: 0; }
+.error .message-icon { color: #a14e36; background: #fceee9; }
+.loading-state { margin-top: 24px; color: #64776b; }
+.loading-dot { display: inline-block; width: 9px; height: 9px; margin-right: 10px; border-radius: 50%; background: #4c886b; }
+:is(a,button,summary):focus-visible { outline: 3px solid #b47624; outline-offset: 4px; }
+a:hover { text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 1150px) { .summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .course-grid { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .progress-page { padding: 28px 22px 40px; } }
+@media (max-width: 560px) { .progress-page { padding: 24px 16px 36px; } .page-header { align-items: flex-start; gap: 10px; } .refresh { padding: 9px; font-size: 11px; } .refresh svg { display: none; } .summary-grid { gap: 10px; margin-top: 16px; } .summary-card { align-items: flex-start; padding: 14px 12px; gap: 9px; } .summary-icon { width: 29px; height: 33px; font-size: 19px; } .summary-card div > span { font-size: 10px; } .summary-card strong { font-size: 24px; } .learning-tabs { gap: 21px; } .section-heading h2 { font-size: 18px; } .course-heading { padding: 19px 17px; flex-wrap: wrap; } .course-symbol { display: none; } .course-heading .status { margin-left: auto; } .course-body { padding: 0 17px; } .course-links { padding: 12px 17px; } .enrollment-note { margin-left: 17px; margin-right: 17px; } }

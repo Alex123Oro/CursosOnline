@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
-const mocks = vi.hoisted(() => ({ user: { findUnique: vi.fn() }, course: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ courseResult: { updateMany: vi.fn() }, $transaction: vi.fn(), $queryRaw: vi.fn(), user: { findUnique: vi.fn() }, course: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() } }));
 vi.mock('../src/config/prisma.js', () => ({ prisma: mocks }));
 import { courseService } from '../src/modules/courses/course.service.js';
 import { courseInputSchema } from '../src/modules/courses/course.rules.js';
@@ -22,7 +22,7 @@ describe('course instructor assignment', () => {
     await courseService.update(1, courseInputSchema.parse({ ...input, code: 'MANUAL' }));
     expect(mocks.course.update.mock.calls[0][0].data).not.toHaveProperty('code');
   });
-  beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 8, name: 'Carla', role: 'INSTRUCTOR' }); mocks.course.create.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.update.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.findUnique.mockResolvedValue({ status: 'DRAFT', instructorId: 8 }); });
+  beforeEach(() => { vi.resetAllMocks(); mocks.$queryRaw.mockResolvedValue([]); mocks.$transaction.mockImplementation(callback => callback(mocks)); mocks.user.findUnique.mockResolvedValue({ id: 8, name: 'Carla', role: 'INSTRUCTOR' }); mocks.course.create.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.update.mockResolvedValue({ ...record, instructor: 'Carla' }); mocks.course.findUnique.mockResolvedValue({ status: 'DRAFT', instructorId: 8 }); });
   it('links an instructor and uses their name on creation', async () => {
     const result = await courseService.create(courseInputSchema.parse(input));
     expect(result).toMatchObject({ instructorId: '8', instructor: 'Carla' });

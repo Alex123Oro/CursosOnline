@@ -34,6 +34,9 @@ enum InstructorDegree {
 enum EnrollmentStatus {
   PREINSCRITO @map("preinscrito")
   INSCRITO    @map("inscrito")
+  CANCELADO   @map("cancelado")
+  RECHAZADO   @map("rechazado")
+  CADUCADO    @map("caducado")
 
   @@map("estado_inscripcion")
 }
@@ -70,10 +73,13 @@ model User {
   name              String            @map("nombre_completo")
   email             String            @unique @map("correo")
   role              UserRole          @map("rol")
+  active            Boolean?          @default(true) @map("activo")
   sis               String?           @unique @map("codigo_sis")
   degree            InstructorDegree? @map("grado")
   phone             String?           @map("telefono")
   participantTypeId Int?              @map("tipo_participante_id")
+  publicRegistration Boolean         @default(false) @map("registro_publico")
+  emailVerifiedAt   DateTime?         @map("correo_verificado_en") @db.Timestamptz(6)
 
   participantType ParticipantType? @relation(fields: [participantTypeId], references: [id])
 
@@ -91,6 +97,8 @@ model User {
   createdCourseAssignments CourseInstructor[] @relation("CourseAssignmentRecorder")
 
   courseResultsRecorded CourseResult[] @relation("CourseResultRecorder")
+  paymentMovements PaymentMovement[]
+  enrollmentEvents EnrollmentEvent[]
 
   @@map("usuarios")
 }
@@ -162,7 +170,7 @@ model CourseSession {
   course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
 
   attendance           Attendance[]
-  instructorAttendance InstructorAttendance?
+  instructorAttendance InstructorAttendance[]
 
   @@unique([id, courseId])
   @@unique([courseId, date, startTime])
@@ -198,6 +206,8 @@ model Enrollment {
   finalAmount        Decimal          @map("monto_final") @db.Decimal(10, 2)
   createdAt          DateTime         @default(now()) @map("created_at")
   confirmedAt        DateTime?        @map("confirmada_en")
+  closedAt           DateTime?        @map("cerrada_en")
+  closureReason      String?          @map("motivo_cierre")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -210,6 +220,8 @@ model Enrollment {
   attendance Attendance[]
   grades     EvaluationGrade[]
   result     CourseResult?
+  paymentMovements PaymentMovement[]
+  events EnrollmentEvent[]
 
   @@unique([id, courseId])
   @@unique([courseId, participantId])
@@ -240,7 +252,7 @@ model Attendance {
 model InstructorAttendance {
   id           Int              @id @default(autoincrement())
   courseId     Int              @map("curso_id")
-  sessionId    Int              @unique @map("sesion_id")
+  sessionId    Int              @map("sesion_id")
   instructorId Int              @map("instructor_id")
   status       AttendanceStatus @map("estado")
   recordedById Int              @map("registrado_por")
@@ -254,7 +266,7 @@ model InstructorAttendance {
   recordedBy User @relation("InstructorAttendanceRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
 
   @@index([instructorId])
-  @@unique([sessionId, courseId])
+  @@unique([sessionId, instructorId])
   @@map("asistencias_instructores")
 }
 
@@ -267,6 +279,35 @@ model Payment {
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 
   @@map("pagos")
+}
+
+model PaymentMovement {
+  id Int @id @default(autoincrement())
+  enrollmentId Int @map("inscripcion_id")
+  kind String @map("tipo") @db.VarChar(12)
+  amount Decimal @map("monto") @db.Decimal(10, 2)
+  reason String @map("motivo")
+  reference String? @map("referencia") @db.VarChar(100)
+  requestId String @unique @default(uuid()) @map("solicitud_id") @db.Uuid
+  recordedById Int? @map("registrado_por")
+  registeredAt DateTime @default(now()) @map("registrado_en")
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  recordedBy User? @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  @@index([enrollmentId, registeredAt])
+  @@map("movimientos_pago")
+}
+
+model EnrollmentEvent {
+  id Int @id @default(autoincrement())
+  enrollmentId Int @map("inscripcion_id")
+  status EnrollmentStatus @map("estado")
+  reason String @map("motivo")
+  recordedById Int? @map("registrado_por")
+  createdAt DateTime @default(now()) @map("registrado_en")
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  recordedBy User? @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+  @@index([enrollmentId, createdAt])
+  @@map("historial_inscripciones")
 }
 
 model CourseEvaluation {

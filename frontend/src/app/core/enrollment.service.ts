@@ -28,10 +28,15 @@ export interface Enrollment {
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
+  closedAt?: string | null;
+  closureReason?: string | null;
+  paymentMovements?: { id: string; kind: string; amount: number; reason: string; reference: string | null; recordedBy: string; registeredAt: string }[];
+  history?: { id: string; status: EnrollmentStatus; reason: string; recordedBy: string; createdAt: string }[];
 }
 export interface EnrollmentCourseSummary {
   id: string; name: string; code: string; status: 'DRAFT' | 'PUBLISHED'; capacity: number | null;
   preenrolledCount: number; enrolledCount: number;
+  closedCounts?: Partial<Record<EnrollmentStatus, number>>;
 }
 export interface EnrollmentQuery { courseId: string; status: EnrollmentStatus; search: string; page: number; }
 export interface EnrollmentPage { items: Enrollment[]; total: number; page: number; pageSize: number; totalPages: number; }
@@ -46,6 +51,13 @@ export class EnrollmentService {
     return this.http.get<Enrollment[]>(this.apiUrl);
   }
   courses() { return this.http.get<EnrollmentCourseSummary[]>(`${this.apiUrl}/courses`); }
+  mine() { return this.http.get<Enrollment[]>(`${this.apiUrl}/mine`); }
+  cancelReservation(id: string, reason: string) { return this.http.post<Enrollment>(`${this.apiUrl}/${id}/cancel`, { reason }); }
+  reject(id: string, reason: string) { return this.http.post<Enrollment>(`${this.apiUrl}/${id}/reject`, { reason }); }
+  expire() { return this.http.post<{ expired: number }>(`${this.apiUrl}/expire`, {}); }
+  movement(id: string, input: { kind: 'ABONO' | 'DEVOLUCION' | 'AJUSTE'; amount: number; reason: string; reference: string; requestId: string }) {
+    return this.http.post<Enrollment>(`${this.apiUrl}/${id}/payment-movements`, input);
+  }
   detail(id: string) { return this.http.get<Enrollment>(`${this.apiUrl}/${id}`); }
   listPage(query: EnrollmentQuery) {
     return this.http.get<EnrollmentPage>(this.apiUrl, { params: { ...query } });
@@ -57,8 +69,8 @@ export class EnrollmentService {
 
   deactivateScholarship(id: string): Observable<Enrollment> { return this.http.delete<Enrollment>(`${this.apiUrl}/${id}/scholarship`); }
 
-  registerPayment(id: string, amount?: number): Observable<Enrollment> {
-    return this.http.post<Enrollment>(`${this.apiUrl}/${id}/payments`, amount === undefined ? {} : { amount });
+  registerPayment(id: string, amount?: number, requestId = crypto.randomUUID(), reason = 'Abono registrado por administración', reference = ''): Observable<Enrollment> {
+    return this.http.post<Enrollment>(`${this.apiUrl}/${id}/payments`, { ...(amount === undefined ? {} : { amount }), requestId, reason, reference });
   }
 
   confirm(id: string): Observable<Enrollment> {

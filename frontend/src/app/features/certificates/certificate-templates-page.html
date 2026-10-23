@@ -1,9 +1,9 @@
-<section class="templates-page">
+<section class="templates-page eva-workspace eva-page">
   <header class="page-heading"><div><p class="eyebrow">ADMINISTRACIÓN / ACREDITACIÓN</p><h1>Plantillas de certificados</h1><p>Personaliza el diseño que recibirán tus participantes.</p></div><div class="header-actions"><a routerLink="/certificados">Ir a emisión ↗</a><button type="button" class="primary" (click)="newTemplate()" [disabled]="saving()">+ Nueva plantilla</button></div></header>
   @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
   @if (error()) { <p class="error" role="alert">{{ error() }} @if (!templates().length) { <button type="button" (click)="load()">Recargar</button> }</p> }
   @if (loading()) { <p role="status">Cargando plantillas…</p> }
-  <nav class="template-list" aria-label="Plantillas guardadas">@for (template of templates(); track template.id) { <button type="button" [class.active]="selected()?.id === template.id" [attr.aria-pressed]="selected()?.id === template.id" (click)="select(template)" [disabled]="saving()"><span class="template-icon" aria-hidden="true">▤</span><span><strong>{{ template.name }}</strong><small>{{ template.type === 'aprobacion' ? 'Aprobación' : 'Participación' }} · Versión {{ template.version }}</small></span></button> }</nav>
+  <nav class="template-list" aria-label="Plantillas guardadas">@for (template of templates(); track template.id) { <button type="button" [class.active]="selected()?.id === template.id" [attr.aria-pressed]="selected()?.id === template.id" (click)="select(template)" [disabled]="saving()"><svg class="template-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18m-11 0v11m4-7h4m-4 3h4"/></svg><span><strong>{{ template.name }}</strong><small>{{ template.type === 'aprobacion' ? 'Aprobación' : 'Participación' }} · Versión {{ template.version }}</small></span></button> }</nav>
   <div class="editor-layout">
     <form class="editor" [formGroup]="form" (ngSubmit)="save()">
       <div class="editor-heading"><h2>{{ selected() ? 'Editar plantilla' : 'Nueva plantilla' }}</h2><span>{{ dirty() ? 'Cambios sin guardar' : selected() ? 'Guardada' : 'Borrador' }}</span></div>

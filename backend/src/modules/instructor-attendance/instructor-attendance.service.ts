@@ -18,12 +18,12 @@ const courseSelect = {
   id: true, name: true, code: true, instructorId: true, status: true
 } satisfies Prisma.CourseSelect;
 
-const sessionInclude = {
+const sessionInclude = (instructorId: number) => ({
   course: { select: courseSelect },
-  instructorAttendance: true
-} satisfies Prisma.CourseSessionInclude;
+  instructorAttendance: { where: { instructorId } }
+}) satisfies Prisma.CourseSessionInclude;
 
-type Session = Prisma.CourseSessionGetPayload<{ include: typeof sessionInclude }>;
+type Session = Prisma.CourseSessionGetPayload<{ include: ReturnType<typeof sessionInclude> }>;
 
 const toRow = (session: Session, today: string, assigned: boolean) => ({
   id: String(session.id),
@@ -36,9 +36,9 @@ const toRow = (session: Session, today: string, assigned: boolean) => ({
     : session.date.toISOString().slice(0, 10) > today
       ? 'No se puede registrar asistencia de una sesión futura.' : null,
   course: { id: String(session.courseId), name: session.course.name, code: session.course.code ?? '' },
-  status: session.instructorAttendance?.status ?? null,
-  updatedAt: session.instructorAttendance?.updatedAt.toISOString() ?? null,
-  recordedById: session.instructorAttendance ? String(session.instructorAttendance.recordedById) : null
+  status: session.instructorAttendance[0]?.status ?? null,
+  updatedAt: session.instructorAttendance[0]?.updatedAt.toISOString() ?? null,
+  recordedById: session.instructorAttendance[0] ? String(session.instructorAttendance[0].recordedById) : null
 });
 
 const assignedToCourse = async (tx: Prisma.TransactionClient, courseId: number, instructorId: number) => {
@@ -75,7 +75,7 @@ export const instructorAttendanceService = {
       OR: [
         { instructorId },
         { instructorAssignments: { some: { instructorId } } },
-        { sessions: { some: { instructorAttendance: { is: { instructorId } } } } }
+        { sessions: { some: { instructorAttendance: { some: { instructorId } } } } }
       ]
     };
     const [courses, sessions] = await Promise.all([
@@ -94,12 +94,12 @@ export const instructorAttendanceService = {
             }
           } : {}),
           OR: [
-            { instructorAttendance: { is: { instructorId } } },
-            { instructorAttendance: { is: null }, course: { instructorId } },
-            { instructorAttendance: { is: null }, course: { instructorAssignments: { some: { instructorId } } } }
+            { instructorAttendance: { some: { instructorId } } },
+            { course: { instructorId } },
+            { course: { instructorAssignments: { some: { instructorId } } } }
           ]
         },
-        include: sessionInclude,
+        include: sessionInclude(instructorId),
         orderBy: [{ date: 'desc' }, { startTime: 'desc' }, { id: 'desc' }]
       })
     ]);
@@ -142,7 +142,7 @@ export const instructorAttendanceService = {
       await tx.$queryRaw`SELECT id FROM cursos WHERE id = ${initial.courseId} FOR SHARE`;
       await tx.$queryRaw`SELECT id FROM sesiones WHERE id = ${sessionId} AND curso_id = ${initial.courseId} FOR UPDATE`;
       const session = await tx.courseSession.findUnique({
-        where: { id: sessionId }, include: sessionInclude
+        where: { id: sessionId }, include: sessionInclude(instructorId)
       });
       if (!session || session.courseId !== initial.courseId) {
         throw new HttpError(404, 'Sesión no encontrada en el curso.');
@@ -152,20 +152,16 @@ export const instructorAttendanceService = {
         throw new HttpError(400, 'No se puede registrar asistencia de una sesión futura.');
       }
       const assigned = await assignedToCourse(tx, session.courseId, instructorId);
-      if (session.instructorAttendance) {
-        if (session.instructorAttendance.instructorId !== instructorId) {
-          throw new HttpError(409, 'La sesión ya tiene asistencia de otro instructor. No se puede transferir el registro.');
-        }
-      } else if (!assigned) {
+      if (!session.instructorAttendance.length && !assigned) {
         throw new HttpError(400, 'El instructor no está asignado a este curso.');
       }
 
       const saved = await tx.instructorAttendance.upsert({
-        where: { sessionId },
+        where: { sessionId_instructorId: { sessionId, instructorId } },
         create: { courseId: session.courseId, sessionId, instructorId, status, recordedById: user.id },
         update: { status, recordedById: user.id }
       });
-      return toRow({ ...session, instructorAttendance: saved }, today, assigned);
+      return toRow({ ...session, instructorAttendance: [saved] }, today, assigned);
     });
   }
 };

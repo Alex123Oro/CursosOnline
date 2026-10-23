@@ -121,7 +121,7 @@ describe('enrollments by course', () => {
       [...harness.routeNativeElement!.querySelectorAll<HTMLButtonElement>('button')].find(
         (item) => item.textContent?.trim() === label
       )!;
-    button('Actualizar pago').click();
+    button('Registrar movimiento').click();
     harness.detectChanges();
     const amount = harness.routeNativeElement!.querySelector<HTMLInputElement>(
       'input[formControlName="amount"]'
@@ -131,8 +131,8 @@ describe('enrollments by course', () => {
     harness.detectChanges();
     button('Guardar pago').click();
     harness.detectChanges();
-    const failed = http.expectOne(`${base}/9/payments`);
-    expect(failed.request.body).toEqual({ amount: 60 });
+    const failed = http.expectOne(`${base}/9/payment-movements`);
+    expect(failed.request.body).toMatchObject({ amount: 60, kind: 'ABONO', requestId: expect.any(String) });
     failed.flush({ message: 'Error temporal' }, { status: 503, statusText: 'Unavailable' });
     harness.detectChanges();
     expect(harness.routeNativeElement!.textContent).toContain('Error temporal');
@@ -140,10 +140,10 @@ describe('enrollments by course', () => {
     expect(button('Guardar pago').disabled).toBe(false);
     button('Guardar pago').click();
     http
-      .expectOne(`${base}/9/payments`)
+      .expectOne(`${base}/9/payment-movements`)
       .flush({ ...row, paymentAmount: 60, paymentStatus: 'PARCIAL' });
     harness.detectChanges();
-    expect(harness.routeNativeElement!.textContent).toContain('Pago registrado correctamente.');
+    expect(harness.routeNativeElement!.textContent).toContain('Movimiento registrado. El historial anterior se conserva.');
     expect(
       harness.routeNativeElement!.querySelector<HTMLAnchorElement>('.back-link')!.search
     ).toContain('pagina=2');
@@ -238,21 +238,21 @@ describe('enrollments by course', () => {
   });
   it('cancels an operation when moving to a different enrollment detail', async () => {
     const harness = await RouterTestingHarness.create('/inscripciones/9?curso=7');
-    http.expectOne(`${base}/9`).flush(row);
+    http.expectOne(`${base}/9`).flush({ ...row, paymentAmount: 0, paymentStatus: 'PENDIENTE' });
     harness.detectChanges();
     const button = (label: string) =>
       [...harness.routeNativeElement!.querySelectorAll<HTMLButtonElement>('button')].find(
         (item) => item.textContent?.trim() === label
       )!;
-    button('Actualizar pago').click();
+    button('Registrar movimiento').click();
     harness.detectChanges();
     button('Guardar pago').click();
-    const pending = http.expectOne(`${base}/9/payments`);
+    const pending = http.expectOne(`${base}/9/payment-movements`);
     await harness.navigateByUrl('/inscripciones/10?curso=7');
     http.expectOne(`${base}/10`).flush({ ...row, id: '10', participantName: 'Luis' });
     harness.detectChanges();
     expect(pending.cancelled).toBe(true);
-    expect(button('Actualizar pago').disabled).toBe(false);
+    expect(button('Registrar movimiento').disabled).toBe(false);
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent).toContain('Luis');
   });
 });

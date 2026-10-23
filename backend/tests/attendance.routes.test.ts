@@ -16,7 +16,7 @@ describe('attendance HTTP contract', () => {
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/courses`;
   });
   afterAll(() => new Promise<void>(resolve => { server.close(() => resolve()); server.closeAllConnections(); }));
-  beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 8, name: 'Instructor', role: 'INSTRUCTOR', participantTypeId: null }); mocks.list.mockResolvedValue({ students: [] }); mocks.save.mockResolvedValue({ enrollmentId: '3', percentage: 100 }); });
+  beforeEach(() => { vi.resetAllMocks(); mocks.user.findUnique.mockResolvedValue({ id: 8, active: true, name: 'Instructor', role: 'INSTRUCTOR', participantTypeId: null }); mocks.list.mockResolvedValue({ students: [] }); mocks.save.mockResolvedValue({ enrollmentId: '3', percentage: 100 }); });
   const put = (path: string, status: unknown, user = '8') => fetch(`${base}/${path}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: user ? `Bearer ${user}` : '' }, body: JSON.stringify({ status }) });
   it('returns 401 to guests on read and write', async () => {
     expect((await fetch(`${base}/2/attendance`)).status).toBe(401);

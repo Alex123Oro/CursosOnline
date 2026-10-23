@@ -51,7 +51,7 @@ function compute(enrollment: ProgressEnrollment, today: string) {
   const weightTotal = graded.reduce((sum, evaluation) => sum + evaluation.weight, 0);
   const configuredWeight = evaluations.reduce((sum, evaluation) => sum + evaluation.weight, 0);
   const currentGrade = weightTotal ? round(graded.reduce((sum, evaluation) =>
-    sum + (evaluation.percentage ?? 0) * evaluation.weight, 0) / weightTotal) : null;
+    sum + (evaluation.score! / evaluation.maxScore * 100) * evaluation.weight, 0) / weightTotal) : null;
   const endDate = dateOnly(course.endDate);
   const isFinished = Boolean(endDate && endDate < today);
   const allEvaluationsGraded = evaluations.length > 0 && graded.length === evaluations.length;
@@ -76,20 +76,20 @@ function compute(enrollment: ProgressEnrollment, today: string) {
   };
 }
 
-async function authorizedCourse(courseId: number, user: RequestUser) {
+async function authorizedCourse(courseId: number, user: RequestUser, db: Prisma.TransactionClient = prisma) {
   if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') throw new HttpError(403, 'No tienes permisos para consultar resultados.');
-  const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, instructorId: true } });
+  const course = await db.course.findUnique({ where: { id: courseId }, select: { id: true, instructorId: true } });
   if (!course) throw new HttpError(404, 'Curso no encontrado.');
   if (user.role === 'INSTRUCTOR' && course.instructorId !== user.id) {
-    const assigned = await prisma.courseInstructor.findUnique({
+    const assigned = await db.courseInstructor.findUnique({
       where: { courseId_instructorId: { courseId, instructorId: user.id } }, select: { id: true }
     });
     if (!assigned) throw new HttpError(403, 'No eres instructor asignado a este curso.');
   }
 }
 
-async function getCourseProgress(courseId: number) {
-  const enrollments = await prisma.enrollment.findMany({ where: { courseId, status: 'INSCRITO' },
+async function getCourseProgress(courseId: number, db: Prisma.TransactionClient = prisma) {
+  const enrollments = await db.enrollment.findMany({ where: { courseId, status: 'INSCRITO' },
     include: { ...enrollmentInclude, participant: { select: { id: true, name: true } } },
     orderBy: { id: 'asc' } });
   return enrollments.map(enrollment => ({ participantId: String(enrollment.participant.id),
@@ -98,7 +98,7 @@ async function getCourseProgress(courseId: number) {
 
 export const progressService = {
   async listForParticipant(participantId: number) {
-    const enrollments = await prisma.enrollment.findMany({ where: { participantId }, include: enrollmentInclude, orderBy: { createdAt: 'desc' } });
+    const enrollments = await prisma.enrollment.findMany({ where: { participantId, status: { in: ['PREINSCRITO', 'INSCRITO'] } }, include: enrollmentInclude, orderBy: { createdAt: 'desc' } });
     return enrollments.map(enrollment => compute(enrollment, boliviaToday()));
   },
   async listCourseResults(courseId: number, user: RequestUser) {
@@ -106,15 +106,17 @@ export const progressService = {
     return getCourseProgress(courseId);
   },
   async calculateCourseResults(courseId: number, user: RequestUser) {
-    await authorizedCourse(courseId, user);
-    const results = await getCourseProgress(courseId);
+    return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM cursos WHERE id=${courseId} FOR UPDATE`;
+    await authorizedCourse(courseId, user, tx);
+    const results = await getCourseProgress(courseId, tx);
     // Los datos incompletos nunca se marcan como aprobados ni reprobados.
     for (const result of results) {
       const enrollmentId = Number(result.enrollmentId);
       const status = result.finalStatus === 'APROBADO' ? 'PASSED' :
         result.finalStatus === 'REPROBADO' ? 'FAILED' :
           result.finalStatus === 'NO_CUMPLE_ASISTENCIA' ? 'ATTENDANCE_NOT_MET' : 'PENDING';
-      await prisma.courseResult.upsert({
+      await tx.courseResult.upsert({
         where: { enrollmentId },
         create: { enrollmentId, courseId, status, finalScore: result.finalGrade,
           attendancePercent: result.attendance.percentage, recordedById: user.id,
@@ -124,5 +126,6 @@ export const progressService = {
       });
     }
     return { courseId: String(courseId), results, savedCount: results.length };
+    });
   }
 };

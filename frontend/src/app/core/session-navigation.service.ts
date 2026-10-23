@@ -15,7 +15,7 @@ export class SessionNavigationService {
       if (!this.session.ready()) return;
       const user = this.session.currentUser();
       const id = user?.id ?? '';
-      if (previousId !== null && previousId !== id && !isCertificateVerificationRoute(this.router.url)) {
+      if (previousId !== null && previousId !== id && !isCertificateVerificationRoute(this.router.url) && !/^\/confirmar-correo(?:[/?#]|$)/.test(this.router.url ?? '')) {
         untracked(() => { void this.router.navigateByUrl(user ? profileHome(user.role) : '/iniciar-sesion'); });
       }
       previousId = id;

@@ -1,5 +1,6 @@
+import { throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
@@ -14,7 +15,7 @@ describe('InstructorService', () => {
     endSessionLocally.mockReset();
     TestBed.configureTestingModule({ providers: [
       provideRouter([]), provideHttpClient(withInterceptors([sessionInterceptor])), provideHttpClientTesting(),
-      { provide: SessionService, useValue: { accessToken: () => 'admin-token', userId: () => '1', endSessionLocally } }
+      { provide: SessionService, useValue: { accessToken: () => 'admin-token', userId: () => '1', renewSession: () => throwError(() => new HttpErrorResponse({status:401})), endSessionLocally } }
     ] });
   });
   afterEach(() => TestBed.inject(HttpTestingController).verify());
