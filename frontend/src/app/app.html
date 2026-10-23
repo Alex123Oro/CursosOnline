@@ -1,4 +1,7 @@
 ﻿<div class="shell" [class.public-shell]="isPublicRoute()" [class.participant-shell]="!isPublicRoute() && session.currentUser()?.role === 'PARTICIPANT'">
+  @if (session.connectionIssue()) {
+    <div class="session-connection-note" role="status">{{ session.connectionIssue() }} <button type="button" [disabled]="session.reconnecting()" (click)="session.retryConnection()">Reintentar</button></div>
+  }
   @if (!isPublicRoute()) {
   <header class="mobile-navbar">
   <button #menuToggle class="menu-toggle" type="button"

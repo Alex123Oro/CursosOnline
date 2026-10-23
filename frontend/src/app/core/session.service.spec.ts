@@ -71,4 +71,56 @@ describe('SessionService authentication', () => {
     session.addInstructor({ ...instructor, name: 'Updated' });
     expect(session.users()).toHaveLength(1);
   });
+
+  function persisted() {
+    localStorage.setItem('eva-access-token','old'); localStorage.setItem('eva-refresh-token','refresh-old');
+    localStorage.setItem('eva-user-id',instructor.id); localStorage.setItem('eva-user',JSON.stringify(instructor));
+    return {session: TestBed.inject(SessionService),http:TestBed.inject(HttpTestingController)};
+  }
+  it('preserves the cached session during a temporary restoration failure and allows retry', () => {
+    const {session,http} = persisted();
+    http.expectOne(req => req.url.endsWith('/session/me')).flush({}, {status:503,statusText:'Unavailable'});
+    expect(session.currentUser()).toEqual(instructor); expect(session.accessToken()).toBe('old'); expect(session.ready()).toBe(true);
+    expect(session.connectionIssue()).not.toBe('');
+    session.retryConnection(); http.expectOne(req => req.url.endsWith('/session/me')).flush(instructor);
+    expect(session.connectionIssue()).toBe('');
+  });
+  it('renews an expired session and restores it with the rotated token', () => {
+    const {session,http} = persisted();
+    http.expectOne(req => req.url.endsWith('/session/me')).flush({}, {status:401,statusText:'Unauthorized'});
+    const refresh = http.expectOne(req => req.url.endsWith('/auth/refresh'));
+    expect(refresh.request.body).toEqual({refreshToken:'refresh-old'});
+    refresh.flush({accessToken:'new',refreshToken:'refresh-new',expiresAt:null,user:instructor});
+    const me = http.expectOne(req => req.url.endsWith('/session/me')); expect(me.request.headers.get('Authorization')).toBe('Bearer new'); me.flush(instructor);
+    expect(session.accessToken()).toBe('new'); expect(localStorage.getItem('eva-refresh-token')).toBe('refresh-new');
+  });
+  it('shares a renewal across concurrent callers', () => {
+    const {session,http} = persisted(); http.expectOne(req => req.url.endsWith('/session/me')).flush(instructor);
+    const a = vi.fn(), b = vi.fn(); session.renewSession().subscribe(a); session.renewSession().subscribe(b);
+    http.expectOne(req => req.url.endsWith('/auth/refresh')).flush({accessToken:'new',refreshToken:'rotated',expiresAt:null,user:instructor});
+    expect(a).toHaveBeenCalledWith('new'); expect(b).toHaveBeenCalledWith('new');
+  });
+  it('retains refresh credentials during a temporary renewal failure', () => {
+    const {session,http} = persisted(); http.expectOne(req => req.url.endsWith('/session/me')).flush(instructor);
+    session.renewSession().subscribe({error:()=>{}});
+    http.expectOne(req => req.url.endsWith('/auth/refresh')).flush({}, {status:503,statusText:'Unavailable'});
+    expect(session.accessToken()).toBe('old'); expect(localStorage.getItem('eva-refresh-token')).toBe('refresh-old');
+  });
+  it('removes both credentials if the refresh token has been revoked', () => {
+    const {session,http} = persisted(); http.expectOne(req => req.url.endsWith('/session/me')).flush(instructor);
+    session.renewSession().subscribe({error:()=>{}});
+    http.expectOne(req => req.url.endsWith('/auth/refresh')).flush({}, {status:401,statusText:'Unauthorized'});
+    expect(session.accessToken()).toBe(''); expect(localStorage.getItem('eva-refresh-token')).toBeNull();
+  });
+  it('does not resurrect a logged out profile when restoration completes late', () => {
+    const {session,http} = persisted(); const pending = http.expectOne(req => req.url.endsWith('/session/me'));
+    session.endSessionLocally(); pending.flush(instructor);
+    expect(session.currentUser()).toBeNull(); expect(localStorage.getItem('eva-user')).toBeNull();
+  });
+  it('does not clear a newly logged in account when an older logout completes', () => {
+    const {session,http} = persisted(); http.expectOne(req => req.url.endsWith('/session/me')).flush(instructor);
+    session.logout().subscribe(); const pending = http.expectOne(req => req.url.endsWith('/auth/logout'));
+    session.login(instructor.email,'secret').subscribe(); http.expectOne(req => req.url.endsWith('/auth/login')).flush({accessToken:'new',refreshToken:'new-refresh',expiresAt:null,user:instructor});
+    pending.flush(null); expect(session.accessToken()).toBe('new');
+  });
 });

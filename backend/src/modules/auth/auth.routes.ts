@@ -16,4 +16,6 @@ authRoutes.post('/resend-confirmation', registrationLimit, asyncHandler(authCont
 authRoutes.post('/confirm-email', registrationLimit, asyncHandler(authController.confirmEmail));
 
 authRoutes.post('/login', asyncHandler(authController.login));
+authRoutes.post('/refresh', rateLimit({ windowMs: 60000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false,
+  message: { message: 'Espera un momento antes de renovar la sesión.' } }), asyncHandler(authController.refresh));
 authRoutes.post('/logout', requireUser, asyncHandler(authController.logout));

@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { profileHome } from '../../core/role.guard';
 import { SessionService } from '../../core/session.service';
+import { returnToCourse } from '../../core/return-to-course';
 
 @Component({
   selector: 'app-login-page',
@@ -21,6 +22,7 @@ export class LoginPage {
   readonly feedback = signal('');
   readonly showPassword = signal(false);
   readonly year = new Date().getFullYear();
+  readonly returnTo = returnToCourse(inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo'));
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required]
@@ -33,7 +35,7 @@ export class LoginPage {
     this.submitting.set(true);
     const { email, password } = this.form.getRawValue();
     this.session.login(email, password).pipe(finalize(() => this.submitting.set(false))).subscribe({
-      next: user => void this.router.navigateByUrl(profileHome(user.role)),
+      next: user => void this.router.navigateByUrl(user.role === 'PARTICIPANT' && this.returnTo ? this.returnTo : profileHome(user.role)),
       error: error => this.feedback.set(this.errorMessage(error))
     });
   }

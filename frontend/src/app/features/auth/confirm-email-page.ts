@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SessionService, type SessionUser } from '../../core/session.service';
+import { returnToCourse } from '../../core/return-to-course';
 
 @Component({
   selector: 'app-confirm-email-page', standalone: true, imports: [RouterLink],
@@ -13,7 +14,7 @@ import { SessionService, type SessionUser } from '../../core/session.service';
     @if (user(); as account) {
       <p class="login-subtitle" role="status">Bienvenido, {{ account.name }}. Tu correo fue confirmado.</p>
       <p>Tu categoría: <strong>{{ account.participantTypeName === 'Estudiante' ? 'Estudiante UMSS' : account.participantTypeName }}</strong>.</p>
-      <a class="catalog-link" routerLink="/mis-cursos">Entrar a mi campus</a><br>
+      <a class="catalog-link" [routerLink]="returnTo ?? '/mis-cursos'">{{ returnTo ? 'Continuar con mi curso' : 'Entrar a mi campus' }}</a><br>
       <a class="catalog-link" routerLink="/catalogo">Explorar cursos</a>
     }
     @if (feedback()) { <p class="login-error" role="alert">{{ feedback() }}</p>
@@ -27,6 +28,7 @@ export class ConfirmEmailPage {
   readonly loading = signal(false);
   readonly feedback = signal('');
   readonly user = signal<SessionUser | null>(null);
+  readonly returnTo = returnToCourse(new URLSearchParams(inject(DOCUMENT).defaultView?.location.search).get('returnTo'));
 
   constructor() {
     const view = inject(DOCUMENT).defaultView;
@@ -39,7 +41,7 @@ export class ConfirmEmailPage {
       return;
     }
     this.loading.set(true);
-    this.session.confirmEmail(token).subscribe({
+    this.session.confirmEmail(token, ...(params.get('refresh_token') ? [params.get('refresh_token')!] : [])).subscribe({
       next: user => { this.user.set(user); this.loading.set(false); },
       error: error => {
         this.loading.set(false);

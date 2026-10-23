@@ -7,7 +7,7 @@
     @if (sentEmail()) {
       <p class="login-subtitle">Revisa <strong>{{ sentEmail() }}</strong> y abre el enlace para completar tu registro. Revisa también la carpeta de spam.</p>
       <p class="category-note">Tu categoría y la tarifa correspondiente estarán disponibles después de confirmar el correo. Si ya tienes una cuenta, inicia sesión.</p>
-      <a class="primary-link" routerLink="/iniciar-sesion">Ir a iniciar sesión</a>
+      <a class="primary-link" routerLink="/iniciar-sesion" [queryParams]="returnTo ? { returnTo } : {}">Ir a iniciar sesión</a>
     } @else {
       <p class="login-subtitle">Elige tu perfil y confirma tu correo para acceder al campus.</p>
       <form [formGroup]="form" (ngSubmit)="submit()">
@@ -37,7 +37,7 @@
         </label>
         <button type="submit" [disabled]="submitting()">{{ submitting() ? 'Enviando…' : 'Crear cuenta y verificar correo' }}</button>
       </form>
-      <p class="account-link">¿Ya tienes cuenta? <a routerLink="/iniciar-sesion">Inicia sesión</a></p>
+      <p class="account-link">¿Ya tienes cuenta? <a routerLink="/iniciar-sesion" [queryParams]="returnTo ? { returnTo } : {}">Inicia sesión</a></p>
     }
     <details class="resend-panel" [open]="!!sentEmail()">
       <summary>¿No recibiste el enlace o ha vencido?</summary>

@@ -10,6 +10,27 @@ vi.mock('../src/config/env.js', () => ({ env }));
 import { authService, verifyAccessToken } from '../src/modules/auth/auth.service.js';
 
 describe('Supabase authentication', () => {
+  it('rotates refresh credentials and returns the authoritative local profile', async () => {
+    const transport = vi.fn().mockResolvedValue(new Response(JSON.stringify({access_token:'rotated-access',refresh_token:'rotated-refresh',expires_in:3600,user:{id:'auth-id'}})));
+    vi.stubGlobal('fetch',transport);
+    findUnique.mockResolvedValue({id:5,name:'Ana',email:'ana@example.test',role:'PARTICIPANT',participantTypeId:2,participantType:{name:'Externo'}});
+    const result = await authService.refresh('refresh-original');
+    expect(transport).toHaveBeenCalledWith(expect.stringContaining('grant_type=refresh_token'),expect.objectContaining({body:JSON.stringify({refresh_token:'refresh-original'})}));
+    expect(result).toMatchObject({accessToken:'rotated-access',refreshToken:'rotated-refresh',user:{id:'5',role:'PARTICIPANT'}});
+    expect(result.expiresAt).toBeGreaterThan(Date.now()/1000);
+  });
+  it.each([429,500,503])('keeps temporary provider status %s distinguishable from invalid credentials', async status => {
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('{}',{status})));
+    await expect(authService.refresh('refresh')).rejects.toMatchObject({statusCode:503});
+  });
+  it('rejects a revoked refresh token', async () => {
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('{}',{status:400})));
+    await expect(authService.refresh('refresh')).rejects.toMatchObject({statusCode:401});
+  });
+  it('handles malformed refresh responses as a temporary provider failure', async () => {
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('not json')));
+    await expect(authService.refresh('refresh')).rejects.toMatchObject({statusCode:503});
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
     findUnique.mockReset();

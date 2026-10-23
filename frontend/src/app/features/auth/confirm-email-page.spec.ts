@@ -19,7 +19,7 @@ describe('ConfirmEmailPage', () => {
       return of({ id: '1', name: 'Ana', participantTypeName: 'Estudiante', role: 'PARTICIPANT' });
     });
     const fixture = TestBed.createComponent(ConfirmEmailPage); fixture.detectChanges();
-    expect(confirmEmail).toHaveBeenCalledWith('verified-token');
+    expect(confirmEmail).toHaveBeenCalledWith('verified-token', 'private-refresh');
     expect(fixture.nativeElement.textContent).toContain('Estudiante UMSS');
     expect(window.location.href).not.toContain('private-refresh');
   });

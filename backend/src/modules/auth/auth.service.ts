@@ -7,6 +7,7 @@ type SupabaseSession = {
   access_token: string;
   refresh_token: string;
   expires_at?: number;
+  expires_in?: number;
   user: SupabaseUser;
 };
 
@@ -66,14 +67,39 @@ export const authService = {
     }
     const session = await response.json() as SupabaseSession;
     const user = await accountFor(session.user);
-    return { accessToken: session.access_token, refreshToken: session.refresh_token, expiresAt: session.expires_at ?? null, user };
+    return { accessToken: session.access_token, refreshToken: session.refresh_token,
+      expiresAt: session.expires_at ?? (session.expires_in ? Math.floor(Date.now() / 1000) + session.expires_in : null), user };
   },
 
-  async confirmEmail(token: string) {
+  async refresh(refreshToken: string) {
+    if (!env.supabaseUrl || !apiKey()) throw new HttpError(503, 'La autenticación no está configurada.');
+    let response: Response;
+    try {
+      response = await fetch(authUrl('token?grant_type=refresh_token'), {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ refresh_token: refreshToken }), signal: AbortSignal.timeout(15000)
+      });
+    } catch { throw new HttpError(503, 'No se pudo renovar la sesión. Inténtalo nuevamente.'); }
+    if (!response.ok) {
+      if (response.status >= 500 || response.status === 429) throw new HttpError(503, 'El servicio de autenticación no está disponible.');
+      throw new HttpError(401, 'La sesión ha vencido. Inicia sesión nuevamente.');
+    }
+    const session = await response.json().catch(() => null) as SupabaseSession | null;
+    if (!session?.access_token || !session.refresh_token || !session.user?.id) throw new HttpError(503, 'No se pudo renovar la sesión.');
+    return { accessToken: session.access_token, refreshToken: session.refresh_token,
+      expiresAt: session.expires_at ?? (session.expires_in ? Math.floor(Date.now() / 1000) + session.expires_in : null), user: await accountFor(session.user) };
+  },
+
+  async confirmEmail(token: string, refreshToken?: string) {
     const identity = await verifyAccessToken(token);
     if (!identity) throw new HttpError(401, 'El enlace no es válido o ha vencido. Solicita uno nuevo.');
     if (!identity.email_confirmed_at) throw new HttpError(403, 'Primero debes confirmar tu correo electrónico.');
-    return { accessToken: token, refreshToken: '', expiresAt: null, user: await accountFor(identity) };
+    const user = await accountFor(identity);
+    if (refreshToken) {
+      const renewed = await authService.refresh(refreshToken);
+      if (renewed.user.id !== user.id) throw new HttpError(401, 'La confirmación no corresponde a esta sesión.');
+      return renewed;
+    }
+    return { accessToken: token, refreshToken: '', expiresAt: null, user };
   },
 
   async logout(token: string) {

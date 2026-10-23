@@ -43,8 +43,8 @@
       </div>
       <button class="login-submit" type="submit" [disabled]="submitting()">{{ submitting() ? 'Validando...' : 'Entrar' }}</button>
     </form>
-    <p class="register-link">¿Aún no tienes cuenta? <a routerLink="/registrarse">Crear cuenta</a></p>
-    <a class="confirmation-link" routerLink="/registrarse">Reenviar confirmación de correo</a>
+    <p class="register-link">¿Aún no tienes cuenta? <a routerLink="/registrarse" [queryParams]="returnTo ? { returnTo } : {}">Crear cuenta</a></p>
+    <a class="confirmation-link" routerLink="/registrarse" [queryParams]="returnTo ? { returnTo } : {}">Reenviar confirmación de correo</a>
     <a class="catalog-link" routerLink="/catalogo">Volver al catálogo <span aria-hidden="true">↗</span></a>
     </div>
   </section>

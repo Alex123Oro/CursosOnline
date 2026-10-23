@@ -10,7 +10,8 @@ export const registrationSchema = z.object({
   name: z.string().trim().min(3, 'Ingresa tu nombre completo.').max(150),
   email: z.string().trim().toLowerCase().email('Ingresa un correo válido.').max(254),
   password: z.string().min(8, 'Usa al menos 8 caracteres.').max(128),
-  participantKind: z.enum(['UMSS', 'EXTERNAL'])
+  participantKind: z.enum(['UMSS', 'EXTERNAL']),
+  returnTo: z.string().regex(/^\/catalogo\/[1-9]\d*$/).optional()
 }).strict().superRefine((input, ctx) => {
   if ((input.participantKind === 'UMSS') !== isUmssStudentEmail(input.email)) {
     ctx.addIssue({ code: 'custom', path: ['email'], message: input.participantKind === 'UMSS'
@@ -19,13 +20,14 @@ export const registrationSchema = z.object({
   }
 });
 export const registrationEmailSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Ingresa un correo válido.').max(254)
+  email: z.string().trim().toLowerCase().email('Ingresa un correo válido.').max(254),
+  returnTo: z.string().regex(/^\/catalogo\/[1-9]\d*$/).optional()
 }).strict();
 
 const confirmationMessage = 'Revisa tu correo y abre el enlace de confirmación. Si ya tienes una cuenta, inicia sesión.';
 const unavailable = () => new HttpError(503, 'No se pudo completar la solicitud de correo. Inténtalo nuevamente.');
 
-const redirectUrl = () => {
+const redirectUrl = (returnTo?: string) => {
   const raw = env.authEmailRedirectUrl ?? (env.publicAppUrl ? `${env.publicAppUrl.replace(/\/$/, '')}/confirmar-correo` : '');
   let url: URL;
   try { url = new URL(raw); } catch { throw new HttpError(503, 'Falta configurar la dirección de confirmación del correo.'); }
@@ -33,6 +35,7 @@ const redirectUrl = () => {
       (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)))) {
     throw new HttpError(503, 'La dirección de confirmación del correo no es válida.');
   }
+  if (returnTo) url.searchParams.set('returnTo', returnTo);
   return url.href;
 };
 
@@ -73,7 +76,7 @@ async function assertEmailConfirmationEnabled() {
 export const registrationService = {
   async register(raw: unknown) {
     const input = registrationSchema.parse(raw);
-    const redirect = redirectUrl();
+    const redirect = redirectUrl(input.returnTo);
     await assertEmailConfirmationEnabled();
     const result = await authRequest(`signup?redirect_to=${encodeURIComponent(redirect)}`, {
       email: input.email, password: input.password,
@@ -85,8 +88,8 @@ export const registrationService = {
   },
 
   async resend(raw: unknown) {
-    const { email } = registrationEmailSchema.parse(raw);
-    const redirect = redirectUrl();
+    const { email, returnTo } = registrationEmailSchema.parse(raw);
+    const redirect = redirectUrl(returnTo);
     await assertEmailConfirmationEnabled();
     await authRequest(`resend?redirect_to=${encodeURIComponent(redirect)}`, { type: 'signup', email });
     return { message: confirmationMessage };

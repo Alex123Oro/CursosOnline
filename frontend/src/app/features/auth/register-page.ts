@@ -1,9 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { SessionService } from '../../core/session.service';
+import { returnToCourse } from '../../core/return-to-course';
 
 const studentEmail = (email: string) => ['est.umss.edu', 'ms.umss.edu'].includes(email.trim().toLowerCase().split('@')[1] ?? '');
 
@@ -19,6 +20,7 @@ export class RegisterPage {
   readonly sentEmail = signal('');
   readonly feedback = signal('');
   readonly resent = signal(false);
+  readonly returnTo = returnToCourse(inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo'));
   readonly form = this.fb.nonNullable.group({
     participantKind: ['UMSS' as 'UMSS' | 'EXTERNAL', Validators.required],
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(150), Validators.pattern(/\S.{1,}\S/)]],
@@ -43,7 +45,7 @@ export class RegisterPage {
     input.email = input.email.trim().toLowerCase();
     this.feedback.set('');
     this.submitting.set(true);
-    this.session.register(input).pipe(finalize(() => this.submitting.set(false))).subscribe({
+    this.session.register({ ...input, ...(this.returnTo ? { returnTo: this.returnTo } : {}) }).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: () => {
         this.sentEmail.set(input.email);
         this.resendForm.controls.email.setValue(input.email);
@@ -60,7 +62,7 @@ export class RegisterPage {
     this.feedback.set('');
     this.resent.set(false);
     this.submitting.set(true);
-    this.session.resendConfirmation(this.resendForm.getRawValue().email.trim().toLowerCase())
+    this.session.resendConfirmation(this.resendForm.getRawValue().email.trim().toLowerCase(), ...(this.returnTo ? [this.returnTo] : []))
       .pipe(finalize(() => this.submitting.set(false))).subscribe({
         next: () => this.resent.set(true),
         error: error => this.feedback.set(this.errorMessage(error))
