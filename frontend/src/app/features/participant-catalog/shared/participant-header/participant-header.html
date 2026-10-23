@@ -9,6 +9,7 @@
       @if (session.currentUser()?.role === 'ADMIN' || session.currentUser()?.role === 'INSTRUCTOR') { <a class="session-action" routerLink="/cursos">Volver a cursos</a> }
       <button class="session-action" type="button" (click)="logout()">Cerrar sesión</button>
     } @else {
+      <a class="session-action" routerLink="/registrarse">Crear cuenta</a>
       <a class="session-action" routerLink="/iniciar-sesion">Iniciar sesión</a>
     }
   </div>

@@ -22,6 +22,8 @@ export const routes: Routes = [
   { path: 'mis-certificados', loadComponent: () => import('./features/certificates/my-certificates-page').then(m => m.MyCertificatesPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mis certificados | EVA' },
   { path: 'mis-certificados/:id', loadComponent: () => import('./features/certificates/certificate-detail-page').then(m => m.CertificateDetailPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Detalle del certificado | EVA' },
   { path: 'iniciar-sesion', component: LoginPage, title: 'Iniciar sesión | EVA' },
+  { path: 'registrarse', loadComponent: () => import('./features/auth/register-page').then(m => m.RegisterPage), title: 'Crear cuenta | EVA' },
+  { path: 'confirmar-correo', loadComponent: () => import('./features/auth/confirm-email-page').then(m => m.ConfirmEmailPage), title: 'Confirmar correo | EVA' },
   { path: 'mi-progreso', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], data: { view: 'all' }, title: 'Mi progreso | EVA' },
   { path: 'mis-cursos', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], data: { view: 'courses' }, title: 'Mis cursos | EVA' },
   { path: 'mi-asistencia', component: ProgressPage, canActivate: [roleGuard(['PARTICIPANT'])], data: { view: 'attendance' }, title: 'Mi asistencia | EVA' },

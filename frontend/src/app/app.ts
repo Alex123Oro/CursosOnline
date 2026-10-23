@@ -17,7 +17,8 @@ export class App {
   readonly session = inject(SessionService);
   readonly navigation = inject(SessionNavigationService);
   readonly sidebarOpen = signal(false);
-  readonly isPublicRoute = signal(this.router.url.startsWith('/catalogo') || this.router.url.startsWith('/iniciar-sesion') || isCertificateVerificationRoute(this.router.url));
+  readonly isPublicRoute = signal(this.publicRoute());
+  private publicRoute() { return /^\/(catalogo|iniciar-sesion|registrarse|confirmar-correo)(?:[/?#]|$)/.test(this.router.url) || isCertificateVerificationRoute(this.router.url); }
   canReturnToCourses() { const role = this.session.currentUser()?.role; return role === 'ADMIN' || role === 'INSTRUCTOR'; }
   isCoursesHome() { return this.router.url === '/cursos' || this.router.url === '/cursos/'; }
 
@@ -25,7 +26,7 @@ export class App {
     this.router.events
       .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe(() => {
-        this.isPublicRoute.set(this.router.url.startsWith('/catalogo') || this.router.url.startsWith('/iniciar-sesion') || isCertificateVerificationRoute(this.router.url));
+        this.isPublicRoute.set(this.publicRoute());
         this.sidebarOpen.set(false);
       });
   }

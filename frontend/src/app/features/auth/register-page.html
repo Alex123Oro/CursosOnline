@@ -1,0 +1,54 @@
+<main class="login-page">
+  <section class="login-panel registration-panel" aria-labelledby="register-title">
+    <a class="login-brand" routerLink="/catalogo"><span class="brand-mark" aria-hidden="true">E</span><span>EVA</span></a>
+    <p class="eyebrow">TU PRÓXIMO PASO EMPIEZA AQUÍ</p>
+    <h1 id="register-title">{{ sentEmail() ? 'Confirma tu correo' : 'Crea tu cuenta' }}</h1>
+    @if (feedback()) { <p class="login-error" role="alert">{{ feedback() }}</p> }
+    @if (sentEmail()) {
+      <p class="login-subtitle">Revisa <strong>{{ sentEmail() }}</strong> y abre el enlace para completar tu registro. Revisa también la carpeta de spam.</p>
+      <p class="category-note">Tu categoría y la tarifa correspondiente estarán disponibles después de confirmar el correo. Si ya tienes una cuenta, inicia sesión.</p>
+      <a class="primary-link" routerLink="/iniciar-sesion">Ir a iniciar sesión</a>
+    } @else {
+      <p class="login-subtitle">Elige tu perfil y confirma tu correo para acceder al campus.</p>
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <fieldset class="kind-options">
+          <legend>¿Cómo participarás?</legend>
+          <label class="kind-option"><input type="radio" formControlName="participantKind" value="UMSS"><span>Estudiante UMSS<small>Con correo institucional estudiantil</small></span></label>
+          <label class="kind-option"><input type="radio" formControlName="participantKind" value="EXTERNAL"><span>Participante externo<small>Con tu correo personal</small></span></label>
+        </fieldset>
+        <label><span>Nombre completo</span><input autocomplete="name" formControlName="name" maxlength="150" placeholder="Como aparecerá en tus certificados">
+          @if (form.controls.name.touched && form.controls.name.invalid) { <small>Ingresa tu nombre completo (entre 3 y 150 caracteres).</small> }
+        </label>
+        <label><span>{{ form.controls.participantKind.value === 'UMSS' ? 'Correo institucional estudiantil' : 'Correo electrónico' }}</span>
+          <input type="email" autocomplete="email" formControlName="email" maxlength="254" [placeholder]="form.controls.participantKind.value === 'UMSS' ? 'tu_usuario@est.umss.edu' : 'nombre@correo.com'">
+          @if (form.controls.email.touched && form.controls.email.invalid) { <small>Ingresa un correo válido.</small> }
+          @if (form.controls.email.touched && form.hasError('emailCategory')) {
+            <small>{{ form.controls.participantKind.value === 'UMSS' ? 'Usa tu correo @est.umss.edu o @ms.umss.edu.' : 'Este correo corresponde a estudiantes UMSS. Selecciona esa opción.' }}</small>
+          }
+        </label>
+        @if (form.controls.participantKind.value === 'UMSS') {
+          <p class="category-note">Te enviaremos un enlace para comprobar que tienes acceso a tu correo institucional. Si no puedes acceder, contacta a administración para validar tu categoría.</p>
+        }
+        <label><span>Contraseña</span><input type="password" autocomplete="new-password" formControlName="password" minlength="8" maxlength="128" placeholder="Al menos 8 caracteres">
+          @if (form.controls.password.touched && form.controls.password.invalid) { <small>Usa entre 8 y 128 caracteres.</small> }
+        </label>
+        <label><span>Confirmar contraseña</span><input type="password" autocomplete="new-password" formControlName="confirmPassword" maxlength="128">
+          @if (form.controls.confirmPassword.touched && (form.hasError('passwordMismatch') || form.controls.confirmPassword.invalid)) { <small>Las contraseñas deben coincidir.</small> }
+        </label>
+        <button type="submit" [disabled]="submitting()">{{ submitting() ? 'Enviando…' : 'Crear cuenta y verificar correo' }}</button>
+      </form>
+      <p class="account-link">¿Ya tienes cuenta? <a routerLink="/iniciar-sesion">Inicia sesión</a></p>
+    }
+    <details class="resend-panel" [open]="!!sentEmail()">
+      <summary>¿No recibiste el enlace o ha vencido?</summary>
+      <form [formGroup]="resendForm" (ngSubmit)="resend()">
+        <label><span>Correo de tu registro</span><input type="email" autocomplete="email" formControlName="email" maxlength="254">
+          @if (resendForm.controls.email.touched && resendForm.controls.email.invalid) { <small>Ingresa un correo válido.</small> }
+        </label>
+        <button type="submit" [disabled]="submitting()">Reenviar confirmación</button>
+      </form>
+      @if (resent()) { <p class="confirmation-note" role="status">Si tu cuenta está pendiente de confirmación, recibirás un nuevo enlace. Revisa tu correo.</p> }
+    </details>
+    <a class="catalog-link" routerLink="/catalogo">Volver al catálogo</a>
+  </section>
+</main>

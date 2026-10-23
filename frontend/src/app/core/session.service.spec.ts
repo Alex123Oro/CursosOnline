@@ -14,6 +14,22 @@ describe('SessionService authentication', () => {
   });
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); localStorage.clear(); });
 
+  it('keeps signup unauthenticated until the confirmation endpoint verifies the token', () => {
+    const session = TestBed.inject(SessionService);
+    const http = TestBed.inject(HttpTestingController);
+    session.register({ name: 'Ana', email: 'ana@example.test', password: 'strong-password', participantKind: 'EXTERNAL' }).subscribe();
+    http.expectOne(`${environment.apiBaseUrl}/auth/register`).flush({ message: 'Check email' });
+    expect(session.currentUser()).toBeNull();
+    expect(localStorage.getItem('eva-access-token')).toBeNull();
+    session.confirmEmail('verified-token').subscribe();
+    const request = http.expectOne(`${environment.apiBaseUrl}/auth/confirm-email`);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer verified-token');
+    const participant = { ...instructor, role: 'PARTICIPANT', participantTypeId: '4', participantTypeName: 'Externo' };
+    request.flush({ accessToken: 'verified-token', user: participant });
+    expect(session.currentUser()).toEqual(participant);
+    expect(localStorage.getItem('eva-access-token')).toBe('verified-token');
+  });
+
   it('restores the persisted authenticated instructor from the session endpoint', () => {
     localStorage.setItem('eva-access-token', 'persisted-token');
     localStorage.setItem('eva-user-id', instructor.id);

@@ -42,6 +42,13 @@ interface AuthResponse {
   user: SessionUser;
 }
 
+export interface ParticipantRegistration {
+  name: string;
+  email: string;
+  password: string;
+  participantKind: 'UMSS' | 'EXTERNAL';
+}
+
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly usersState = signal<SessionUser[]>([]);
@@ -81,6 +88,23 @@ export class SessionService {
       }),
       map(result => result.user)
     );
+  }
+
+  register(input: ParticipantRegistration) {
+    return this.http.post<{ message: string }>(`${environment.apiBaseUrl}/auth/register`, input);
+  }
+
+  resendConfirmation(email: string) {
+    return this.http.post<{ message: string }>(`${environment.apiBaseUrl}/auth/resend-confirmation`, { email });
+  }
+
+  confirmEmail(token: string) {
+    return this.http.post<AuthResponse>(`${environment.apiBaseUrl}/auth/confirm-email`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).pipe(tap(result => {
+      this.persistSession(result.user, result.accessToken);
+      this.ready.set(true);
+    }), map(result => result.user));
   }
 
   logout() {
