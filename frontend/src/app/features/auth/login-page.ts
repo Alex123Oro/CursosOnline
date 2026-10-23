@@ -11,7 +11,7 @@ import { SessionService } from '../../core/session.service';
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './login-page.html',
-  styleUrl: './login-page.scss'
+  styleUrls: ['./login-page.scss', './login-layout.scss']
 })
 export class LoginPage {
   private readonly fb = inject(FormBuilder);
@@ -19,6 +19,8 @@ export class LoginPage {
   private readonly session = inject(SessionService);
   readonly submitting = signal(false);
   readonly feedback = signal('');
+  readonly showPassword = signal(false);
+  readonly year = new Date().getFullYear();
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required]
