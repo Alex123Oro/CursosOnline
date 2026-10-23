@@ -21,6 +21,9 @@
       [attr.aria-current]="state().status === 'INSCRITO' ? 'page' : null"
       >Inscritos</a
     >
+    @for (tab of closedTabs; track tab.status) {
+      <a class="enrollment-tab" routerLink="/inscripciones" [queryParams]="tabQuery(tab.status)" [class.active]="state().status === tab.status" [attr.aria-current]="state().status === tab.status ? 'page' : null">{{ tab.label }}</a>
+    }
   </nav>
   <section class="course-selection" aria-label="Seleccionar curso">
     @if (coursesLoading()) {
@@ -67,7 +70,7 @@
       <h2>Selecciona un curso para ver sus participantes</h2>
       <p>
         Elige un curso en el buscador. Aquí aparecerán únicamente sus
-        {{ state().status === 'INSCRITO' ? 'inscritos' : 'preinscritos' }}.
+        {{ statusLabels[state().status] }}.
       </p>
     </section>
   } @else {

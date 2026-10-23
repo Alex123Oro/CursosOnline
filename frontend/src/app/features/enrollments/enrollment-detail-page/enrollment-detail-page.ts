@@ -18,7 +18,7 @@ import { Enrollment, EnrollmentService } from '../../../core/enrollment.service'
 import { SessionService } from '../../../core/session.service';
 import { calculateEnrollmentAmount } from '../../../core/enrollment-amount';
 import { enrollmentParams, readEnrollmentQuery } from '../enrollment-navigation';
-type Action = 'scholarship' | 'payment' | 'confirm' | 'deactivate' | null;
+type Action = 'scholarship' | 'payment' | 'confirm' | 'deactivate' | 'cancel-reservation' | 'reject' | null;
 @Component({
   selector: 'app-enrollment-detail-page',
   imports: [RouterLink, ReactiveFormsModule],
@@ -47,6 +47,8 @@ export class EnrollmentDetailPage {
   readonly error = signal('');
   readonly action = signal<Action>(null);
   readonly confirmed = signal(false);
+  private paymentRequestId: string = crypto.randomUUID();
+  readonly closureForm = this.fb.nonNullable.group({ reason: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(500)]] });
   readonly backQuery = computed(() => {
     const state = readEnrollmentQuery(this.query());
     const row = this.enrollment();
@@ -77,8 +79,11 @@ export class EnrollmentDetailPage {
     reason: ['', [Validators.required, Validators.minLength(3), Validators.pattern(/\S/)]],
   });
   readonly paymentForm = this.fb.nonNullable.group({
-    amount: [0, [Validators.required, Validators.min(0)]],
-  });
+    amount: [0, [Validators.required, Validators.min(-99999999), Validators.max(99999999)]],
+    kind: ['ABONO' as 'ABONO' | 'DEVOLUCION' | 'AJUSTE'],
+    reason: ['Abono registrado por administración', [Validators.required, Validators.minLength(5), Validators.maxLength(500)]],
+    reference: ['', Validators.maxLength(100)]
+  }, { validators: control => Number(control.value.amount) === 0 || (control.value.kind !== 'AJUSTE' && Number(control.value.amount) < 0) ? { amount: true } : null });
   private readonly scholarshipValues = toSignal(this.scholarshipForm.valueChanges, {
     initialValue: this.scholarshipForm.getRawValue(),
   });
@@ -152,7 +157,9 @@ export class EnrollmentDetailPage {
       scholarshipPercent: row.scholarshipPercent,
       reason: row.scholarshipReason ?? '',
     });
-    this.paymentForm.reset({ amount: row.finalAmount });
+    this.paymentRequestId = crypto.randomUUID();
+    this.paymentForm.reset({ amount: Math.max(0, row.finalAmount - (row.paymentAmount ?? 0)), kind: 'ABONO', reason: 'Abono registrado por administración', reference: '' });
+    this.closureForm.reset();
     this.action.set(action);
   }
   cancel() {
@@ -175,11 +182,17 @@ export class EnrollmentDetailPage {
     this.paymentForm.markAllAsTouched();
     const row = this.enrollment();
     if (!row || this.paymentForm.invalid || this.isSaving()) return;
-    this.update(
-      this.api.registerPayment(row.id, this.paymentForm.controls.amount.value),
-      'Pago registrado correctamente.'
-    );
+    const input = this.paymentForm.getRawValue();
+    this.update(this.api.movement(row.id, { ...input, reason: input.reason.trim(), requestId: this.paymentRequestId }), 'Movimiento registrado. El historial anterior se conserva.');
   }
+  closeReservation() {
+    this.closureForm.markAllAsTouched();
+    const row = this.enrollment();
+    if (!row || this.closureForm.invalid || this.isSaving()) return;
+    const reason = this.closureForm.getRawValue().reason.trim();
+    this.update(this.action() === 'reject' ? this.api.reject(row.id, reason) : this.api.cancelReservation(row.id, reason), 'Preinscripción cerrada. El cupo quedó disponible.');
+  }
+  statusLabel(status: Enrollment['status']) { return ({ PREINSCRITO: 'Preinscrito', INSCRITO: 'Inscrito', CANCELADO: 'Cancelada', RECHAZADO: 'Rechazada', CADUCADO: 'Caducada' })[status]; }
   deactivate() {
     const row = this.enrollment();
     if (!row || this.isSaving()) return;

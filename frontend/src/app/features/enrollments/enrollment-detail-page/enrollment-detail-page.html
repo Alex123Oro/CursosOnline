@@ -18,7 +18,7 @@
         <p>{{ row.participantEmail }} · {{ row.participantTypeName }}</p>
       </div>
       <span class="status" [class.confirmed]="row.status === 'INSCRITO'">{{
-        row.status === 'INSCRITO' ? 'Inscrito' : 'Preinscrito'
+        statusLabel(row.status)
       }}</span>
     </header>
     @if (feedback()) {
@@ -107,7 +107,7 @@
         }
         <button
           class="secondary-btn"
-          [disabled]="isSaving()"
+          [disabled]="isSaving() || (row.status !== 'PREINSCRITO' && row.status !== 'INSCRITO')"
           [attr.aria-expanded]="action() === (row.scholarshipActive ? 'deactivate' : 'scholarship')"
           aria-controls="enrollment-action"
           (click)="open(row.scholarshipActive ? 'deactivate' : 'scholarship')"
@@ -127,14 +127,16 @@
         <div class="actions">
           <button
             class="secondary-btn"
-            [disabled]="isSaving() || (row.finalAmount === 0 && row.status !== 'INSCRITO')"
+            [disabled]="isSaving() || (row.status !== 'PREINSCRITO' && row.status !== 'INSCRITO') || (row.finalAmount === 0 && (row.paymentAmount ?? 0) === 0)"
             [attr.aria-expanded]="action() === 'payment'"
             aria-controls="enrollment-action"
             (click)="open('payment')"
           >
-            {{ row.paymentAmount !== null ? 'Actualizar pago' : 'Registrar pago' }}
+            Registrar movimiento
           </button>
           @if (row.status === 'PREINSCRITO') {
+            <button class="secondary-btn" [disabled]="isSaving() || (row.paymentAmount ?? 0) > 0" (click)="open('cancel-reservation')">Cancelar reserva</button>
+            <button class="secondary-btn" [disabled]="isSaving() || (row.paymentAmount ?? 0) > 0" (click)="open('reject')">Rechazar solicitud</button>
             <button
               class="primary-btn"
               [disabled]="isSaving() || !canConfirm()"
@@ -148,6 +150,15 @@
         </div>
       </section>
     </div>
+    @if (row.closureReason) { <p class="feedback">{{ statusLabel(row.status) }}: {{ row.closureReason }}</p> }
+    <section class="card payment-history"><h2>Historial de movimientos</h2>
+      @for (movement of row.paymentMovements ?? []; track movement.id) {
+        <article><strong>{{ movement.kind }} · {{ movement.amount }} Bs</strong><p>{{ movement.reason }}{{ movement.reference ? ' · ' + movement.reference : '' }}</p><small>{{ movement.recordedBy }} · {{ date(movement.registeredAt) }}</small></article>
+      } @empty { <p>Todavía no hay movimientos registrados.</p> }
+    </section>
+    <details class="card"><summary>Historial de la inscripción</summary>
+      @for (event of row.history ?? []; track event.id) { <p><strong>{{ statusLabel(event.status) }}</strong> · {{ event.reason }}<br><small>{{ event.recordedBy }} · {{ date(event.createdAt) }}</small></p> }
+    </details>
     @if (action()) {
       <section
         #actionPanel
@@ -200,23 +211,26 @@
             </form>
           }
           @case ('payment') {
-            <h2 id="action-title">Registrar pago</h2>
+            <h2 id="action-title">Registrar movimiento</h2>
             <p>
-              Monto final del curso: {{ row.finalAmount }} Bs. El importe registrado sustituye el
-              pago anterior; no se suma.
+              Monto final: {{ row.finalAmount }} Bs. Saldo registrado: {{ row.paymentAmount ?? 0 }} Bs. Los abonos se suman; las devoluciones se descuentan. Cada movimiento conserva su motivo y autor.
             </p>
             <form [formGroup]="paymentForm" (ngSubmit)="savePayment()">
               <fieldset [disabled]="isSaving()">
+                <label>Tipo de movimiento<select formControlName="kind"><option value="ABONO">Abono</option><option value="DEVOLUCION">Devolución</option><option value="AJUSTE">Ajuste del saldo (+ / −)</option></select></label>
                 <label
-                  >Monto registrado (Bs)<input
+                  >Importe del movimiento (Bs)<input
                     type="number"
-                    min="0"
+                    [min]="paymentForm.controls.kind.value === 'AJUSTE' ? -99999999 : 0.01"
                     step="0.01"
                     formControlName="amount"
                 /></label>
                 @if (paymentForm.controls.amount.invalid && paymentForm.controls.amount.touched) {
-                  <small class="error">Ingresa un monto válido y no negativo.</small>
+                  <small class="error">Ingresa un monto válido distinto de cero.</small>
                 }
+                <label>Motivo<textarea formControlName="reason" rows="2" maxlength="500"></textarea></label>
+                <label>Referencia o comprobante<input formControlName="reference" maxlength="100"></label>
+                @if (paymentForm.invalid && paymentForm.touched) { <small class="error">Revisa el importe y escribe un motivo de al menos 5 caracteres.</small> }
               </fieldset>
               <div class="actions">
                 <button
@@ -245,6 +259,12 @@
                 {{ isSaving() ? 'Guardando…' : 'Desactivar beca' }}
               </button>
             </div>
+          }
+          @case ('cancel-reservation') {
+            <h2 id="action-title">Cancelar reserva sin pago</h2><form [formGroup]="closureForm" (ngSubmit)="closeReservation()"><label>Motivo<textarea rows="3" formControlName="reason" maxlength="500"></textarea></label><p>Se conservará el historial y se liberará el cupo.</p><button class="primary-btn" [disabled]="isSaving() || closureForm.invalid">Confirmar cancelación</button><button type="button" class="secondary-btn" (click)="cancel()" [disabled]="isSaving()">Volver</button></form>
+          }
+          @case ('reject') {
+            <h2 id="action-title">Rechazar solicitud sin pago</h2><form [formGroup]="closureForm" (ngSubmit)="closeReservation()"><label>Motivo<textarea rows="3" formControlName="reason" maxlength="500"></textarea></label><p>El rechazo quedará registrado y se liberará el cupo.</p><button class="primary-btn" [disabled]="isSaving() || closureForm.invalid">Confirmar rechazo</button><button type="button" class="secondary-btn" (click)="cancel()" [disabled]="isSaving()">Volver</button></form>
           }
           @case ('confirm') {
             <h2 id="action-title">Confirmar inscripción</h2>

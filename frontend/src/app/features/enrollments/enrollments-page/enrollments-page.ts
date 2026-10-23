@@ -19,6 +19,8 @@ import { enrollmentParams, readEnrollmentQuery } from '../enrollment-navigation'
   styleUrl: './enrollments-page.scss',
 })
 export class EnrollmentsPage {
+  readonly closedTabs: {status: EnrollmentStatus; label: string}[] = [{ status: 'CANCELADO', label: 'Canceladas' }, { status: 'RECHAZADO', label: 'Rechazadas' }, { status: 'CADUCADO', label: 'Caducadas' }];
+  readonly statusLabels = { PREINSCRITO: 'preinscritos', INSCRITO: 'inscritos', CANCELADO: 'solicitudes canceladas', RECHAZADO: 'solicitudes rechazadas', CADUCADO: 'reservas caducadas' };
   private readonly api = inject(EnrollmentService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

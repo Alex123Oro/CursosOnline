@@ -15,6 +15,7 @@ import { LoginPage } from './features/auth/login-page';
 import { ProgressPage } from './features/progress/progress-page';
 
 export const routes: Routes = [
+  { path: 'mis-inscripciones', loadComponent: () => import('./features/enrollments/my-enrollments-page').then(m => m.MyEnrollmentsPage), canActivate: [roleGuard(['PARTICIPANT'])], title: 'Mis inscripciones | EVA' },
   { path: 'plantillas-certificados', loadComponent: () => import('./features/certificates/certificate-templates-page').then(m => m.CertificateTemplatesPage), canActivate: [roleGuard(['ADMIN'])], canDeactivate: [async (component: import('./features/certificates/certificate-templates-page').CertificateTemplatesPage) => component.canLeave()], title: 'Plantillas de certificados | EVA' },
   { path: 'verificar', loadComponent: () => import('./features/certificates/certificate-verification-page').then(m => m.CertificateVerificationPage), title: 'Verificar certificado | EVA' },
   { path: 'verificar/:codigo', loadComponent: () => import('./features/certificates/certificate-verification-page').then(m => m.CertificateVerificationPage), title: 'Verificar certificado | EVA' },

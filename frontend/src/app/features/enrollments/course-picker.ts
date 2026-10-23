@@ -58,7 +58,7 @@ import { EnrollmentStatus } from '../../core/course.service';
               >
             </div>
             <span>{{
-              status() === 'INSCRITO' ? course.enrolledCount : course.preenrolledCount
+              count(course)
             }}</span>
           </li>
         } @empty {
@@ -171,6 +171,9 @@ import { EnrollmentStatus } from '../../core/course.service';
   ],
 })
 export class EnrollmentCoursePicker {
+  count(course: EnrollmentCourseSummary) {
+    return this.status() === 'INSCRITO' ? course.enrolledCount : this.status() === 'PREINSCRITO' ? course.preenrolledCount : course.closedCounts?.[this.status()] ?? 0;
+  }
   readonly courses = input<EnrollmentCourseSummary[]>([]);
   readonly value = input('');
   readonly status = input<EnrollmentStatus>('PREINSCRITO');

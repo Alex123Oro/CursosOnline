@@ -25,7 +25,7 @@ describe('App', () => {
   it.each([
     { role: 'ADMIN', groups: ['Formación', 'Instructores', 'Certificación'], links: ['/cursos', '/inscripciones', '/catalogo', '/instructores', '/asignaciones-instructores', '/asistencia-instructores', '/certificados', '/plantillas-certificados'] },
     { role: 'INSTRUCTOR', groups: ['Formación'], links: ['/cursos', '/catalogo'] },
-    { role: 'PARTICIPANT', groups: ['Mi formación', 'Certificación', 'Explorar'], links: ['/mis-cursos', '/mi-asistencia', '/mis-calificaciones', '/mis-resultados', '/mi-progreso', '/mis-certificados', '/catalogo'] },
+    { role: 'PARTICIPANT', groups: ['Mi formación', 'Certificación', 'Explorar'], links: ['/mis-cursos', '/mis-inscripciones', '/mi-asistencia', '/mis-calificaciones', '/mis-resultados', '/mi-progreso', '/mis-certificados', '/catalogo'] },
   ])('keeps $role navigation visible under static group labels with an icon per link', ({ role, groups, links }) => {
     const fixture = TestBed.createComponent(App);
     TestBed.inject(SessionService).login('navigation@example.test', 'secret').subscribe();
