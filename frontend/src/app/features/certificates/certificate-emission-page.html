@@ -25,9 +25,11 @@
           <li><div class="student"><strong>{{ student.name }}</strong><span class="badge" [class.failed]="student.approvalStatus === 'REPROBADO'">{{ student.approvalStatus === 'APROBADO' ? (type() === 'aprobacion' ? 'Aprobado' : 'Asistencia cumplida') : student.approvalStatus === 'REPROBADO' ? (type() === 'aprobacion' ? 'No aprobado' : 'Asistencia insuficiente') : 'Requisitos pendientes' }}</span></div>
             <div><span class="badge">{{ student.certificate ? 'Emitido' : 'Pendiente' }}</span>@if (student.certificate) { <small>{{ student.certificate.code }}{{ student.certificate.status === 'REVOKED' ? ' · Anulado' : '' }}</small> }</div>
             <span class="action-wrapper" [attr.tabindex]="canIssue(student) ? null : 0" [attr.aria-label]="canIssue(student) ? null : reason(student)">
-              <button type="button" (click)="requestIssue(student)" [disabled]="saving() || !canIssue(student)" [attr.title]="canIssue(student) ? null : reason(student)">Emitir certificado</button>
+              <button type="button" (click)="requestIssue(student)" [disabled]="saving() || !canIssue(student)" [attr.title]="canIssue(student) ? null : reason(student)">{{ student.certificate?.status === 'REVOKED' ? 'Reemitir certificado' : 'Emitir certificado' }}</button>
+              @if (student.certificate?.status === 'VALID') { <button type="button" (click)="requestRevocation(student)" [disabled]="saving()">Anular con motivo</button> }
               @if (!canIssue(student)) { <span class="tooltip" role="tooltip">{{ reason(student) }}</span> }
             </span>
+            @if (student.history?.length) { <details><summary>Historial de certificados</summary>@for (item of student.history; track item.id) { <p><strong>{{ item.code }}</strong> · {{ item.status === 'VALID' ? 'Vigente' : 'Anulado' }}<br>{{ item.revokedReason || item.reissueReason }}</p> }</details> }
           </li>
         }
       </ul>
@@ -35,6 +37,9 @@
     }
   }
   @if (confirmation()) {
-    <section class="confirmation" role="dialog" aria-labelledby="emission-confirmation" tabindex="-1"><h2 id="emission-confirmation">Confirmar emisión</h2><p>{{ confirmationText() }}</p><p>El resultado y los datos del certificado se conservarán como historial.</p><div class="bulk"><button class="primary" type="button" (click)="confirm()" [disabled]="saving()">{{ saving() ? 'Emitiendo…' : 'Confirmar emisión' }}</button><button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button></div></section>
+    <section class="confirmation" role="dialog" aria-labelledby="emission-confirmation" tabindex="-1"><h2 id="emission-confirmation">Confirmar emisión</h2><p>{{ confirmationText() }}</p><p>El resultado y los datos del certificado se conservarán como historial.</p>@if (confirmation() !== 'bulk' && $any(confirmation()).certificate?.status === 'REVOKED') { <label>Motivo de reemisión<textarea maxlength="500" rows="2" [value]="correctionReason()" (input)="correctionReason.set($any($event.target).value)"></textarea></label> } <div class="bulk"><button class="primary" type="button" (click)="confirm()" [disabled]="saving()">{{ saving() ? 'Emitiendo…' : 'Confirmar emisión' }}</button><button type="button" (click)="cancel()" [disabled]="saving()">Cancelar</button></div></section>
+  }
+  @if (revokeTarget(); as target) {
+    <section class="confirmation" role="dialog" aria-labelledby="revoke-title"><h2 id="revoke-title">Anular certificado de {{ target.name }}</h2><p>El código anterior quedará anulado en la verificación pública. Se conservarán el documento y sus datos originales.</p><label>Motivo de anulación<textarea rows="3" maxlength="500" [value]="correctionReason()" (input)="correctionReason.set($any($event.target).value)"></textarea></label><div class="bulk"><button class="primary" type="button" [disabled]="saving() || correctionReason().trim().length < 5" (click)="confirmRevocation()">Confirmar anulación</button><button type="button" [disabled]="saving()" (click)="cancelRevocation()">Volver</button></div></section>
   }
 </section>

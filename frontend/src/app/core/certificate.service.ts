@@ -15,6 +15,7 @@ export interface CertificateCourse { id: string; name: string; code: string; }
 export interface CertificateCandidate {
   enrollmentId: string; name: string; approvalStatus: 'APROBADO' | 'REPROBADO' | 'PENDIENTE';
   blockedReason: string | null; certificate: { id: string; code: string; status: Certificate['status'] } | null;
+  history?: { id: string; code: string; status: Certificate['status']; issuedAt: string; revokedReason: string | null; revokedAt: string | null; replacesId: string | null; reissueReason: string | null }[];
 }
 export interface CertificateRoster { course: CertificateCourse; students: CertificateCandidate[]; }
 export interface CertificateBatch { issued: Certificate[]; failed: { enrollmentId: string; message: string }[]; }
@@ -26,6 +27,10 @@ export class CertificateService {
   courses() { return this.http.get<CertificateCourse[]>(`${this.base}/courses`); }
   roster(courseId: string, type: Certificate['type'] = 'aprobacion') { return this.http.get<CertificateRoster>(`${environment.apiBaseUrl}/courses/${courseId}/certificates`, type === 'aprobacion' ? {} : { params: { type } }); }
   issue(enrollmentId: string, type: Certificate['type'] = 'aprobacion', templateId?: string) { return this.http.post<Certificate>(this.base, { enrollmentId, type, ...(templateId ? { templateId } : {}) }); }
+  revoke(id: string, reason: string) { return this.http.post<Certificate>(`${this.base}/${id}/revoke`, { reason }); }
+  reissue(id: string, reason: string, type: Certificate['type'], templateId?: string) {
+    return this.http.post<Certificate>(`${this.base}/${id}/reissue`, { reason, type, ...(templateId ? { templateId } : {}) });
+  }
   bulk(courseId: string, enrollmentIds: string[], type: Certificate['type'] = 'aprobacion', templateId?: string) {
     return this.http.post<CertificateBatch>(`${environment.apiBaseUrl}/courses/${courseId}/certificates/bulk`, { ...(type === 'aprobacion' ? { enrollmentIds } : { enrollmentIds, type }), ...(templateId ? { templateId } : {}) });
   }

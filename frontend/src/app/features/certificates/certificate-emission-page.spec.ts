@@ -31,7 +31,7 @@ describe('CertificateEmissionPage', () => {
   afterEach(() => { fixture.destroy(); http.verify(); });
   it('enables approved unissued rows only and explains disabled actions', () => {
     const buttons = [...fixture.nativeElement.querySelectorAll('.roster button')] as HTMLButtonElement[];
-    expect(buttons.map(button => button.disabled)).toEqual([false,true,true]);
+    expect(buttons.map(button => button.disabled)).toEqual([false,true,true,false]);
     expect(buttons[1].title).toContain('nota mínima'); expect(buttons[2].title).toContain('ya fue emitido');
     expect(fixture.nativeElement.textContent).toContain('Aprobado'); expect(fixture.nativeElement.textContent).toContain('No aprobado');
   });
@@ -42,6 +42,24 @@ describe('CertificateEmissionPage', () => {
     expect(page.saving()).toBe(true); request.flush(certificateFixture); fixture.detectChanges();
     http.expectOne(`${environment.apiBaseUrl}/courses/2/certificates`).flush({ course,students: [issued,failed] }); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Certificado emitido correctamente'); expect(page.confirmation()).toBeNull();
+  });
+  it('requires a reason before revocation and reissues through the correction endpoint', () => {
+    const page = fixture.componentInstance;
+    page.requestRevocation(issued); page.confirmRevocation();
+    http.expectNone(`${environment.apiBaseUrl}/certificates/7/revoke`);
+    page.correctionReason.set('Corrección de asistencia'); page.confirmRevocation();
+    const revoke = http.expectOne(`${environment.apiBaseUrl}/certificates/7/revoke`);
+    expect(revoke.request.body).toEqual({reason:'Corrección de asistencia'});
+    revoke.flush({...certificateFixture,status:'REVOKED'}); fixture.detectChanges();
+    const revoked: CertificateCandidate = {...approvedCandidate, certificate:{id:'7',code:'8F72A91C',status:'REVOKED'}};
+    http.expectOne(`${environment.apiBaseUrl}/courses/2/certificates`).flush({course,students:[revoked]}); fixture.detectChanges();
+    expect(page.eligible()).toEqual([]);
+    page.requestIssue(revoked); page.confirm(); http.expectNone(`${environment.apiBaseUrl}/certificates/7/reissue`);
+    page.correctionReason.set('Asistencia corregida y revisada'); page.confirm();
+    const reissue = http.expectOne(`${environment.apiBaseUrl}/certificates/7/reissue`);
+    expect(reissue.request.body).toMatchObject({reason:'Asistencia corregida y revisada',type:'aprobacion',templateId:'1'});
+    reissue.flush({...certificateFixture,id:'8',code:'ABCD1234'}); fixture.detectChanges();
+    http.expectOne(`${environment.apiBaseUrl}/courses/2/certificates`).flush({course,students:[issued]});
   });
   it('keeps domain errors visible without falsely marking a certificate issued', () => {
     const page = fixture.componentInstance; page.requestIssue(approvedCandidate); page.confirm();

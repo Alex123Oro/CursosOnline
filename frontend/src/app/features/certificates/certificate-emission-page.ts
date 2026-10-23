@@ -31,9 +31,11 @@ export class CertificateEmissionPage {
   readonly feedback = signal('');
   readonly failures = signal<string[]>([]);
   readonly confirmation = signal<CertificateCandidate | 'bulk' | null>(null);
+  readonly revokeTarget = signal<CertificateCandidate | null>(null);
+  readonly correctionReason = signal('');
   readonly search = signal('');
   readonly page = signal(0);
-  readonly eligible = computed(() => this.students().filter(row => this.canIssue(row)).slice(0,100));
+  readonly eligible = computed(() => this.students().filter(row => this.canIssue(row) && !row.certificate).slice(0,100));
   readonly filtered = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('es');
     return this.students().filter(row => row.name.toLocaleLowerCase('es').includes(query));
@@ -72,7 +74,7 @@ export class CertificateEmissionPage {
       onCleanup(() => { this.mutation?.unsubscribe(); });
       untracked(() => {
         this.students.set([]); this.error.set(''); this.loading.set(false); this.saving.set(false);
-        this.confirmation.set(null); this.page.set(0);
+        this.confirmation.set(null); this.revokeTarget.set(null); this.correctionReason.set(''); this.page.set(0);
         if (user?.role !== 'ADMIN' || !id) return;
         this.loading.set(true);
         const sub = this.api.roster(id, type).subscribe({
@@ -83,8 +85,8 @@ export class CertificateEmissionPage {
       });
     });
   }
-  canIssue(row: CertificateCandidate) { return !!this.templateId() && row.approvalStatus === 'APROBADO' && !row.certificate && !row.blockedReason; }
-  reason(row: CertificateCandidate) { return row.certificate ? 'El certificado ya fue emitido.' : row.blockedReason || (!this.templateId() ? 'Selecciona una plantilla de certificado.' : 'El participante aún no ha aprobado el curso.'); }
+  canIssue(row: CertificateCandidate) { return !!this.templateId() && row.approvalStatus === 'APROBADO' && row.certificate?.status !== 'VALID' && !row.blockedReason; }
+  reason(row: CertificateCandidate) { return row.certificate?.status === 'VALID' ? 'El certificado ya fue emitido.' : row.blockedReason || (!this.templateId() ? 'Selecciona una plantilla de certificado.' : 'El participante aún no ha aprobado el curso.'); }
   selectType(value: string) {
     if (this.saving() || (value !== 'aprobacion' && value !== 'participacion')) return;
     this.feedback.set(''); this.failures.set([]); this.type.set(value);
@@ -94,13 +96,27 @@ export class CertificateEmissionPage {
     if (this.saving()) return;
     this.feedback.set(''); this.failures.set([]); this.search.set(''); this.courseId.set(id);
   }
-  requestIssue(row: CertificateCandidate) { if (!this.saving() && this.canIssue(row)) this.confirmation.set(row); }
+  requestIssue(row: CertificateCandidate) { if (!this.saving() && this.canIssue(row)) { this.correctionReason.set(''); this.revokeTarget.set(null); this.confirmation.set(row); } }
+  requestRevocation(row: CertificateCandidate) { if (!this.saving() && row.certificate?.status === 'VALID') { this.confirmation.set(null); this.correctionReason.set(''); this.revokeTarget.set(row); } }
+  confirmRevocation() {
+    const target = this.revokeTarget(); const reason = this.correctionReason().trim();
+    if (!target?.certificate || reason.length < 5 || reason.length > 500 || this.saving()) return;
+    this.saving.set(true); this.error.set('');
+    this.mutation = this.api.revoke(target.certificate.id, reason).subscribe({
+      next: () => { this.saving.set(false); this.revokeTarget.set(null); this.feedback.set('Certificado anulado. Ahora se pueden corregir los datos y reemitir con otro código.'); this.retryList(); },
+      error: error => { this.saving.set(false); this.error.set(error.error?.message ?? 'No se pudo anular el certificado.'); }
+    });
+  }
+  cancelRevocation() { if (!this.saving()) this.revokeTarget.set(null); }
   selectTemplate(id: string) { if (!this.saving()) { this.templateId.set(id); this.confirmation.set(null); } }
   requestBulk() { if (!this.saving() && this.eligible().length) this.confirmation.set('bulk'); }
   cancel() { if (!this.saving()) this.confirmation.set(null); }
   confirm() {
     const target = this.confirmation();
     if (!target || this.saving()) return;
+    if (target !== 'bulk' && target.certificate?.status === 'REVOKED' && this.correctionReason().trim().length < 5) {
+      this.error.set('Indica el motivo de la reemisión (al menos 5 caracteres).'); return;
+    }
     this.saving.set(true); this.error.set(''); this.feedback.set(''); this.failures.set([]);
     const complete = () => { this.saving.set(false); this.confirmation.set(null); this.listRetry.update(value => value + 1); };
     const fail = (error: { error?: { message?: string } }) => {
@@ -116,7 +132,10 @@ export class CertificateEmissionPage {
         }, error: fail
       });
     } else {
-      this.mutation = this.api.issue(target.enrollmentId, this.type(), this.templateId()).subscribe({
+      const request = target.certificate?.status === 'REVOKED'
+        ? this.api.reissue(target.certificate.id, this.correctionReason().trim(), this.type(), this.templateId())
+        : this.api.issue(target.enrollmentId, this.type(), this.templateId());
+      this.mutation = request.subscribe({
         next: result => { this.feedback.set(`Certificado emitido correctamente. Código: ${result.code}`); complete(); }, error: fail
       });
     }
