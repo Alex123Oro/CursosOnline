@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "file": "migrations/20261026184509_certificates_local_baseline.sql",
+  "sha256": "894454a544bba7a5f5e4c2aba2ad2cafca38a63d60cbe5544cf6f6a69c769132",
+  "source": "public schema-only export; no rows, no Auth accounts",
+  "sourcePostgres": "17.6",
+  "cli": "2.122.0",
+  "authTrigger": "restored from public.crear_usuario_desde_auth dependency",
+  "normalization": [
+    "CREATE SCHEMA IF NOT EXISTS public",
+    "Removed pg_dump psql restrict directives",
+    "Omitted cloud-only supabase_admin default ACL changes; local Supabase manages that role; table/function grants preserved"
+  ],
+  "migrations": [
+    {
+      "file": "migrations/20261026184509_certificates_local_baseline.sql",
+      "sha256": "894454a544bba7a5f5e4c2aba2ad2cafca38a63d60cbe5544cf6f6a69c769132"
+    },
+    {
+      "file": "migrations/20261026185150_local_acl_compatibility.sql",
+      "sha256": "1e2b73487d33e0f79f5951c4e8fac68000b8767a61be47f94af43f189136147a"
+    }
+  ]
+}

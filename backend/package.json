@@ -4,6 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "local:up": "node scripts/certificates-docker.mjs up",
+    "local:down": "node scripts/certificates-docker.mjs down",
+    "local:status": "node scripts/certificates-docker.mjs status",
+    "local:configure": "node scripts/certificates-docker.mjs configure-local",
+    "local:use": "node scripts/certificates-docker.mjs use-local",
+    "remote:use": "node scripts/certificates-docker.mjs use-remote",
+    "certificates:check": "tsx \"prisma/Certificates Module/seed.ts\"",
+    "certificates:seed": "tsx \"prisma/Certificates Module/seed.ts\" --apply",
+    "certificates:verify": "tsx \"prisma/Certificates Module/verify.ts\"",
     "test": "vitest run",
     "predev": "prisma generate",
     "dev": "tsx watch src/index.ts",
@@ -51,6 +60,7 @@
     "@types/node-forge": "^1.3.14",
     "@types/qrcode": "^1.5.6",
     "prisma": "^6.16.2",
+    "supabase": "2.122.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^3.2.4"
